@@ -1,8 +1,8 @@
 {
-  "name": "hmpps-template-typescript",
+  "name": "hmpps-people-on-probation-ui",
   "version": "0.0.1",
-  "description": "HMPPS Typescript Template",
-  "repository": "git@github.com:ministryofjustice/hmpps-template-typescript.git",
+  "description": "HMPPS People On Probation Ui",
+  "repository": "git@github.com:ministryofjustice/hmpps-people-on-probation-ui.git",
   "license": "MIT",
   "scripts": {
     "prepare": "hmpps-precommit-hooks-prepare",
