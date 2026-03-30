@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import ServiceUnavailable from './_components/ServiceUnavailable'
 import { defaultPopCrn, getPopDashboard, resolvePopCrn, withCrn } from '@/lib/server/pop'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,9 @@ export default async function PopHome({
 
   const selectedCrn = resolvePopCrn(requestedCrn)
   const dashboard = await getPopDashboard(selectedCrn)
+  if (!dashboard) {
+    return <ServiceUnavailable />
+  }
 
   return (
     <>

@@ -1,4 +1,5 @@
 import SummaryCard from '../_components/SummaryCard'
+import ServiceUnavailable from '../_components/ServiceUnavailable'
 import { getPopOrderSummary, resolvePopCrn, withCrn } from '@/lib/server/pop'
 
 export const dynamic = 'force-dynamic'
@@ -14,6 +15,17 @@ export default async function Conditions({
     typeof resolvedSearchParams?.crn === 'string' ? resolvedSearchParams.crn : undefined,
   )
   const orderSummary = await getPopOrderSummary(selectedCrn)
+  if (!orderSummary) {
+    return (
+      <>
+        <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+          Back
+        </a>
+        <h1 className="govuk-heading-xl">Your conditions</h1>
+        <ServiceUnavailable />
+      </>
+    )
+  }
 
   return (
     <>

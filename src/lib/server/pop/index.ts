@@ -1,5 +1,6 @@
 import 'server-only'
 
+import logger from '../../../../logger'
 import PeopleOnProbationApiClient, {
   type AppointmentResponse,
   type RequirementResponse,
@@ -65,6 +66,15 @@ export type PopProgressDetails = {
 
 function createService() {
   return new PeopleOnProbationService(new PeopleOnProbationApiClient(createAuthenticationClient()))
+}
+
+async function returnNullWhenUnavailable<T>(operation: string, fetchData: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fetchData()
+  } catch (error) {
+    logger.warn({ error, operation }, 'People on Probation data unavailable')
+    return null
+  }
 }
 
 function formatName(name?: { forename: string; middleName?: string; surname: string } | null) {
@@ -170,84 +180,98 @@ export function withCrn(path: string, crn: string) {
   return `${path}?crn=${encodeURIComponent(crn)}`
 }
 
-export async function getPopUserDetails(crn: string): Promise<PopUserDetails> {
-  const personalDetails = await createService().getPersonalDetails(crn)
-  const emergencyContact = personalDetails.emergencyContacts[0]
+export async function getPopUserDetails(crn: string): Promise<PopUserDetails | null> {
+  return returnNullWhenUnavailable('getPopUserDetails', async () => {
+    const personalDetails = await createService().getPersonalDetails(crn)
+    const emergencyContact = personalDetails.emergencyContacts[0]
 
-  return {
-    userId: crn,
-    name: formatName(personalDetails.name),
-    preferredName: personalDetails.preferredName || 'Not recorded',
-    dateOfBirth: formatDate(personalDetails.dateOfBirth),
-    address: formatAddress(personalDetails.mainAddress),
-    phone: personalDetails.telephoneNumber || 'Not recorded',
-    mobile: personalDetails.mobileNumber || 'Not recorded',
-    email: personalDetails.emailAddress || 'Not recorded',
-    emergencyContact: {
-      name: emergencyContact ? formatName(emergencyContact.name) : 'Not recorded',
-      relationship: emergencyContact?.relationship || 'Not recorded',
-      phone: emergencyContact?.mobileNumber || 'Not recorded',
-    },
-    probationPractitioner: {
-      name: formatName(personalDetails.practitioner?.name || null),
-      phone: personalDetails.practitioner?.telephoneNumber || 'Not recorded',
-      officeAddress: formatAddress(personalDetails.practitioner?.team?.officeAddresses?.[0]),
-    },
-  }
+    return {
+      userId: crn,
+      name: formatName(personalDetails.name),
+      preferredName: personalDetails.preferredName || 'Not recorded',
+      dateOfBirth: formatDate(personalDetails.dateOfBirth),
+      address: formatAddress(personalDetails.mainAddress),
+      phone: personalDetails.telephoneNumber || 'Not recorded',
+      mobile: personalDetails.mobileNumber || 'Not recorded',
+      email: personalDetails.emailAddress || 'Not recorded',
+      emergencyContact: {
+        name: emergencyContact ? formatName(emergencyContact.name) : 'Not recorded',
+        relationship: emergencyContact?.relationship || 'Not recorded',
+        phone: emergencyContact?.mobileNumber || 'Not recorded',
+      },
+      probationPractitioner: {
+        name: formatName(personalDetails.practitioner?.name || null),
+        phone: personalDetails.practitioner?.telephoneNumber || 'Not recorded',
+        officeAddress: formatAddress(personalDetails.practitioner?.team?.officeAddresses?.[0]),
+      },
+    }
+  })
 }
 
-export async function getPopDashboard(crn: string) {
+export async function getPopDashboard(crn: string): Promise<{ preferredName: string } | null> {
   const details = await getPopUserDetails(crn)
+  if (!details) return null
 
   return {
     preferredName: details.preferredName !== 'Not recorded' ? details.preferredName : details.name,
   }
 }
 
-export async function getPopAppointments(crn: string) {
-  const [futureAppointments, pastAppointments] = await Promise.all([
-    createService().getFutureAppointments(crn, 0, 10),
-    createService().getPastAppointments(crn, 0, 10),
-  ])
+export async function getPopAppointments(crn: string): Promise<{
+  upcomingAppointments: PopAppointment[]
+  pastAppointments: PopAppointment[]
+} | null> {
+  return returnNullWhenUnavailable('getPopAppointments', async () => {
+    const [futureAppointments, pastAppointments] = await Promise.all([
+      createService().getFutureAppointments(crn, 0, 10),
+      createService().getPastAppointments(crn, 0, 10),
+    ])
 
-  return {
-    upcomingAppointments: futureAppointments.content.map(mapAppointment),
-    pastAppointments: pastAppointments.content.map(mapAppointment),
-  }
+    return {
+      upcomingAppointments: futureAppointments.content.map(mapAppointment),
+      pastAppointments: pastAppointments.content.map(mapAppointment),
+    }
+  })
 }
 
-export async function getPopOrderSummary(crn: string): Promise<PopOrderSummary> {
-  const sentences = await createService().getSentences(crn)
-  const sentence = getPrimarySentence(sentences.sentences)
+export async function getPopOrderSummary(crn: string): Promise<PopOrderSummary | null> {
+  return returnNullWhenUnavailable('getPopOrderSummary', async () => {
+    const sentences = await createService().getSentences(crn)
+    const sentence = getPrimarySentence(sentences.sentences)
 
-  return {
-    orderType: sentence?.type || 'Not recorded',
-    startDate: formatDate(sentence?.startDate),
-    requirementsCompletionDate: formatDate(sentence?.expectedEndDate),
-    requirements: (sentence?.requirements || []).map(formatRequirement),
-  }
+    return {
+      orderType: sentence?.type || 'Not recorded',
+      startDate: formatDate(sentence?.startDate),
+      requirementsCompletionDate: formatDate(sentence?.expectedEndDate),
+      requirements: (sentence?.requirements || []).map(formatRequirement),
+    }
+  })
 }
 
-export async function getPopProgress(crn: string): Promise<PopProgressDetails> {
-  const sentences = await createService().getSentences(crn)
-  const primarySentence = getPrimarySentence(sentences.sentences)
+export async function getPopProgress(crn: string): Promise<PopProgressDetails | null> {
+  return returnNullWhenUnavailable('getPopProgress', async () => {
+    const sentences = await createService().getSentences(crn)
+    const primarySentence = getPrimarySentence(sentences.sentences)
 
-  return {
-    orderPeriod: `${formatDate(primarySentence?.startDate)} to ${formatDate(primarySentence?.expectedEndDate)}`,
-    sentenceCount: sentences.sentences.length,
-    requirements: (primarySentence?.requirements || []).map(formatRequirement),
-  }
+    return {
+      orderPeriod: `${formatDate(primarySentence?.startDate)} to ${formatDate(primarySentence?.expectedEndDate)}`,
+      sentenceCount: sentences.sentences.length,
+      requirements: (primarySentence?.requirements || []).map(formatRequirement),
+    }
+  })
 }
 
-export async function getPopProbationConditions(crn: string) {
-  const sentences = await createService().getSentences(crn)
-  const primarySentence = getPrimarySentence(sentences.sentences)
-  const requirementConditions = (primarySentence?.requirements || []).map(
-    requirement => `${requirement.type || 'Requirement'}: ${requirement.description || 'No description provided'}`,
-  )
-  const licenceConditions = (primarySentence?.licenceConditions || []).map(
-    condition => `${condition.type || 'Licence condition'}: ${condition.description || 'No description provided'}`,
-  )
+export async function getPopRequirementsAndConditions(crn: string): Promise<string[] | null> {
+  return returnNullWhenUnavailable('getPopRequirementsAndConditions', async () => {
+    const sentences = await createService().getSentences(crn)
+    const primarySentence = getPrimarySentence(sentences.sentences)
+    const requirementConditions = (primarySentence?.requirements || []).map(
+      requirement => `${requirement.type || 'Requirement'}: ${requirement.description || 'No description provided'}`,
+    )
+    const licenceConditions = (primarySentence?.licenceConditions || []).map(
+      condition => `${condition.type || 'Licence condition'}: ${condition.description || 'No description provided'}`,
+    )
 
-  return [...requirementConditions, ...licenceConditions]
+    return [...requirementConditions, ...licenceConditions]
+  })
 }

@@ -1,5 +1,6 @@
 import ConditionsList from '../_components/ConditionsList'
-import { getPopProbationConditions, resolvePopCrn, withCrn } from '@/lib/server/pop'
+import ServiceUnavailable from '../_components/ServiceUnavailable'
+import { getPopRequirementsAndConditions, resolvePopCrn, withCrn } from '@/lib/server/pop'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -13,7 +14,22 @@ export default async function ProbationConditions({
   const selectedCrn = resolvePopCrn(
     typeof resolvedSearchParams?.crn === 'string' ? resolvedSearchParams.crn : undefined,
   )
-  const conditions = await getPopProbationConditions(selectedCrn)
+  const requirementsAndconditions = await getPopRequirementsAndConditions(selectedCrn)
+  if (!requirementsAndconditions) {
+    return (
+      <>
+        <div className="govuk-grid-row">
+          <div className="govuk-grid-column-full">
+            <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+              Back
+            </a>
+            <h1 className="govuk-heading-xl">Your requirements and licence conditions</h1>
+            <ServiceUnavailable />
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
@@ -22,7 +38,7 @@ export default async function ProbationConditions({
           <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
             Back
           </a>
-          <h1 className="govuk-heading-xl">Probation service</h1>
+          <h1 className="govuk-heading-xl">Your requirements and licence conditions</h1>
         </div>
       </div>
 
@@ -35,7 +51,7 @@ export default async function ProbationConditions({
             and changes you make.
           </p>
           <h3 className="govuk-heading-m govuk-!-font-weight-bold govuk-!-margin-bottom-2">We expect you to:</h3>
-          <ConditionsList items={conditions} />
+          <ConditionsList items={requirementsAndconditions} />
         </div>
       </div>
 
