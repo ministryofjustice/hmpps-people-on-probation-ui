@@ -3,7 +3,7 @@
 [![Ministry of Justice Repository Compliance Badge](https://github-community.service.justice.gov.uk/repository-standards/api/hmpps-people-on-probation-ui/badge?style=flat)](https://github-community.service.justice.gov.uk/repository-standards/hmpps-people-on-probation-ui)
 [![Docker Repository on ghcr](https://img.shields.io/badge/ghcr.io-repository-2496ED.svg?logo=docker)](https://ghcr.io/ministryofjustice/hmpps-people-on-probation-ui)
 
-Template github repo used for new Typescript based projects.
+Next.js application for HMPPS People on Probation UI.
 
 # Instructions
 
@@ -16,25 +16,17 @@ Please raise any questions or queries there. Contributions welcome!
 
 Our security policy is located [here](https://github.com/ministryofjustice/hmpps-people-on-probation-ui/security/policy).
 
-More information about the template project including features can be
-found [here](https://dsdmoj.atlassian.net/wiki/spaces/NDSS/pages/3488677932/Typescript+template+project).
-
 ## Creating a Cloud Platform namespace
 
 When deploying to a new namespace, you may wish to use the
 [templates project namespace](https://github.com/ministryofjustice/cloud-platform-environments/tree/main/namespaces/live.cloud-platform.service.justice.gov.uk/hmpps-templates-dev)
-as the basis for your new namespace. This namespace contains both the kotlin and typescript template projects, which
-is the usual way that projects are setup. This namespace includes an AWS elasticache setup - which is required by this
-template project.
+as the basis for your new namespace. This namespace includes an AWS elasticache setup, which is required if you enable
+distributed sessions in this service.
 
 Copy this folder and update all the existing namespace references. If you only need the typescript configuration then
 remove all kotlin references. Submit a PR to the Cloud Platform team in #ask-cloud-platform. Further instructions from
 the Cloud Platform team can be found in
 the [Cloud Platform User Guide](https://user-guide.cloud-platform.service.justice.gov.uk/#cloud-platform-user-guide)
-
-## Customising the new project
-
-As part of the automation to create the new service, various parts of the codebase will be updated to reflect it's specific name.
 
 ## Oauth2 Credentials
 
@@ -88,52 +80,46 @@ When deployed to an environment with multiple pods we run applications with an i
 a distributed cache of sessions.
 The template app is, by default, configured not to use REDIS when running locally.
 
-## Developing against the template project
+## Developing locally
 
-### Running the app via docker-compose
+Create an environment file by copying `.env.example` to `.env.local`.
+Environment variables in `.env.local` are loaded by Next.js during local development and builds.
 
-The easiest way to run the app is to use docker compose to create the service and all dependencies.
-
-`docker compose pull`
-
-`docker compose up`
-
-### Running the app for development
-
-To start the main services excluding the example typescript template app:
-
-`docker compose up --scale=app=0`
-
-Create an environment file by copying `.env.example` -> `.env`
-Environment variables set in here will be available when running `start:dev`
-
-Install dependencies using `npm install`, ensuring you are using `node v20`
+Install dependencies using `npm run setup`, ensuring you are using `node v24`.
 
 Note: Using `nvm` (or [fnm](https://github.com/Schniz/fnm)), run `nvm install --latest-npm` within the repository folder
 to use the correct version of node, and the latest version of npm. This matches the `engines` config in `package.json`
 and the github pipeline build config.
 
-And then, to build the assets and start the app with esbuild:
+To start the app locally:
 
-`npm run start:dev`
+`npm run dev`
 
-### Logging in with a test user
+This runs the Next.js dev server on `http://localhost:3000`.
 
-Once the application is running you should then be able to login with:
+To use the Playwright port:
 
-username: AUTH_USER
-password: password123456
+`npm run start-feature`
 
-To request specific users and roles then raise a PR
-to [update the seed data](https://github.com/ministryofjustice/hmpps-auth/blob/main/src/main/resources/db/dev/data/auth/V900_3__users.sql)
-for the in-memory DB used by Auth
+This runs the same app on `http://localhost:3007`.
+
+### Runtime assets
+
+Static runtime assets under `public/` are split by ownership.
+
+- Source styles live under `assets/scss`
+- Source images live under `assets/images`
+- `public/app` is for committed app-owned static files
+- `npm run sync:assets` regenerates `public/generated` and `public/assets`
+
+The sync step runs automatically before `dev` and `build`.
 
 ### Installing dependencies
 
 By default no pre or post install scripts will be run during `npm install`.
 Instead a list of configured install scripts will be run via the [npm script allowlist](https://github.com/ministryofjustice/hmpps-typescript-lib/tree/main/packages/npm-script-allowlist) tool.
 
-Instead of running `npm install`, run `npm run setup` - this will run an `npm ci` to install any dependencies and then run any configured install scripts.
+Instead of running `npm install`, run `npm run setup` - this runs `npm ci` and then the configured allowlisted install scripts.
 
 ### Making changes
 
@@ -161,7 +147,7 @@ For local running, start a wiremock instance by:
 
 `docker compose -f docker-compose-test.yml up`
 
-Then run the server in test mode by:
+Then run the Next app in test mode by:
 
 `npm run start-feature` (or `npm run start-feature:dev` to run with auto-restart on changes)
 
@@ -176,28 +162,6 @@ And then either, run tests in headless mode with:
 Or run tests with the UI:
 
 `npm run int-test-ui`
-
-## Keeping your app up-to-date
-
-While there are multiple ways to keep your project up-to-date this [method](https://mojdt.slack.com/archives/C69NWE339/p1694009011413449) doesn't require you to keep cherry picking the changes, however if that works for you there is no reason to stop.
-
-In your service, add the template as a remote:
-
-`git remote add template https://github.com/ministryofjustice/hmpps-people-on-probation-ui`
-
-Create a branch and switch to it, eg:
-
-`git checkout -b template-changes-2309`
-
-Fetch all remotes:
-
-`git fetch --all`
-
-Merge the changes from the template into your service source:
-
-`git merge template/main --allow-unrelated-histories`
-
-You'll need to manually handle the merge of the changes, but if you do it early, carefully, and regularly, it won't be too much of a hassle.
 
 ## Change log
 
