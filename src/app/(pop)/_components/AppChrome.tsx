@@ -7,7 +7,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
         <div className="govuk-header__container">
           <div className="govuk-header__branding">
             <span className="govuk-header__logo" aria-hidden="true" />
-            <a href="/" className="govuk-header__link">
+            <a href="/" className="govuk-header__homepage-link pop-app-header__link">
               Manage my community sentence
             </a>
           </div>

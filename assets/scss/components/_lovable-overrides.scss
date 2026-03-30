@@ -52,7 +52,7 @@
   transform: translateY(2px);
 }
 
-.govuk-header__link {
+.pop-app-header .pop-app-header__link {
   @include govuk-link-common;
   @include govuk-font($size: 19, $weight: 'bold');
   font-size: 19px;
@@ -62,12 +62,17 @@
   align-items: center;
   padding: 0;
   margin: 0;
+  margin-right: 0;
   line-height: 1.2;
   white-space: nowrap;
+  word-spacing: normal;
   min-width: 0;
 
   &:hover {
+    margin-bottom: 0;
+    border-bottom: 0;
     text-decoration: underline;
+    text-decoration-thickness: 1px;
   }
 
   &:visited,
@@ -83,7 +88,7 @@
 .govuk-link,
 .govuk-back-link,
 .govuk-button,
-.govuk-header__link,
+.pop-app-header__link,
 .govuk-header__navigation-link {
   &:focus,
   &:focus-visible,
@@ -114,19 +119,19 @@
 }
 
 @container (max-width: 260px) {
-  .govuk-header__link {
+  .pop-app-header .pop-app-header__link {
     font-size: 16px;
   }
 }
 
 @container (max-width: 220px) {
-  .govuk-header__link {
+  .pop-app-header .pop-app-header__link {
     font-size: 15px;
   }
 }
 
 @container (max-width: 190px) {
-  .govuk-header__link {
+  .pop-app-header .pop-app-header__link {
     font-size: 14px;
   }
 }
@@ -152,7 +157,7 @@
     padding-right: 0;
   }
 
-  .govuk-header__link {
+  .pop-app-header .pop-app-header__link {
     margin-left: 0 !important;
     white-space: normal;
     display: -webkit-box;
