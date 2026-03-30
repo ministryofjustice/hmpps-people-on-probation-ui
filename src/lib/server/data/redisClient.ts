@@ -28,7 +28,7 @@ export function getRedisClient() {
     logger.error(error, 'Redis client error')
   })
 
-  void redisClient.connect().catch((error: Error) => {
+  redisClient.connect().catch((error: Error) => {
     logger.error(error, 'Failed to connect Redis client')
   })
 

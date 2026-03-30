@@ -2,7 +2,6 @@ import 'server-only'
 
 import PeopleOnProbationApiClient, {
   type AppointmentResponse,
-  type PersonalDetailsResponse,
   type RequirementResponse,
   type SentenceResponse,
 } from '../data/peopleOnProbationApiClient'
@@ -104,15 +103,17 @@ function formatTime(startTime?: string | null, endTime?: string | null) {
   return `${startTime || 'Unknown'} to ${endTime}`
 }
 
-function formatAddress(address?: {
-  houseNumber?: string
-  buildingName?: string
-  street?: string
-  town?: string
-  district?: string
-  county?: string
-  postcode?: string
-} | null) {
+function formatAddress(
+  address?: {
+    houseNumber?: string
+    buildingName?: string
+    street?: string
+    town?: string
+    district?: string
+    county?: string
+    postcode?: string
+  } | null,
+) {
   if (!address) return 'Not recorded'
 
   return [
@@ -139,7 +140,10 @@ function formatRequirement(requirement: RequirementResponse): PopProgressRequire
 }
 
 function mapAppointment(appointment: AppointmentResponse): PopAppointment {
-  const status = appointment.attended === undefined ? undefined : appointment.attended ? 'Attended' : 'Missed'
+  let status: string | undefined
+  if (appointment.attended !== undefined) {
+    status = appointment.attended ? 'Attended' : 'Missed'
+  }
 
   return {
     date: formatDateWithWeekday(appointment.date),
