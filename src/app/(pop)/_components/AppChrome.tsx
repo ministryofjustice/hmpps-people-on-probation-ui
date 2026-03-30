@@ -2,8 +2,8 @@
 
 export default function AppChrome({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <header className="govuk-header">
+      <>
+      <header className="govuk-header pop-app-header">
         <div className="govuk-header__container">
           <div className="govuk-header__branding">
             <span className="govuk-header__logo" aria-hidden="true" />
