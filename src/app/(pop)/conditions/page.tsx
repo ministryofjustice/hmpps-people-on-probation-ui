@@ -21,7 +21,7 @@ export default async function Conditions({
         <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
           Back
         </a>
-        <h1 className="govuk-heading-xl">Your conditions</h1>
+        <h1 className="govuk-heading-xl">Your probation conditions</h1>
         <ServiceUnavailable />
       </>
     )
@@ -33,43 +33,46 @@ export default async function Conditions({
         Back
       </a>
 
-      <h1 className="govuk-heading-xl">Your conditions</h1>
+      <h1 className="govuk-heading-xl">{orderSummary.pageTitle || 'Your probation conditions'}</h1>
 
       <p className="govuk-body">
-        You must follow these conditions to avoid returning to court, being given additional requirements, or
-        being sent to prison.
+        {orderSummary.intro ||
+          'These are the conditions of your probation. Not following these rules can lead to you being breached. This means you could end up having more rules added to your probation, going back to court or going back to prison.'}
       </p>
 
-      <SummaryCard title="Order details">
+      <SummaryCard title={orderSummary.orderDetailsTitle || 'Order details'}>
         <dl className="govuk-summary-list">
           <div className="govuk-summary-list__row">
             <dt className="govuk-summary-list__key">Order type</dt>
             <dd className="govuk-summary-list__value">{orderSummary.orderType}</dd>
           </div>
           <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">Order start date</dt>
+            <dt className="govuk-summary-list__key">Start date</dt>
             <dd className="govuk-summary-list__value">{orderSummary.startDate}</dd>
           </div>
           <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">Order estimated end date</dt>
+            <dt className="govuk-summary-list__key">End date</dt>
             <dd className="govuk-summary-list__value">{orderSummary.requirementsCompletionDate}</dd>
           </div>
         </dl>
       </SummaryCard>
 
-      <SummaryCard title="Order requirements">
+      <SummaryCard
+        title={orderSummary.rulesTitle || 'Rules of your order'}
+        action={
+          orderSummary.rulesAction
+            ? {
+                label: orderSummary.rulesAction.label,
+                href: withCrn(orderSummary.rulesAction.href, selectedCrn),
+              }
+            : undefined
+        }
+      >
         <dl className="govuk-summary-list">
           {orderSummary.requirements.map(requirement => (
-            <div className="govuk-summary-list__row" key={requirement.category}>
-              <dt className="govuk-summary-list__key">{requirement.category}</dt>
-              <dd className="govuk-summary-list__value">
-                <div>{requirement.requirement}</div>
-                {requirement.required !== undefined ? (
-                  <div className="govuk-hint govuk-!-margin-top-1">
-                    {requirement.completed || 0} of {requirement.required} {requirement.unit || ''} completed
-                  </div>
-                ) : null}
-              </dd>
+            <div className="govuk-summary-list__row" key={requirement.title}>
+              <dt className="govuk-summary-list__key">{requirement.rows[0]?.label || requirement.title}</dt>
+              <dd className="govuk-summary-list__value">{requirement.rows[0]?.value || requirement.requirement || 'Not recorded'}</dd>
             </div>
           ))}
         </dl>

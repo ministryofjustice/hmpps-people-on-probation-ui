@@ -25,24 +25,35 @@ export default async function PopHome({
 
   return (
     <>
-      <h1 className="govuk-heading-xl">Welcome, {dashboard.preferredName}</h1>
+      <h1 className="govuk-heading-xl">Welcome, {dashboard.welcomeName}</h1>
       <div className="govuk-card-grid">
-        <a className="govuk-card-link" href={withCrn('/your-details', selectedCrn)}>
-          <h2 className="govuk-card-link__title">Your details</h2>
-          <p className="govuk-card-link__description">View your personal information</p>
-        </a>
-        <a className="govuk-card-link" href={withCrn('/your-progress', selectedCrn)}>
-          <h2 className="govuk-card-link__title">Your progress</h2>
-          <p className="govuk-card-link__description">Track your community order progress</p>
-        </a>
-        <a className="govuk-card-link" href={withCrn('/appointments', selectedCrn)}>
-          <h2 className="govuk-card-link__title">Past and upcoming appointments</h2>
-          <p className="govuk-card-link__description">View your scheduled sessions</p>
-        </a>
-        <a className="govuk-card-link" href={withCrn('/conditions', selectedCrn)}>
-          <h2 className="govuk-card-link__title">Your conditions</h2>
-          <p className="govuk-card-link__description">View the conditions of your order</p>
-        </a>
+        {(dashboard.cards || [
+          {
+            title: 'Your details',
+            description: 'View your personal information',
+            href: '/your-details',
+          },
+          {
+            title: 'Your progress',
+            description: 'Track your community order progress',
+            href: '/your-progress',
+          },
+          {
+            title: 'Past and upcoming appointments',
+            description: 'View your scheduled sessions',
+            href: '/appointments',
+          },
+          {
+            title: 'Your conditions',
+            description: 'View the conditions of your order',
+            href: '/conditions',
+          },
+        ]).map(card => (
+          <a key={card.title} className="govuk-card-link" href={withCrn(card.href, selectedCrn)}>
+            <h2 className="govuk-card-link__title">{card.title}</h2>
+            <p className="govuk-card-link__description">{card.description}</p>
+          </a>
+        ))}
       </div>
     </>
   )

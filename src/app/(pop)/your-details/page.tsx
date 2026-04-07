@@ -1,4 +1,5 @@
 import SummaryCard from '../_components/SummaryCard'
+import PageLastUpdated from '../_components/PageLastUpdated'
 import ServiceUnavailable from '../_components/ServiceUnavailable'
 import { getPopUserDetails, resolvePopCrn, withCrn } from '@/lib/server/pop'
 
@@ -33,13 +34,15 @@ export default async function YourDetails({
         Back
       </a>
 
-      <h1 className="govuk-heading-xl govuk-!-margin-bottom-1">Your details</h1>
+      <h1 className="govuk-heading-xl govuk-!-margin-bottom-1">{userProfile.pageTitle || 'Your details'}</h1>
+
+      <PageLastUpdated value={userProfile.lastUpdated} />
 
       <p className="govuk-body">
-        To change any of this information, contact your probation practitioner.
+        {userProfile.intro || 'To change any of this information, contact your probation practitioner.'}
       </p>
 
-      <SummaryCard title="Personal details">
+      <SummaryCard title={userProfile.personalDetailsTitle || 'Personal details'}>
         <dl className="govuk-summary-list">
           <div className="govuk-summary-list__row">
             <dt className="govuk-summary-list__key">Name</dt>
@@ -56,16 +59,18 @@ export default async function YourDetails({
         </dl>
       </SummaryCard>
 
-      <SummaryCard title="Identity numbers">
-        <dl className="govuk-summary-list">
-          <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">CRN</dt>
-            <dd className="govuk-summary-list__value">{userProfile.userId}</dd>
-          </div>
-        </dl>
-      </SummaryCard>
+      {!userProfile.hideIdentityNumbers ? (
+        <SummaryCard title="Identity numbers">
+          <dl className="govuk-summary-list">
+            <div className="govuk-summary-list__row">
+              <dt className="govuk-summary-list__key">CRN</dt>
+              <dd className="govuk-summary-list__value">{userProfile.userId}</dd>
+            </div>
+          </dl>
+        </SummaryCard>
+      ) : null}
 
-      <SummaryCard title="Contact details">
+      <SummaryCard title={userProfile.contactDetailsTitle || 'Contact details'}>
         <dl className="govuk-summary-list">
           <div className="govuk-summary-list__row">
             <dt className="govuk-summary-list__key">Address</dt>
@@ -110,29 +115,31 @@ export default async function YourDetails({
         </dl>
       </SummaryCard>
 
-      <SummaryCard title="Probation practitioner details">
-        <dl className="govuk-summary-list">
-          <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">Name</dt>
-            <dd className="govuk-summary-list__value">{userProfile.probationPractitioner.name}</dd>
-          </div>
-          <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">Phone number</dt>
-            <dd className="govuk-summary-list__value">{userProfile.probationPractitioner.phone}</dd>
-          </div>
-          <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">Office address</dt>
-            <dd className="govuk-summary-list__value">
-              {userProfile.probationPractitioner.officeAddress.split('\n').map((line, index) => (
-                <span key={`${line}-${index}`}>
-                  {line}
-                  <br />
-                </span>
-              ))}
-            </dd>
-          </div>
-        </dl>
-      </SummaryCard>
+      {!userProfile.hideProbationPractitionerDetails ? (
+        <SummaryCard title="Probation practitioner details">
+          <dl className="govuk-summary-list">
+            <div className="govuk-summary-list__row">
+              <dt className="govuk-summary-list__key">Name</dt>
+              <dd className="govuk-summary-list__value">{userProfile.probationPractitioner.name}</dd>
+            </div>
+            <div className="govuk-summary-list__row">
+              <dt className="govuk-summary-list__key">Phone number</dt>
+              <dd className="govuk-summary-list__value">{userProfile.probationPractitioner.phone}</dd>
+            </div>
+            <div className="govuk-summary-list__row">
+              <dt className="govuk-summary-list__key">Office address</dt>
+              <dd className="govuk-summary-list__value">
+                {userProfile.probationPractitioner.officeAddress.split('\n').map((line, index) => (
+                  <span key={`${line}-${index}`}>
+                    {line}
+                    <br />
+                  </span>
+                ))}
+              </dd>
+            </div>
+          </dl>
+        </SummaryCard>
+      ) : null}
     </>
   )
 }

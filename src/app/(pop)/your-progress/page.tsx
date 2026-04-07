@@ -1,3 +1,4 @@
+import PageLastUpdated from '../_components/PageLastUpdated'
 import SummaryCard from '../_components/SummaryCard'
 import ServiceUnavailable from '../_components/ServiceUnavailable'
 import { getPopProgress, resolvePopCrn, withCrn } from '@/lib/server/pop'
@@ -34,49 +35,42 @@ export default async function YourProgress({
       </a>
 
       <h1 className="govuk-heading-xl">Your progress</h1>
+      <PageLastUpdated value={progressData.lastUpdated} />
 
       <h2 className="govuk-heading-m">Overall order</h2>
-      <SummaryCard title="Community order" headingLevel={3}>
+      <SummaryCard title={progressData.overallOrder.title} headingLevel={3}>
         <dl className="govuk-summary-list">
-          <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">Order period</dt>
-            <dd className="govuk-summary-list__value">{progressData.orderPeriod}</dd>
-          </div>
-          <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">Sentence count</dt>
-            <dd className="govuk-summary-list__value">{progressData.sentenceCount}</dd>
-          </div>
-          <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">Status</dt>
-            <dd className="govuk-summary-list__value">
-              <span className="govuk-tag govuk-tag--green">On track</span>
-            </dd>
-          </div>
+          {progressData.overallOrder.rows.map(row => (
+            <div className="govuk-summary-list__row" key={row.label}>
+              <dt className="govuk-summary-list__key">{row.label}</dt>
+              <dd className="govuk-summary-list__value">{row.value}</dd>
+            </div>
+          ))}
         </dl>
       </SummaryCard>
 
       <h2 className="govuk-heading-m">Order requirements</h2>
       {progressData.requirements.map(requirement => (
-        <SummaryCard key={`${requirement.category}-${requirement.requirement}`} title={requirement.category} headingLevel={3}>
+        <SummaryCard
+          key={requirement.title}
+          title={requirement.title}
+          headingLevel={3}
+          action={
+            requirement.action
+              ? {
+                  label: requirement.action.label,
+                  href: withCrn(requirement.action.href, selectedCrn),
+                }
+              : undefined
+          }
+        >
           <dl className="govuk-summary-list">
-            <div className="govuk-summary-list__row">
-              <dt className="govuk-summary-list__key">Description</dt>
-              <dd className="govuk-summary-list__value">{requirement.requirement}</dd>
-            </div>
-            <div className="govuk-summary-list__row">
-              <dt className="govuk-summary-list__key">Progress</dt>
-              <dd className="govuk-summary-list__value">
-                {requirement.required !== undefined
-                  ? `${requirement.completed || 0} of ${requirement.required} ${requirement.unit || ''}`
-                  : 'Not recorded'}
-              </dd>
-            </div>
-            <div className="govuk-summary-list__row">
-              <dt className="govuk-summary-list__key">Status</dt>
-              <dd className="govuk-summary-list__value">
-                <span className="govuk-tag govuk-tag--green">On track</span>
-              </dd>
-            </div>
+            {requirement.rows.map(row => (
+              <div className="govuk-summary-list__row" key={row.label}>
+                <dt className="govuk-summary-list__key">{row.label}</dt>
+                <dd className="govuk-summary-list__value">{row.value}</dd>
+              </div>
+            ))}
           </dl>
         </SummaryCard>
       ))}
