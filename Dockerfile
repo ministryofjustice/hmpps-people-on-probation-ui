@@ -40,13 +40,16 @@ COPY --from=build --chown=appuser:appgroup \
         ./
 
 COPY --from=build --chown=appuser:appgroup \
-        /app/dist ./dist
+        /app/.next/standalone ./
 
 COPY --from=build --chown=appuser:appgroup \
-        /app/node_modules ./node_modules
+        /app/.next/static ./.next/static
+
+COPY --from=build --chown=appuser:appgroup \
+        /app/public ./public
 
 EXPOSE 3000
 ENV NODE_ENV='production'
 USER 2000
 
-CMD [ "npm", "start" ]
+CMD [ "node", "server.js" ]

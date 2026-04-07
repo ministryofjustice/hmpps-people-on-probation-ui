@@ -5,7 +5,8 @@ $moj-page-width: 1170px;
 $govuk-page-width: $moj-page-width;
 
 @import "govuk-frontend/dist/govuk/index";
-@import "@ministryofjustice/frontend/moj/all";
 
-@import './components/header-bar';
+@import './components/card-links';
+@import './components/lovable-overrides';
 @import './overrides/local';
+@import './pop-local';
