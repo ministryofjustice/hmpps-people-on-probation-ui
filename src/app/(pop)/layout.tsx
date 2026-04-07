@@ -7,7 +7,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppChrome>
-      <div className="govuk-width-container">
+      <div className="govuk-width-container pop-app-width-container">
         <main className="govuk-main-wrapper app-container govuk-body" id="main-content">
           {children}
         </main>
