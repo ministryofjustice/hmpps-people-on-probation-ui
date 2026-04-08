@@ -31,7 +31,10 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
 
   useEffect(() => {
     const rawConversation = window.localStorage.getItem(storageKey)
-    if (!rawConversation) return
+    if (!rawConversation) {
+      setHasLoadedConversation(true)
+      return
+    }
 
     try {
       const savedConversation = JSON.parse(rawConversation) as {
