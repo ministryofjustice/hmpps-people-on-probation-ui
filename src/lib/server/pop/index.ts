@@ -11,7 +11,7 @@ import { createAuthenticationClient } from '../data/authenticationClient'
 import { getStaticProfile, hasStaticProfile } from './staticData'
 
 export const defaultPopCrn = 'X975562'
-const popDataMode = process.env.POP_DATA_MODE ?? 'hybrid'
+const popDataMode = process.env.POP_DATA_MODE ?? 'static'
 
 export type PopAppointment = {
   date: string
