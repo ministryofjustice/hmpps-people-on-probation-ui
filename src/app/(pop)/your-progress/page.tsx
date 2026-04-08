@@ -1,0 +1,79 @@
+import PageLastUpdated from '../_components/PageLastUpdated'
+import SummaryCard from '../_components/SummaryCard'
+import ServiceUnavailable from '../_components/ServiceUnavailable'
+import { getPopProgress, resolvePopCrn, withCrn } from '@/lib/server/pop'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+export default async function YourProgress({
+  searchParams,
+}: {
+  searchParams?: Promise<{ crn?: string | string[] | undefined }>
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const selectedCrn = resolvePopCrn(
+    typeof resolvedSearchParams?.crn === 'string' ? resolvedSearchParams.crn : undefined,
+  )
+  const progressData = await getPopProgress(selectedCrn)
+  if (!progressData) {
+    return (
+      <>
+        <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+          Back
+        </a>
+        <h1 className="govuk-heading-xl">Your progress</h1>
+        <ServiceUnavailable />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+        Back
+      </a>
+
+      <h1 className="govuk-heading-xl">Your progress</h1>
+      <PageLastUpdated value={progressData.lastUpdated} />
+
+      <h2 className="govuk-heading-m">Overall order</h2>
+      <SummaryCard title={progressData.overallOrder.title} headingLevel={3}>
+        <dl className="govuk-summary-list">
+          {progressData.overallOrder.rows.map(row => (
+            <div className="govuk-summary-list__row" key={row.label}>
+              <dt className="govuk-summary-list__key">{row.label}</dt>
+              <dd className="govuk-summary-list__value">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </SummaryCard>
+
+      <h2 className="govuk-heading-m">Order requirements</h2>
+      {progressData.requirements.map(requirement => (
+        <SummaryCard
+          key={requirement.title}
+          title={requirement.title}
+          headingLevel={3}
+          action={
+            requirement.action
+              ? {
+                  label: requirement.action.label,
+                  href: withCrn(requirement.action.href, selectedCrn),
+                }
+              : undefined
+          }
+        >
+          <dl className="govuk-summary-list">
+            {requirement.rows.map(row => (
+              <div className="govuk-summary-list__row" key={row.label}>
+                <dt className="govuk-summary-list__key">{row.label}</dt>
+                <dd className="govuk-summary-list__value">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </SummaryCard>
+      ))}
+    </>
+  )
+}
