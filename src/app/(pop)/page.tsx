@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
+import HomeCardGrid from './_components/HomeCardGrid'
 import ServiceUnavailable from './_components/ServiceUnavailable'
-import { defaultPopCrn, getPopDashboard, resolvePopCrn, withCrn } from '@/lib/server/pop'
+import { defaultPopCrn, getPopDashboard, resolvePopCrn } from '@/lib/server/pop'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -26,35 +27,33 @@ export default async function PopHome({
   return (
     <>
       <h1 className="govuk-heading-xl">Welcome, {dashboard.welcomeName}</h1>
-      <div className="govuk-card-grid">
-        {(dashboard.cards || [
-          {
-            title: 'Your details',
-            description: 'View your personal information',
-            href: '/your-details',
-          },
-          {
-            title: 'Your progress',
-            description: 'Track your community order progress',
-            href: '/your-progress',
-          },
-          {
-            title: 'Past and upcoming appointments',
-            description: 'View your scheduled sessions',
-            href: '/appointments',
-          },
-          {
-            title: 'Your conditions',
-            description: 'View the conditions of your order',
-            href: '/conditions',
-          },
-        ]).map((card, index) => (
-          <a key={`${card.title}-${card.href}-${index}`} className="govuk-card-link" href={withCrn(card.href, selectedCrn)}>
-            <h2 className="govuk-card-link__title">{card.title}</h2>
-            <p className="govuk-card-link__description">{card.description}</p>
-          </a>
-        ))}
-      </div>
+      <HomeCardGrid
+        crn={selectedCrn}
+        cards={
+          dashboard.cards || [
+            {
+              title: 'Your details',
+              description: 'View your personal information',
+              href: '/your-details',
+            },
+            {
+              title: 'Your progress',
+              description: 'Track your community order progress',
+              href: '/your-progress',
+            },
+            {
+              title: 'Past and upcoming appointments',
+              description: 'View your scheduled sessions',
+              href: '/appointments',
+            },
+            {
+              title: 'Your conditions',
+              description: 'View the conditions of your order',
+              href: '/conditions',
+            },
+          ]
+        }
+      />
     </>
   )
 }

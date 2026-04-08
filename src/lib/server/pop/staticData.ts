@@ -1,3 +1,4 @@
+import { getPopChatbotConfig } from '@/lib/popChatbot'
 import type {
   PopAppointment,
   PopAppointmentsDetails,
@@ -8,19 +9,28 @@ import type {
 } from './index'
 
 export type PopStaticProfile = {
-  dashboard: {
-    welcomeName: string
-    cards: {
-      title: string
-      description: string
-      href: string
-    }[]
-  }
+  dashboard: PopStaticProfileDashboard
   userDetails: PopUserDetails
   probationOfficerDetails: PopProbationOfficerDetails
   orderSummary: PopOrderSummary
   progress: PopProgressDetails
   appointments: PopAppointmentsDetails
+}
+
+type PopStaticProfileDashboard = {
+  welcomeName: string
+  cards: {
+    title: string
+    description: string
+    href: string
+    action?: 'open-chatbot'
+  }[]
+  chatbot?: {
+    title: string
+    closeLabel: string
+    inputPlaceholder: string
+    sendLabel: string
+  }
 }
 
 function buildAppointment(appointment: PopAppointment): PopAppointment {
@@ -261,8 +271,10 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
           title: 'Talk to our chatbot',
           description: 'You can ask our chatbot questions',
           href: '#',
+          action: 'open-chatbot',
         },
       ],
+      chatbot: getPopChatbotConfig(crn) || undefined,
     },
     userDetails: {
       userId: crn,

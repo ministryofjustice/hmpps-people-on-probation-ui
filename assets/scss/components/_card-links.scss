@@ -28,6 +28,13 @@
   }
 }
 
+.govuk-card-link--button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
 .govuk-card-link__title {
   @include govuk-font($size: 19, $weight: 'bold');
   color: govuk-colour('blue');

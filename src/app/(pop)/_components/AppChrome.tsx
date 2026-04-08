@@ -1,5 +1,7 @@
 'use client'
 
+import GlobalChatbotWidget from './GlobalChatbotWidget'
+
 export default function AppChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
@@ -38,6 +40,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
         </p>
       </div>
       {children}
+      <GlobalChatbotWidget />
       <footer className="govuk-footer pop-app-footer">
         <div className="govuk-footer__container">
           <div className="pop-app-footer__left">

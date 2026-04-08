@@ -142,7 +142,14 @@ export type PopDashboard = {
     title: string
     description: string
     href: string
+    action?: 'open-chatbot'
   }[]
+  chatbot?: {
+    title: string
+    closeLabel: string
+    inputPlaceholder: string
+    sendLabel: string
+  }
 }
 
 function createService() {
