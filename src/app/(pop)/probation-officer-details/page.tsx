@@ -66,18 +66,6 @@ export default async function ProbationOfficerDetails({
               ))}
             </dd>
           </div>
-          <div className="govuk-summary-list__row">
-            <dt className="govuk-summary-list__key">Email address</dt>
-            <dd className="govuk-summary-list__value">
-              {probationOfficer.emailHref ? (
-                <a className="govuk-link" href={probationOfficer.emailHref}>
-                  {probationOfficer.email}
-                </a>
-              ) : (
-                probationOfficer.email
-              )}
-            </dd>
-          </div>
         </dl>
       </SummaryCard>
     </>
