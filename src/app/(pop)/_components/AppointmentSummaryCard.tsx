@@ -4,16 +4,18 @@ import { PopAppointment } from '@/lib/server/pop'
 type AppointmentSummaryCardProps = {
   appointment: PopAppointment
   isUpcoming: boolean
+  headerTitle?: string
 }
 
 export default function AppointmentSummaryCard({
   appointment,
   isUpcoming,
+  headerTitle,
 }: AppointmentSummaryCardProps) {
   return (
     <div className="govuk-summary-card">
       <div className="govuk-summary-card__title-wrapper">
-        <h3 className="govuk-summary-card__title">{appointment.date}</h3>
+        <h3 className="govuk-summary-card__title">{headerTitle || appointment.date}</h3>
         <ul className="govuk-summary-card__actions">
           {appointment.showOnMap && appointment.mapHref ? (
             <li className="govuk-summary-card__action">

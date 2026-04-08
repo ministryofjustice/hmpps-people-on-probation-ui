@@ -1,10 +1,30 @@
 import AppointmentSummaryCard from '../_components/AppointmentSummaryCard'
 import PageLastUpdated from '../_components/PageLastUpdated'
 import ServiceUnavailable from '../_components/ServiceUnavailable'
-import { getPopAppointments, resolvePopCrn, withCrn } from '@/lib/server/pop'
+import { PopAppointment, getPopAppointments, resolvePopCrn, withCrn } from '@/lib/server/pop'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+
+function groupAppointmentsByDate(appointments: PopAppointment[]) {
+  const groups: { date: string; appointments: PopAppointment[] }[] = []
+
+  appointments.forEach(appointment => {
+    const lastGroup = groups[groups.length - 1]
+
+    if (lastGroup && lastGroup.date === appointment.date) {
+      lastGroup.appointments.push(appointment)
+      return
+    }
+
+    groups.push({
+      date: appointment.date,
+      appointments: [appointment],
+    })
+  })
+
+  return groups
+}
 
 export default async function Appointments({
   searchParams,
@@ -28,6 +48,10 @@ export default async function Appointments({
     )
   }
 
+  const groupedLayout = appointments.layout === 'grouped-by-date'
+  const upcomingGroups = groupedLayout ? groupAppointmentsByDate(appointments.upcomingAppointments) : []
+  const pastGroups = groupedLayout ? groupAppointmentsByDate(appointments.pastAppointments) : []
+
   return (
     <>
       <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
@@ -47,25 +71,53 @@ export default async function Appointments({
       {appointments.upcomingAppointments.length === 0 ? (
         <p className="govuk-body">No upcoming appointments found.</p>
       ) : null}
-      {appointments.upcomingAppointments.map(appointment => (
-        <AppointmentSummaryCard
-          key={`${appointment.date}-${appointment.title}`}
-          appointment={appointment}
-          isUpcoming
-        />
-      ))}
+      {groupedLayout
+        ? upcomingGroups.map(group => (
+            <section key={`upcoming-${group.date}`} className="pop-appointments-date-group">
+              <h3 className="govuk-heading-s pop-appointments-date-group__title">{group.date}</h3>
+              {group.appointments.map((appointment, index) => (
+                <AppointmentSummaryCard
+                  key={`${appointment.date}-${appointment.title}-${index}`}
+                  appointment={appointment}
+                  isUpcoming
+                  headerTitle={appointment.title || appointment.category}
+                />
+              ))}
+            </section>
+          ))
+        : appointments.upcomingAppointments.map((appointment, index) => (
+            <AppointmentSummaryCard
+              key={`${appointment.date}-${appointment.title}-${index}`}
+              appointment={appointment}
+              isUpcoming
+            />
+          ))}
 
       <h2 className="govuk-heading-l">{appointments.pastTitle || 'Past appointments'}</h2>
       {appointments.pastAppointments.length === 0 ? (
         <p className="govuk-body">No past appointments found.</p>
       ) : null}
-      {appointments.pastAppointments.map(appointment => (
-        <AppointmentSummaryCard
-          key={`${appointment.date}-${appointment.title}`}
-          appointment={appointment}
-          isUpcoming={false}
-        />
-      ))}
+      {groupedLayout
+        ? pastGroups.map(group => (
+            <section key={`past-${group.date}`} className="pop-appointments-date-group">
+              <h3 className="govuk-heading-s pop-appointments-date-group__title">{group.date}</h3>
+              {group.appointments.map((appointment, index) => (
+                <AppointmentSummaryCard
+                  key={`${appointment.date}-${appointment.title}-${index}`}
+                  appointment={appointment}
+                  isUpcoming={false}
+                  headerTitle={appointment.title || appointment.category}
+                />
+              ))}
+            </section>
+          ))
+        : appointments.pastAppointments.map((appointment, index) => (
+            <AppointmentSummaryCard
+              key={`${appointment.date}-${appointment.title}-${index}`}
+              appointment={appointment}
+              isUpcoming={false}
+            />
+          ))}
     </>
   )
 }

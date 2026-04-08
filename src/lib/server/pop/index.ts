@@ -28,6 +28,7 @@ export type PopAppointment = {
 }
 
 export type PopAppointmentsDetails = {
+  layout?: 'default' | 'grouped-by-date'
   pageTitle?: string
   lastUpdated?: string
   intro?: string
@@ -85,6 +86,12 @@ export type PopProgressRequirement = {
   completed?: number
   required?: number
   unit?: string
+  meter?: {
+    startLabel: string
+    endLabel: string
+    valuePercent: number
+    color?: 'black' | 'blue'
+  }
   title: string
   rows: {
     label: string
@@ -115,6 +122,12 @@ export type PopProgressDetails = {
   lastUpdated?: string
   overallOrder: {
     title: string
+    meter?: {
+      startLabel: string
+      endLabel: string
+      valuePercent: number
+      color?: 'black' | 'blue'
+    }
     rows: {
       label: string
       value: string

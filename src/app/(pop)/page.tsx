@@ -48,8 +48,8 @@ export default async function PopHome({
             description: 'View the conditions of your order',
             href: '/conditions',
           },
-        ]).map(card => (
-          <a key={card.title} className="govuk-card-link" href={withCrn(card.href, selectedCrn)}>
+        ]).map((card, index) => (
+          <a key={`${card.title}-${card.href}-${index}`} className="govuk-card-link" href={withCrn(card.href, selectedCrn)}>
             <h2 className="govuk-card-link__title">{card.title}</h2>
             <p className="govuk-card-link__description">{card.description}</p>
           </a>
