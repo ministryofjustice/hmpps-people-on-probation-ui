@@ -62,11 +62,6 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
           description: 'What probation expects of you',
           href: '/expectations',
         },
-        {
-          title: 'Talk to our chatbot',
-          description: 'You can ask our chatbot questions',
-          href: '#',
-        },
       ],
     },
     userDetails: {
