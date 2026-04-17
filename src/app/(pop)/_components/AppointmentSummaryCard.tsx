@@ -31,6 +31,11 @@ export default function AppointmentSummaryCard({
               </a>
             </li>
           ) : null}
+          {appointment.mandatory ? (
+            <li className="govuk-summary-card__action pop-appointment-mandatory-action">
+              <strong className="govuk-tag pop-appointment-mandatory-tag">Mandatory</strong>
+            </li>
+          ) : null}
         </ul>
       </div>
       <div className="govuk-summary-card__content">
@@ -53,11 +58,17 @@ export default function AppointmentSummaryCard({
               <dd className="govuk-summary-list__value">{appointment.contact}</dd>
             </div>
           ) : null}
-          {!isUpcoming && appointment.status ? (
+          {!isUpcoming ? (
             <div className="govuk-summary-list__row">
               <dt className="govuk-summary-list__key">Status</dt>
               <dd className="govuk-summary-list__value">
-                <span className="govuk-tag govuk-tag--green">{appointment.status}</span>
+                {appointment.status ? (
+                  <span className={`govuk-tag ${appointment.statusTagClassName || 'govuk-tag--grey'}`}>
+                    {appointment.status}
+                  </span>
+                ) : (
+                  'Not recorded'
+                )}
               </dd>
             </div>
           ) : null}

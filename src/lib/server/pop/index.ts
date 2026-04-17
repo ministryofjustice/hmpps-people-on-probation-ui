@@ -22,6 +22,8 @@ export type PopAppointment = {
   contact?: string
   contactLabel?: string
   status?: string
+  statusTagClassName?: string
+  mandatory?: boolean
   showOnMap?: boolean
   mapHref?: string
   calendarHref?: string
@@ -433,7 +435,7 @@ export async function getPopAppointments(crn: string): Promise<PopAppointmentsDe
     ])
 
     return {
-      pageTitle: 'Past and future appointments',
+      pageTitle: 'Your appointments',
       intro:
         'Your probation appointments are part of the rules of your probation. If you have any problems attending an appointment, you should let your probation officer know as soon as possible.',
       warning:
@@ -455,7 +457,7 @@ export async function getPopOrderSummary(crn: string): Promise<PopOrderSummary |
     const sentence = getPrimarySentence(sentences.sentences)
 
     return {
-      pageTitle: 'Your probation conditions',
+      pageTitle: 'Your probation requirements',
       intro:
         'These are the conditions of your probation. Not following these rules can lead to you being breached. This means you could end up having more rules added to your probation, going back to court or going back to prison.',
       orderDetailsTitle: 'Order details',

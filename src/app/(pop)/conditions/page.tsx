@@ -21,7 +21,7 @@ export default async function Conditions({
         <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
           Back
         </a>
-        <h1 className="govuk-heading-xl">Your probation conditions</h1>
+        <h1 className="govuk-heading-xl">Your probation requirements</h1>
         <ServiceUnavailable />
       </>
     )
@@ -33,7 +33,7 @@ export default async function Conditions({
         Back
       </a>
 
-      <h1 className="govuk-heading-xl">{orderSummary.pageTitle || 'Your probation conditions'}</h1>
+      <h1 className="govuk-heading-xl">{orderSummary.pageTitle || 'Your probation requirements'}</h1>
 
       <p className="govuk-body">
         {orderSummary.intro ||

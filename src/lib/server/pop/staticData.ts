@@ -58,12 +58,12 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
           href: '/your-progress',
         },
         {
-          title: 'Your probation conditions',
+          title: 'Your probation requirements',
           description: 'The rules you need to follow as part of your probation',
           href: '/conditions',
         },
         {
-          title: 'Past and future appointments',
+          title: 'Your appointments',
           description: 'A list of some of your past and future appointments',
           href: '/appointments',
         },
@@ -77,7 +77,7 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
     userDetails: {
       userId: crn,
       pageTitle: 'Personal details',
-      lastUpdated: '10 March 2025, 2.29pm',
+      lastUpdated: '10 April 2026, 2.29pm',
       intro: 'If you need to update any of your details, you should contact your probation officer and let them know.',
       personalDetailsTitle: 'Your personal details',
       contactDetailsTitle: 'Your contact details',
@@ -104,7 +104,7 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
     },
     probationOfficerDetails: {
       pageTitle: 'Probation officer details',
-      lastUpdated: '10 March 2025, 2.29pm',
+      lastUpdated: '10 April 2026, 2.29pm',
       intro: 'If you need to update any of your details, you should contact your probation officer and let them know.',
       sectionTitle: 'Probation officer details',
       name: 'Sarah Smith',
@@ -114,7 +114,7 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
       emailHref: '#',
     },
     orderSummary: {
-      pageTitle: 'Your probation conditions',
+      pageTitle: 'Your probation requirements',
       intro:
         'These are the conditions of your probation. Not following these rules can lead to you being breached. This means you could end up having more rules added to your probation, going back to court or going back to prison.',
       orderDetailsTitle: 'Order details',
@@ -139,7 +139,7 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
       ],
     },
     progress: {
-      lastUpdated: '10 March 2025, 2.29pm',
+      lastUpdated: '10 April 2026, 2.29pm',
       overallOrder: {
         title: 'Community order',
         rows: [
@@ -165,8 +165,8 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
     },
     appointments: {
       layout: 'default',
-      pageTitle: 'Past and future appointments',
-      lastUpdated: '10 March 2025, 2.29pm',
+      pageTitle: 'Your appointments',
+      lastUpdated: '10 April 2026, 2.29pm',
       intro:
         'Your probation appointments are part of the rules of your probation. If you have any problems attending an appointment, you should let your probation officer know as soon as possible.',
       warning:
@@ -177,11 +177,12 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
         buildAppointment({
           date: 'Monday 13 April 2026',
           time: '10:00am',
-          title: 'Planned Office Visit (NS)',
-          category: 'Planned Office Visit (NS)',
+          title: 'Appointment',
+          category: 'Appointment',
           location: 'Probation Office\n123 Main Street\nSE1 2AB',
           contact: 'Probation officer',
           contactLabel: 'Who with',
+          mandatory: true,
           showOnMap: true,
           mapHref: '#',
           calendarHref: '#',
@@ -194,6 +195,7 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
           location: '123 Example Street\nLondon\nSW1A 1AA',
           contact: 'Unpaid work provider',
           contactLabel: 'Key contact',
+          mandatory: true,
           showOnMap: true,
           mapHref: '#',
           calendarHref: '#',
@@ -208,24 +210,33 @@ function createScenarioOneProfile(crn: string): PopStaticProfile {
           location: '123 Example Street\nLondon\nSW1A 1AA',
           contact: 'Unpaid work provider',
           contactLabel: 'Key contact',
+          mandatory: true,
+          status: 'Missed',
+          statusTagClassName: 'govuk-tag--green',
         }),
         buildAppointment({
           date: 'Monday 16 March 2026',
           time: '1:00pm',
-          title: 'Planned Office Visit (NS)',
-          category: 'Planned Office Visit (NS)',
+          title: 'Appointment',
+          category: 'Appointment',
           location: 'Probation Office\n123 Main Street\nSE1 2AB',
           contact: 'Probation officer',
           contactLabel: 'Key contact',
+          mandatory: true,
+          status: 'Attended',
+          statusTagClassName: 'govuk-tag--red',
         }),
         buildAppointment({
           date: 'Wednesday 25 February 2026',
           time: '10:00am',
-          title: 'Initial appointment - in-office (NS)',
-          category: 'Initial appointment - in-office (NS)',
+          title: 'First appointment',
+          category: 'First appointment',
           location: 'Probation Office\n123 Main Street\nSE1 2AB',
           contact: 'Probation officer',
           contactLabel: 'Key contact',
+          mandatory: true,
+          status: 'Attended',
+          statusTagClassName: 'govuk-tag--red',
         }),
       ],
     },
@@ -253,12 +264,12 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
           href: '/your-progress',
         },
         {
-          title: 'Your probation conditions',
+          title: 'Your probation requirements',
           description: 'The rules you need to follow as part of your probation',
           href: '/conditions',
         },
         {
-          title: 'Past and future appointments',
+          title: 'Your appointments',
           description: 'A list of some of your past and future appointments',
           href: '/appointments',
         },
@@ -279,7 +290,7 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
     userDetails: {
       userId: crn,
       pageTitle: 'Personal details',
-      lastUpdated: '10 March 2025, 2.29pm',
+      lastUpdated: '10 April 2026, 2.29pm',
       intro: 'If you need to update any of your details, you should contact your probation officer and let them know.',
       personalDetailsTitle: 'Your personal details',
       contactDetailsTitle: 'Your contact details',
@@ -305,7 +316,7 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
     },
     probationOfficerDetails: {
       pageTitle: 'Probation officer details',
-      lastUpdated: '10 March 2025, 2.29pm',
+      lastUpdated: '10 April 2026, 2.29pm',
       intro: 'If you need to update any of your details, you should contact your probation officer and let them know.',
       sectionTitle: 'Probation officer details',
       name: 'Sarah Smith',
@@ -314,7 +325,7 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
       email: '',
     },
     orderSummary: {
-      pageTitle: 'Your probation conditions',
+      pageTitle: 'Your probation requirements',
       intro:
         'These are the conditions of your probation. Not following these rules can lead to you being breached. This means you could end up having more rules added to your probation, going back to court or going back to prison.',
       orderDetailsTitle: 'Order details',
@@ -351,7 +362,7 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
       ],
     },
     progress: {
-      lastUpdated: '10 March 2025, 2.29pm',
+      lastUpdated: '10 April 2026, 2.29pm',
       overallOrder: {
         title: 'Community order',
         meter: {
@@ -403,8 +414,8 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
     },
     appointments: {
       layout: 'grouped-by-date',
-      pageTitle: 'Past and future appointments',
-      lastUpdated: '10 March 2025, 2.29pm',
+      pageTitle: 'Your appointments',
+      lastUpdated: '10 April 2026, 2.29pm',
       intro:
         'Your probation appointments are part of the rules of your probation. If you have any problems attending an appointment, you should let your probation officer know as soon as possible.',
       warning:
@@ -441,6 +452,7 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
           location: 'Probation Office\n123 Main Street\nSE1 2AB',
           contact: 'Probation officer',
           contactLabel: 'Key contact',
+          mandatory: true,
           showOnMap: true,
           mapHref: '#',
           calendarHref: '#',
@@ -454,6 +466,9 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
           location: 'Probation Office\n123 Main Street\nSE1 2AB',
           contact: 'Probation officer',
           contactLabel: 'Key contact',
+          mandatory: true,
+          status: 'Attended',
+          statusTagClassName: 'govuk-tag--red',
         }),
         buildAppointment({
           date: 'Wednesday 25 February 2026',
@@ -462,6 +477,9 @@ function createScenarioTwoProfile(crn: string): PopStaticProfile {
           location: 'Probation Office\n123 Main Street\nSE1 2AB',
           contact: 'Probation officer',
           contactLabel: 'Key contact',
+          mandatory: true,
+          status: 'Missed',
+          statusTagClassName: 'govuk-tag--green',
         }),
       ],
     },

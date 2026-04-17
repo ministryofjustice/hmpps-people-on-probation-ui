@@ -42,7 +42,7 @@ export default async function Appointments({
         <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
           Back
         </a>
-        <h1 className="govuk-heading-xl">Past and future appointments</h1>
+        <h1 className="govuk-heading-xl">Your appointments</h1>
         <ServiceUnavailable />
       </>
     )
@@ -58,7 +58,7 @@ export default async function Appointments({
         Back
       </a>
 
-      <h1 className="govuk-heading-xl">{appointments.pageTitle || 'Past and future appointments'}</h1>
+      <h1 className="govuk-heading-xl">{appointments.pageTitle || 'Your appointments'}</h1>
       <PageLastUpdated value={appointments.lastUpdated} />
 
       <p className="govuk-body">

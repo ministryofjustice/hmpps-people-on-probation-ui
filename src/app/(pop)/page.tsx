@@ -42,12 +42,12 @@ export default async function PopHome({
               href: '/your-progress',
             },
             {
-              title: 'Past and upcoming appointments',
+              title: 'Your appointments',
               description: 'View your scheduled sessions',
               href: '/appointments',
             },
             {
-              title: 'Your conditions',
+              title: 'Your probation requirements',
               description: 'View the conditions of your order',
               href: '/conditions',
             },

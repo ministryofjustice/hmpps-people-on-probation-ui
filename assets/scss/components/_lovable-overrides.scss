@@ -560,6 +560,11 @@
   padding: govuk-spacing(3);
 }
 
+.govuk-summary-card__actions {
+  display: flex;
+  align-items: center;
+}
+
 .govuk-summary-list {
   margin-bottom: 0;
 }
@@ -617,11 +622,22 @@
 }
 
 .govuk-tag--green {
-  background-color: $govuk-success-colour;
+  background-color: govuk-functional-colour('success');
+  color: govuk-colour('white');
 }
 
 .govuk-tag--red {
-  background-color: $govuk-error-colour;
+  background-color: govuk-functional-colour('error');
+  color: govuk-colour('white');
+}
+
+.pop-appointment-mandatory-action {
+  margin-left: auto;
+}
+
+.pop-appointment-mandatory-tag {
+  background-color: govuk-colour('black') !important;
+  color: govuk-colour('white') !important;
 }
 
 .govuk-phase-banner .govuk-tag {
