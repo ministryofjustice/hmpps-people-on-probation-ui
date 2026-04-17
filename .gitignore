@@ -71,6 +71,7 @@ web_modules/
 # dotenv environment variables file
 .env
 .env.test
+.env.local
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -79,6 +80,10 @@ web_modules/
 # Next.js build output
 .next
 out
+
+# Generated runtime assets
+/public/generated/
+/public/assets/
 
 # Nuxt.js build / generate output
 .nuxt

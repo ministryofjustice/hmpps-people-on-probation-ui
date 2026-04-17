@@ -54,6 +54,8 @@ generic-service:
       REDIS_AUTH_TOKEN: 'auth_token'
     hmpps-people-on-probation-ui-application-insights:
       APPLICATIONINSIGHTS_CONNECTION_STRING: "APPLICATIONINSIGHTS_CONNECTION_STRING"
+    hmpps-people-on-probation-ui-chatbot:
+      POP_CHATBOT_API_KEY: "POP_CHATBOT_API_KEY"
     # This secret will need to be created in your namespace (note it isn't in hmpps-templates-dev)
     # IRSA configuration in your namespace will also be required, and then uncomment serviceAccountName above.
     # sqs-hmpps-audit-secret:
