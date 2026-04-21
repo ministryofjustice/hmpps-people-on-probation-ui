@@ -18,6 +18,12 @@ type ChatMessage = {
   text: string
 }
 
+const SUGGESTED_QUESTIONS = [
+  'What happens at my first appointment?',
+  'Can I travel abroad on probation?',
+  'What are my reporting requirements?',
+]
+
 export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: ChatbotWidgetProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
@@ -25,6 +31,7 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [hasLoadedConversation, setHasLoadedConversation] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(true)
   const messagesRef = useRef<HTMLDivElement | null>(null)
   const hasBootstrappedRef = useRef(false)
   const storageKey = getPopChatbotConversationStorageKey(crn)
@@ -45,6 +52,9 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
       setConversationId(savedConversation.conversationId)
       setMessages(savedConversation.messages)
       hasBootstrappedRef.current = savedConversation.messages.length > 0
+      if (savedConversation.messages.some(m => m.sender === 'user')) {
+        setShowSuggestions(false)
+      }
     } catch {
       window.localStorage.removeItem(storageKey)
     } finally {
@@ -70,6 +80,9 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
 
     if (sender === 'user') {
       setMessages(current => [...current, { sender: 'user', text: trimmedMessage }])
+    }
+    if (sender !== 'assistant-seed') {
+      setShowSuggestions(false)
     }
 
     setIsLoading(true)
@@ -152,7 +165,7 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
     setConversationId(null)
     setInputValue('')
     setErrorMessage(null)
-
+    setShowSuggestions(true)
     hasBootstrappedRef.current = false
     onReset()
     // Start a fresh conversation immediately
@@ -163,13 +176,15 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
     <div className="pop-chatbot">
       <section className="pop-chatbot__panel" aria-label={chatbot.title}>
         <div className="pop-chatbot__header">
-          <h2 className="pop-chatbot__title">{chatbot.title}</h2>
+          <div>
+            <h2 className="pop-chatbot__title">Fred</h2>
+            <span className="pop-chatbot__subtitle">AI Probation Assistant</span>
+          </div>
           <div className="pop-chatbot__header-actions">
-            <button type="button" className="pop-chatbot__reset-button" onClick={handleReset}>
-              {chatbot.resetLabel}
-            </button>
-            <button type="button" className="pop-chatbot__icon-button" aria-label="Close chatbot" onClick={onClose}>
-              x
+            <button type="button" className="pop-chatbot__reset-button" onClick={handleReset} aria-label="Reset conversation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
             </button>
           </div>
         </div>
@@ -183,6 +198,24 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
               {message.text}
             </div>
           ))}
+          {showSuggestions && messages.length > 0 && !isLoading ? (
+            <div className="pop-chatbot__suggestions">
+              {SUGGESTED_QUESTIONS.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  className="pop-chatbot__suggestion"
+                  onClick={() => {
+                    setShowSuggestions(false)
+                    setInputValue('')
+                    void sendMessage(q)
+                  }}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {isLoading ? <div className="pop-chatbot__status">Fred is typing...</div> : null}
           {errorMessage ? <div className="pop-chatbot__status pop-chatbot__status--error">{errorMessage}</div> : null}
         </div>
@@ -196,15 +229,13 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
             value={inputValue}
             onChange={event => setInputValue(event.target.value)}
           />
-          <button type="submit" className="pop-chatbot__send" disabled={isLoading || !inputValue.trim()}>
-            {chatbot.sendLabel}
+          <button type="submit" className="pop-chatbot__send" disabled={isLoading || !inputValue.trim()} aria-label="Send">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
           </button>
         </form>
       </section>
-
-      <button type="button" className="pop-chatbot__close-pill" onClick={onClose}>
-        {chatbot.closeLabel}
-      </button>
     </div>
   )
 }

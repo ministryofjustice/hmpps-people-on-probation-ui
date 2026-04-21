@@ -1,72 +1,51 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import ChatbotWidget from './ChatbotWidget'
-import {
-  getPopChatbotConfig,
-  getPopChatbotConversationStorageKey,
-  getPopChatbotStorageKey,
-} from '@/lib/popChatbot'
 
 const defaultCrn = 'X975562'
+
+const chatbotConfig = {
+  title: 'Fred',
+  closeLabel: 'Close',
+  resetLabel: 'Reset',
+  inputPlaceholder: 'Ask a question...',
+  sendLabel: 'Send',
+}
 
 export default function GlobalChatbotWidget() {
   const searchParams = useSearchParams()
   const crn = searchParams.get('crn')?.trim() || defaultCrn
-  const chatbot = useMemo(() => getPopChatbotConfig(crn), [crn])
   const [isOpen, setIsOpen] = useState(false)
 
-  useEffect(() => {
-    if (!chatbot) {
-      setIsOpen(false)
-      return
-    }
-
-    setIsOpen(window.localStorage.getItem(getPopChatbotStorageKey(crn)) === 'true')
-  }, [chatbot, crn])
-
-  useEffect(() => {
-    const handleOpen = (event: Event) => {
-      const detail = (event as CustomEvent<{ crn?: string }>).detail
-      if (detail?.crn !== crn) return
-
-      window.localStorage.setItem(getPopChatbotStorageKey(crn), 'true')
-      setIsOpen(true)
-    }
-
-    const handleClose = (event: Event) => {
-      const detail = (event as CustomEvent<{ crn?: string }>).detail
-      if (detail?.crn !== crn) return
-
-      window.localStorage.setItem(getPopChatbotStorageKey(crn), 'false')
-      setIsOpen(false)
-    }
-
-    window.addEventListener('pop-chatbot:open', handleOpen as EventListener)
-    window.addEventListener('pop-chatbot:close', handleClose as EventListener)
-
-    return () => {
-      window.removeEventListener('pop-chatbot:open', handleOpen as EventListener)
-      window.removeEventListener('pop-chatbot:close', handleClose as EventListener)
-    }
-  }, [crn])
-
-  if (!chatbot || !isOpen) {
-    return null
-  }
-
   return (
-    <ChatbotWidget
-      crn={crn}
-      chatbot={chatbot}
-      onClose={() => {
-        window.localStorage.setItem(getPopChatbotStorageKey(crn), 'false')
-        window.dispatchEvent(new CustomEvent('pop-chatbot:close', { detail: { crn } }))
-      }}
-      onReset={() => {
-        window.localStorage.removeItem(getPopChatbotConversationStorageKey(crn))
-      }}
-    />
+    <div className="pop-chatbot-sticky">
+      {isOpen && (
+        <ChatbotWidget
+          crn={crn}
+          chatbot={chatbotConfig}
+          onClose={() => setIsOpen(false)}
+          onReset={() => {}}
+        />
+      )}
+      <button
+        type="button"
+        className="pop-chatbot-sticky__toggle"
+        aria-label={isOpen ? 'Close chat' : 'Open chat'}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {isOpen ? (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        ) : (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        )}
+      </button>
+    </div>
   )
 }
