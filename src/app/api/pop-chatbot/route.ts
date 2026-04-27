@@ -8,25 +8,28 @@ const chatbotApiKey = process.env.POP_CHATBOT_API_KEY
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
-      message?: string
-      conversationId?: string
-    }
+    const body = (await request.json()) as Record<string, unknown>
 
-    const message = body.message?.trim()
+    const message = (body.message as string)?.trim()
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
-    const upstreamBody: {
-      message: string
-      conversation_id?: string
-    } = {
+    const upstreamBody: Record<string, unknown> = {
+      
       message,
     }
 
-    if (body.conversationId?.trim()) {
-      upstreamBody.conversation_id = body.conversationId.trim()
+    // Copy user_context directly if provided
+    if (body.user_context) {
+      console.log('Including user_context in chatbot request');
+      upstreamBody.user_context = body.user_context
+      upstreamBody.supervision_type = 'community_order'
+    }
+
+    // Convert conversationId to conversation_id for upstream API
+    if (body.conversationId) {
+      upstreamBody.conversation_id = body.conversationId
     }
 
     const upstreamResponse = await fetch(chatbotApiUrl, {

@@ -58,13 +58,13 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
     window.localStorage.setItem(
       storageKey,
       JSON.stringify({
-        conversationId,
+        conversationId: conversationId,
         messages,
       }),
     )
   }, [conversationId, messages, storageKey])
 
-  const sendMessage = async (message: string, sender: 'user' | 'assistant-seed' = 'user') => {
+  const sendMessage = async (message: string, sender: 'user' | 'assistant-seed' = 'user', overrideConversationId?: string | null) => {
     const trimmedMessage = message.trim()
     if (!trimmedMessage || isLoading) return
 
@@ -75,16 +75,35 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
     setIsLoading(true)
     setErrorMessage(null)
 
+    const currentConversationId = overrideConversationId !== undefined ? overrideConversationId : conversationId
+
+
+
     try {
+      const requestBody: Record<string, unknown> = {
+        message: trimmedMessage,
+        conversationId: currentConversationId,
+      }
+
+      // Include user_context only on first message (when conversationId is empty)
+      if (!currentConversationId) {
+        try {
+          const chatContextResponse = await fetch(`/api/pop-chat-context?crn=${encodeURIComponent(crn)}`)
+          if (chatContextResponse.ok) {
+            const chatContext = await chatContextResponse.json()
+            requestBody.user_context = chatContext
+          }
+        } catch {
+          // Silently fail if user context fetch fails
+        }
+      }
+
       const response = await fetch('/api/pop-chatbot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: trimmedMessage,
-          conversationId,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
@@ -109,7 +128,7 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
     if (!hasLoadedConversation) return
     if (!hasBootstrappedRef.current && messages.length === 0 && !conversationId && !isLoading) {
       hasBootstrappedRef.current = true
-      void sendMessage('hi', 'assistant-seed')
+      void sendMessage('hi', 'assistant-seed', null)
     }
   }, [conversationId, hasLoadedConversation, isLoading, messages.length])
 
@@ -133,8 +152,11 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
     setConversationId(null)
     setInputValue('')
     setErrorMessage(null)
+
     hasBootstrappedRef.current = false
     onReset()
+    // Start a fresh conversation immediately
+    void sendMessage('hi', 'assistant-seed', null)
   }
 
   return (

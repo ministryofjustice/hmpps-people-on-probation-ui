@@ -498,3 +498,19 @@ export function hasStaticProfile(crn: string): boolean {
 export function getStaticProfile(crn: string): PopStaticProfile | null {
   return staticProfilesByCrn[crn] ?? null
 }
+
+export function getStaticProfileForChatContext(crn: string): Record<string, unknown> | null {
+  const profile = getStaticProfile(crn)
+  if (!profile) {
+    return null
+  }
+
+  // Return whole profile except dashboard cards
+  return {
+    userDetails: profile.userDetails,
+    probationOfficerDetails: profile.probationOfficerDetails,
+    orderSummary: profile.orderSummary,
+    progress: profile.progress,
+    appointments: profile.appointments,
+  }
+}
