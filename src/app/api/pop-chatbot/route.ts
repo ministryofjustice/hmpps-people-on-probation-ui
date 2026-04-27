@@ -16,13 +16,11 @@ export async function POST(request: NextRequest) {
     }
 
     const upstreamBody: Record<string, unknown> = {
-      
       message,
     }
 
     // Copy user_context directly if provided
     if (body.user_context) {
-      console.log('Including user_context in chatbot request');
       upstreamBody.user_context = body.user_context
       upstreamBody.supervision_type = 'community_order'
     }
