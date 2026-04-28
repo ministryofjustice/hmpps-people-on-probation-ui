@@ -9,10 +9,7 @@ export async function POST(request: NextRequest) {
     const chatbotApiUrl = process.env.POP_CHATBOT_API_URL
     const chatbotApiKey = process.env.POP_CHATBOT_API_KEY
     if (!chatbotApiUrl || !chatbotApiKey) {
-      return NextResponse.json(
-        { error: 'Chatbot service is not configured' },
-        { status: 503 },
-      )
+      return NextResponse.json({ error: 'Chatbot service is not configured' }, { status: 503 })
     }
 
     const body = (await request.json()) as Record<string, unknown>

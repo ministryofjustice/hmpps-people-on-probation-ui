@@ -12,14 +12,23 @@ const SUGGESTED_QUESTIONS = [
 
 class ChatWidget {
   private container: HTMLElement
+
   private toggle: HTMLButtonElement
+
   private panel: HTMLElement
+
   private messagesEl: HTMLElement
+
   private input: HTMLInputElement
+
   private sendBtn: HTMLButtonElement
+
   private messages: ChatMessage[] = []
+
   private conversationId: string | null = null
+
   private isOpen = false
+
   private isSending = false
 
   constructor() {
@@ -186,7 +195,9 @@ class ChatWidget {
   private renderMessage(msg: ChatMessage): void {
     const wrapper = this.createElement('div', `chat-widget__message chat-widget__message--${msg.role}`)
     const bubble = this.createElement('div', 'chat-widget__bubble')
-    bubble.innerHTML = this.escapeHtml(msg.content).replace(/\n{3,}/g, '<br><br>').replace(/\n/g, '<br>')
+    bubble.innerHTML = this.escapeHtml(msg.content)
+      .replace(/\n{3,}/g, '<br><br>')
+      .replace(/\n/g, '<br>')
     wrapper.appendChild(bubble)
     this.messagesEl.appendChild(wrapper)
   }
@@ -198,9 +209,13 @@ class ChatWidget {
   }
 
   private showTyping(): HTMLElement {
-    const wrapper = this.createElement('div', 'chat-widget__message chat-widget__message--bot chat-widget__message--typing')
+    const wrapper = this.createElement(
+      'div',
+      'chat-widget__message chat-widget__message--bot chat-widget__message--typing',
+    )
     const bubble = this.createElement('div', 'chat-widget__bubble')
-    bubble.innerHTML = '<span class="chat-widget__dot"></span><span class="chat-widget__dot"></span><span class="chat-widget__dot"></span>'
+    bubble.innerHTML =
+      '<span class="chat-widget__dot"></span><span class="chat-widget__dot"></span><span class="chat-widget__dot"></span>'
     wrapper.appendChild(bubble)
     this.messagesEl.appendChild(wrapper)
     this.scrollToBottom()
@@ -261,10 +276,14 @@ class ChatWidget {
   }
 }
 
-export function initChatWidget(): void {
+function bootstrap(): ChatWidget {
+  return new ChatWidget()
+}
+
+export default function initChatWidget(): void {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new ChatWidget())
+    document.addEventListener('DOMContentLoaded', bootstrap)
   } else {
-    new ChatWidget()
+    bootstrap()
   }
 }
