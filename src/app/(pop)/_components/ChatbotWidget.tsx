@@ -32,9 +32,29 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [hasLoadedConversation, setHasLoadedConversation] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [userContext, setUserContext] = useState<Record<string, unknown> | null>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
   const hasBootstrappedRef = useRef(false)
   const storageKey = getPopChatbotConversationStorageKey(crn)
+
+  // Fetch user_context once when the widget mounts; reuse on every message so
+  // conversations survive backend pod restarts (which wipe the in-memory cache).
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(`/api/pop-chat-context?crn=${encodeURIComponent(crn)}`)
+        if (!res.ok) return
+        const ctx = (await res.json()) as Record<string, unknown>
+        if (!cancelled) setUserContext(ctx)
+      } catch {
+        // Silently fall back to no user_context — widget still works, less personalised.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [crn])
 
   useEffect(() => {
     const rawConversation = window.localStorage.getItem(storageKey)
@@ -98,17 +118,11 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
         conversationId: currentConversationId,
       }
 
-      // Include user_context only on first message (when conversationId is empty)
-      if (!currentConversationId) {
-        try {
-          const chatContextResponse = await fetch(`/api/pop-chat-context?crn=${encodeURIComponent(crn)}`)
-          if (chatContextResponse.ok) {
-            const chatContext = await chatContextResponse.json()
-            requestBody.user_context = chatContext
-          }
-        } catch {
-          // Silently fail if user context fetch fails
-        }
+      // Send user_context with every message. Backend caches it per
+      // conversation, so this is cheap; sending each time keeps conversations
+      // working through backend pod restarts that wipe the in-memory cache.
+      if (userContext) {
+        requestBody.user_context = userContext
       }
 
       const response = await fetch('/api/pop-chatbot', {
