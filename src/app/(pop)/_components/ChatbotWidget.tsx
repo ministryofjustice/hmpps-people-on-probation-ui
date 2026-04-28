@@ -121,8 +121,23 @@ export default function ChatbotWidget({ crn, chatbot, onClose, onReset }: Chatbo
       // Send user_context with every message. Backend caches it per
       // conversation, so this is cheap; sending each time keeps conversations
       // working through backend pod restarts that wipe the in-memory cache.
-      if (userContext) {
-        requestBody.user_context = userContext
+      // Use the on-mount-fetched value when available; otherwise fetch inline
+      // (covers the race where the bootstrap message fires before mount fetch
+      // resolves).
+      let contextToSend = userContext
+      if (!contextToSend) {
+        try {
+          const res = await fetch(`/api/pop-chat-context?crn=${encodeURIComponent(crn)}`)
+          if (res.ok) {
+            contextToSend = (await res.json()) as Record<string, unknown>
+            setUserContext(contextToSend)
+          }
+        } catch {
+          // Silently fall back to no user_context.
+        }
+      }
+      if (contextToSend) {
+        requestBody.user_context = contextToSend
       }
 
       const response = await fetch('/api/pop-chatbot', {
