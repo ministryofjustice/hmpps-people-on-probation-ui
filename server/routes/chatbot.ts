@@ -1,16 +1,17 @@
 import { Router } from 'express'
 
-const CHATBOT_API_URL = process.env.CHATBOT_API_URL
-const CHATBOT_API_KEY = process.env.CHATBOT_API_KEY
-
-if (!CHATBOT_API_URL || !CHATBOT_API_KEY) {
-  throw new Error('CHATBOT_API_URL and CHATBOT_API_KEY must be set')
-}
-
 export default function chatbotRoutes(): Router {
   const router = Router()
 
   router.post('/chatbot/send', async (req, res) => {
+    // Read env at request time so the module can be imported by build steps
+    // / tests without throwing. The vars must be present in the deployed env.
+    const chatbotApiUrl = process.env.CHATBOT_API_URL
+    const chatbotApiKey = process.env.CHATBOT_API_KEY
+    if (!chatbotApiUrl || !chatbotApiKey) {
+      return res.status(503).json({ error: 'Chatbot service is not configured' })
+    }
+
     const { message, conversationId, userContext } = req.body
 
     if (!message || typeof message !== 'string') {
@@ -26,11 +27,11 @@ export default function chatbotRoutes(): Router {
         body.user_context = userContext
       }
 
-      const response = await fetch(`${CHATBOT_API_URL}/chatbot/chat-embed`, {
+      const response = await fetch(`${chatbotApiUrl}/chatbot/chat-embed`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': CHATBOT_API_KEY,
+          'X-API-Key': chatbotApiKey,
         },
         body: JSON.stringify(body),
       })

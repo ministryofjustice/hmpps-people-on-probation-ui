@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 
-const chatbotApiUrl = process.env.POP_CHATBOT_API_URL
-const chatbotApiKey = process.env.POP_CHATBOT_API_KEY
-
-if (!chatbotApiUrl || !chatbotApiKey) {
-  throw new Error('POP_CHATBOT_API_URL and POP_CHATBOT_API_KEY must be set')
-}
-
 export async function POST(request: NextRequest) {
   try {
+    // Read env at request time so the build's page-data collection step
+    // doesn't trip on unset vars. They must be present in the deployed env.
+    const chatbotApiUrl = process.env.POP_CHATBOT_API_URL
+    const chatbotApiKey = process.env.POP_CHATBOT_API_KEY
+    if (!chatbotApiUrl || !chatbotApiKey) {
+      return NextResponse.json(
+        { error: 'Chatbot service is not configured' },
+        { status: 503 },
+      )
+    }
+
     const body = (await request.json()) as Record<string, unknown>
 
     const message = (body.message as string)?.trim()
