@@ -505,12 +505,37 @@ export function getStaticProfileForChatContext(crn: string): Record<string, unkn
     return null
   }
 
-  // Return whole profile except dashboard cards
+  // Map POP UI's data shape onto the keys the chatbot's
+  // format_probation_personal_context formatter expects (camelCase, top-level).
+  // Without this remap, fields like appointments collapse to "(None)" because
+  // the formatter looks for `appointments.upcoming` while POP stores the same
+  // data under `appointments.upcomingAppointments`.
+  const { userDetails, orderSummary, appointments } = profile
+
   return {
-    userDetails: profile.userDetails,
-    probationOfficerDetails: profile.probationOfficerDetails,
-    orderSummary: profile.orderSummary,
-    progress: profile.progress,
-    appointments: profile.appointments,
+    personalDetails: {
+      name: userDetails.name,
+      preferredName: userDetails.preferredName,
+      dateOfBirth: userDetails.dateOfBirth,
+      userId: userDetails.userId,
+    },
+    contactDetails: {
+      address: userDetails.address,
+      phone: userDetails.phone,
+      mobile: userDetails.mobile,
+      email: userDetails.email,
+    },
+    emergencyContact: userDetails.emergencyContact,
+    probationPractitioner: userDetails.probationPractitioner,
+    orderDetails: {
+      orderType: orderSummary.orderType,
+      startDate: orderSummary.startDate,
+      requirementsCompletionDate: orderSummary.requirementsCompletionDate,
+      requirements: orderSummary.requirements,
+    },
+    appointments: {
+      upcoming: appointments.upcomingAppointments,
+      past: appointments.pastAppointments,
+    },
   }
 }
