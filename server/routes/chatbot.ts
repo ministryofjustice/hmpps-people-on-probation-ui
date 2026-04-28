@@ -1,22 +1,29 @@
 import { Router } from 'express'
 
-const CHATBOT_API_URL = process.env.CHATBOT_API_URL || 'https://probationchatbot-production.up.railway.app'
-const CHATBOT_API_KEY = process.env.CHATBOT_API_KEY || 'dwQPxPfVcdV4HKFg2doCiPh-EFZCESJLwu2Md2KMLqQ'
+const CHATBOT_API_URL = process.env.CHATBOT_API_URL
+const CHATBOT_API_KEY = process.env.CHATBOT_API_KEY
+
+if (!CHATBOT_API_URL || !CHATBOT_API_KEY) {
+  throw new Error('CHATBOT_API_URL and CHATBOT_API_KEY must be set')
+}
 
 export default function chatbotRoutes(): Router {
   const router = Router()
 
   router.post('/chatbot/send', async (req, res) => {
-    const { message, conversationId } = req.body
+    const { message, conversationId, userContext } = req.body
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message is required' })
     }
 
     try {
-      const body: Record<string, string> = { message }
+      const body: Record<string, unknown> = { message }
       if (conversationId) {
         body.conversation_id = conversationId
+      }
+      if (userContext && typeof userContext === 'object') {
+        body.user_context = userContext
       }
 
       const response = await fetch(`${CHATBOT_API_URL}/chatbot/chat-embed`, {

@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 
-const chatbotApiUrl =
-  process.env.POP_CHATBOT_API_URL ?? 'https://probationchatbot-production.up.railway.app/chatbot/chat-embed'
+const chatbotApiUrl = process.env.POP_CHATBOT_API_URL
 const chatbotApiKey = process.env.POP_CHATBOT_API_KEY
+
+if (!chatbotApiUrl || !chatbotApiKey) {
+  throw new Error('POP_CHATBOT_API_URL and POP_CHATBOT_API_KEY must be set')
+}
 
 export async function POST(request: NextRequest) {
   try {
