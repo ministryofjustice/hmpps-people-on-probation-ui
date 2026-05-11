@@ -3,13 +3,14 @@
 
 generic-service:
   ingress:
-    host: people-on-probation-ui.hmpps.service.justice.gov.uk
+    host: people-on-probation.hmpps.service.justice.gov.uk
 
   env:
-    INGRESS_URL: "https://people-on-probation-ui.hmpps.service.justice.gov.uk"
+    INGRESS_URL: "https://people-on-probation.hmpps.service.justice.gov.uk"
     HMPPS_AUTH_URL: "https://sign-in.hmpps.service.justice.gov.uk/auth"
     TOKEN_VERIFICATION_API_URL: "https://token-verification-api.prison.service.justice.gov.uk"
-    EXAMPLE_API_URL: 'https://template-kotlin.hmpps.service.justice.gov.uk'
+    PEOPLE_ON_PROBATION_API_URL: 'https://people-on-probation-api.hmpps.service.justice.gov.uk'
+    POP_CHATBOT_API_URL: 'https://probationchatbot-dev.apps.live.cloud-platform.service.justice.gov.uk/api/backend/chatbot/chat-embed'
     AUDIT_ENABLED: "false"
 
 generic-prometheus-alerts:
