@@ -12,7 +12,7 @@ generic-service:
     HMPPS_AUTH_URL: "https://sign-in-preprod.hmpps.service.justice.gov.uk/auth"
     TOKEN_VERIFICATION_API_URL: "https://token-verification-api-preprod.prison.service.justice.gov.uk"
     PEOPLE_ON_PROBATION_API_URL: 'https://people-on-probation-api-preprod.hmpps.service.justice.gov.uk'
-    POP_CHATBOT_API_URL: 'https://probationchatbot-production.up.railway.app/chatbot/chat-embed'
+    POP_CHATBOT_API_URL: 'https://probationchatbot-dev.apps.live.cloud-platform.service.justice.gov.uk/api/backend/chatbot/chat-embed'
     ENVIRONMENT_NAME: PRE-PRODUCTION
     AUDIT_ENABLED: "false"
 
