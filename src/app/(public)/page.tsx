@@ -1,6 +1,20 @@
 import Link from 'next/link'
 
-export default function PublicStartPage() {
+export const dynamic = 'force-dynamic'
+
+function normaliseReturnTo(returnTo?: string | string[]) {
+  if (typeof returnTo !== 'string' || !returnTo.startsWith('/') || returnTo.startsWith('//')) return '/dashboard'
+  return returnTo
+}
+
+export default async function PublicStartPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ returnTo?: string | string[] | undefined }>
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const signInStartHref = `/sign-in/start?returnTo=${encodeURIComponent(normaliseReturnTo(resolvedSearchParams?.returnTo))}`
+
   return (
     <div className="govuk-grid-row">
       <div className="govuk-grid-column-two-thirds">
@@ -15,7 +29,7 @@ export default function PublicStartPage() {
         <p className="govuk-body">
           To start using your probation account, <strong>sign in or register</strong> with GOV.UK One Login.
         </p>
-        <Link href="/sign-in" role="button" draggable={false} className="govuk-button" data-module="govuk-button">
+        <Link href={signInStartHref} role="button" draggable={false} className="govuk-button" data-module="govuk-button">
           Start now
         </Link>
       </div>

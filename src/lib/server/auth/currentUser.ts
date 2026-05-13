@@ -23,7 +23,7 @@ export async function requireCurrentUser(returnTo = '/dashboard') {
   const user = await getCurrentUser()
 
   if (!user) {
-    redirect(`/sign-in?returnTo=${encodeURIComponent(normaliseReturnTo(returnTo))}`)
+    redirect(`/?returnTo=${encodeURIComponent(normaliseReturnTo(returnTo))}`)
   }
 
   return user

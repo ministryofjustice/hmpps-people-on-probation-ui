@@ -7,7 +7,6 @@ const publicPaths = [
   '/health',
   '/info',
   '/ping',
-  '/sign-in',
   '/sign-in/start',
   '/sign-in/callback',
   '/sign-out',
@@ -39,10 +38,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const signInUrl = new URL('/sign-in', request.url)
-  signInUrl.searchParams.set('returnTo', buildReturnTo(request))
+  const startUrl = new URL('/', request.url)
+  startUrl.searchParams.set('returnTo', buildReturnTo(request))
 
-  return NextResponse.redirect(signInUrl)
+  return NextResponse.redirect(startUrl)
 }
 
 export const config = {
