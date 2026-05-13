@@ -3,20 +3,21 @@ import { appSessionCookieName, clearAppSessionCookie } from '../../../lib/server
 import { deleteAuthenticatedUserSession, getAuthenticatedUserSession } from '../../../lib/server/auth/sessionStore'
 import { getOneLoginDiscoveryDocument } from '../../../lib/server/auth/oneLoginDiscovery'
 import { nextServerConfig } from '../../../lib/server/config'
+import { getApplicationRedirectUrl } from '../../../lib/server/auth/redirects'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-function getLocalSignedOutRedirect(request: NextRequest) {
-  return new URL('/', request.url)
+function getLocalSignedOutRedirect() {
+  return getApplicationRedirectUrl('/')
 }
 
-async function getOneLoginLogoutUrl(request: NextRequest, idToken?: string) {
-  if (!idToken) return getLocalSignedOutRedirect(request)
+async function getOneLoginLogoutUrl(idToken?: string) {
+  if (!idToken) return getLocalSignedOutRedirect()
 
   const discoveryDocument = await getOneLoginDiscoveryDocument()
   const endSessionEndpoint = discoveryDocument.end_session_endpoint
-  if (!endSessionEndpoint) return getLocalSignedOutRedirect(request)
+  if (!endSessionEndpoint) return getLocalSignedOutRedirect()
 
   const logoutUrl = new URL(endSessionEndpoint)
   logoutUrl.searchParams.set('id_token_hint', idToken)
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
     await deleteAuthenticatedUserSession(sessionId)
   }
 
-  const response = NextResponse.redirect(await getOneLoginLogoutUrl(request, session?.idToken))
+  const response = NextResponse.redirect(await getOneLoginLogoutUrl(session?.idToken))
   clearAppSessionCookie(response.cookies)
 
   return response

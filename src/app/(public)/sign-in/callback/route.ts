@@ -11,20 +11,21 @@ import {
   saveAuthenticatedUserSession,
 } from '../../../../lib/server/auth/sessionStore'
 import { authenticateOneLoginCallback } from '../../../../lib/server/auth/oneLoginToken'
+import { getApplicationRedirectUrl } from '../../../../lib/server/auth/redirects'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-function redirectToAuthError(request: NextRequest) {
-  return NextResponse.redirect(new URL('/autherror', request.url))
+function redirectToAuthError() {
+  return NextResponse.redirect(getApplicationRedirectUrl('/autherror'))
 }
 
 export async function GET(request: NextRequest) {
   const transactionId = request.cookies.get(oneLoginTransactionCookieName)?.value
-  if (!transactionId) return redirectToAuthError(request)
+  if (!transactionId) return redirectToAuthError()
 
   const transaction = await getOneLoginTransaction(transactionId)
-  if (!transaction) return redirectToAuthError(request)
+  if (!transaction) return redirectToAuthError()
 
   const error = request.nextUrl.searchParams.get('error')
   const code = request.nextUrl.searchParams.get('code')
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   if (error || !code || state !== transaction.state) {
     await deleteOneLoginTransaction(transactionId)
-    const response = redirectToAuthError(request)
+    const response = redirectToAuthError()
     clearOneLoginTransactionCookie(response.cookies)
     return response
   }
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
   await saveAuthenticatedUserSession(session)
   await deleteOneLoginTransaction(transactionId)
 
-  const response = NextResponse.redirect(new URL(transaction.returnTo, request.url))
+  const response = NextResponse.redirect(getApplicationRedirectUrl(transaction.returnTo))
   clearOneLoginTransactionCookie(response.cookies)
   setAppSessionCookie(response.cookies, session.id, getAuthenticatedUserSessionTtlSeconds())
 
