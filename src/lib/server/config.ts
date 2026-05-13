@@ -43,7 +43,7 @@ export const nextServerConfig = {
     clientId: get('ONE_LOGIN_CLIENT_ID', ''),
     redirectUri: get('ONE_LOGIN_REDIRECT_URI', `${get('INGRESS_URL', 'http://localhost:3000')}/sign-in/callback`),
     postLogoutRedirectUri: get('ONE_LOGIN_POST_LOGOUT_REDIRECT_URI', get('INGRESS_URL', 'http://localhost:3000')),
-    scopes: get('ONE_LOGIN_SCOPES', 'openid email phone'),
+    scopes: get('ONE_LOGIN_SCOPES', 'email,phone,openid'),
     vtr: get('ONE_LOGIN_VTR', 'Cl.Cm'),
     keyId: get('ONE_LOGIN_KEY_ID', ''),
     privateKeyBase64: process.env.ONE_LOGIN_PRIVATE_KEY_BASE64,
