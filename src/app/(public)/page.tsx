@@ -1,5 +1,3 @@
-import Link from 'next/link'
-
 export const dynamic = 'force-dynamic'
 
 function normaliseReturnTo(returnTo?: string | string[]) {
@@ -29,9 +27,9 @@ export default async function PublicStartPage({
         <p className="govuk-body">
           To start using your probation account, <strong>sign in or register</strong> with GOV.UK One Login.
         </p>
-        <Link href={signInStartHref} role="button" draggable={false} className="govuk-button" data-module="govuk-button">
+        <a href={signInStartHref} role="button" draggable={false} className="govuk-button" data-module="govuk-button">
           Start now
-        </Link>
+        </a>
       </div>
     </div>
   )
