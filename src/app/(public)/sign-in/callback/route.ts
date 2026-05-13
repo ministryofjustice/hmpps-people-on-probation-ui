@@ -4,10 +4,7 @@ import {
   oneLoginTransactionCookieName,
   setAppSessionCookie,
 } from '../../../../lib/server/auth/cookies'
-import {
-  deleteOneLoginTransaction,
-  getOneLoginTransaction,
-} from '../../../../lib/server/auth/loginTransactionStore'
+import { deleteOneLoginTransaction, getOneLoginTransaction } from '../../../../lib/server/auth/loginTransactionStore'
 import {
   createAuthenticatedUserSession,
   getAuthenticatedUserSessionTtlSeconds,

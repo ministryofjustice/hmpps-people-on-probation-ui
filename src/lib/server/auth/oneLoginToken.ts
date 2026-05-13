@@ -119,7 +119,9 @@ function getExpectedVectorOfTrust() {
   const requestedVectorOfTrust = nextServerConfig.oneLogin.vtr.split(',')[0].trim()
   const [credentialTrust, credentialTrustLevel] = requestedVectorOfTrust.split('.')
 
-  return credentialTrust === 'Cl' && credentialTrustLevel ? `${credentialTrust}.${credentialTrustLevel}` : requestedVectorOfTrust
+  return credentialTrust === 'Cl' && credentialTrustLevel
+    ? `${credentialTrust}.${credentialTrustLevel}`
+    : requestedVectorOfTrust
 }
 
 async function getUserInfo(accessToken: string | undefined, discoveryDocument: OneLoginDiscoveryDocument) {
