@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation'
-import HomeCardGrid from './_components/HomeCardGrid'
-import ServiceUnavailable from './_components/ServiceUnavailable'
+import HomeCardGrid from '../_components/HomeCardGrid'
+import ServiceUnavailable from '../_components/ServiceUnavailable'
 import { defaultPopCrn, getPopDashboard, resolvePopCrn } from '@/lib/server/pop'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export default async function PopHome({
+export default async function Dashboard({
   searchParams,
 }: {
   searchParams?: Promise<{ crn?: string | string[] | undefined }>
@@ -15,7 +15,7 @@ export default async function PopHome({
   const requestedCrn = typeof resolvedSearchParams?.crn === 'string' ? resolvedSearchParams.crn : undefined
 
   if (!requestedCrn?.trim()) {
-    redirect(`/?crn=${encodeURIComponent(defaultPopCrn)}`)
+    redirect(`/dashboard?crn=${encodeURIComponent(defaultPopCrn)}`)
   }
 
   const selectedCrn = resolvePopCrn(requestedCrn)

@@ -30,9 +30,10 @@ generic-service:
     NODE_ENV: 'production'
     REDIS_ENABLED: 'true'
     REDIS_TLS_ENABLED: 'true'
-    TOKEN_VERIFICATION_ENABLED: 'true'
     AUDIT_SQS_REGION: 'eu-west-2'
     AUDIT_SERVICE_NAME: 'HMPPS518' # Your audit service name
+    ONE_LOGIN_SCOPES: 'openid email phone'
+    ONE_LOGIN_VTR: 'Cl.Cm'
 
   # Pre-existing kubernetes secrets to load as environment variables in the deployment.
   # namespace_secrets:
@@ -43,12 +44,14 @@ generic-service:
     # These secrets are created by terraform.
     hmpps-people-on-probation-ui-client-creds:
       CLIENT_CREDS_CLIENT_ID: 'CLIENT_CREDS_CLIENT_ID'
-      CLIENT_CREDS_CLIENT_SECRET: 'CLIENT_CREDS_CLIENT_SECRET'
-    hmpps-people-on-probation-ui-auth-code:
-      AUTH_CODE_CLIENT_ID: 'AUTH_CODE_CLIENT_ID'
-      AUTH_CODE_CLIENT_SECRET: 'AUTH_CODE_CLIENT_SECRET'    
+      CLIENT_CREDS_CLIENT_SECRET: 'CLIENT_CREDS_CLIENT_SECRET'   
     hmpps-people-on-probation-ui-session-secret:
       SESSION_SECRET: 'SESSION_SECRET'
+    hmpps-people-on-probation-ui-one-login:
+      ONE_LOGIN_CLIENT_ID: 'ONE_LOGIN_CLIENT_ID'
+      ONE_LOGIN_KEY_ID: 'ONE_LOGIN_KEY_ID'
+      ONE_LOGIN_PRIVATE_KEY_BASE64: 'ONE_LOGIN_PRIVATE_KEY_BASE64'
+      ONE_LOGIN_PUBLIC_KEY_BASE64: 'ONE_LOGIN_PUBLIC_KEY_BASE64'
     hmpps-people-on-probation-ui-elasticache-redis:
       REDIS_HOST: 'primary_endpoint_address'
       REDIS_AUTH_TOKEN: 'auth_token'

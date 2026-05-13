@@ -1,14 +1,10 @@
-'use client'
-
-import GlobalChatbotWidget from './GlobalChatbotWidget'
-
-export default function AppChrome({ children }: { children: React.ReactNode }) {
+export default function PublicChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       <header className="govuk-header pop-app-header">
         <div className="govuk-header__container">
           <div className="govuk-header__branding">
-            <a href="/dashboard" className="govuk-header__homepage-link pop-app-header__link">
+            <a href="/one-login" className="govuk-header__homepage-link pop-app-header__link">
               <span className="govuk-header__logo" aria-hidden="true" />
               <span className="pop-app-header__wordmark">
                 <span className="pop-app-header__brand-gov">GOV</span>
@@ -23,10 +19,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
       </header>
       <div className="pop-app-service-strip">
         <div className="pop-app-service-strip__content">
-          <div className="pop-app-service-strip__name">Manage your community sentence</div>
-          <a href="/sign-out" className="govuk-link pop-app-service-strip__signout">
-            Sign out
-          </a>
+          <div className="pop-app-service-strip__name">Manage your probation</div>
         </div>
       </div>
       <div className="govuk-phase-banner">
@@ -40,7 +33,6 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
         </p>
       </div>
       {children}
-      <GlobalChatbotWidget />
       <footer className="govuk-footer pop-app-footer">
         <div className="govuk-footer__container">
           <div className="pop-app-footer__left">

@@ -5,6 +5,7 @@ function get(name: string, fallback: string): string {
 }
 
 export const nextServerConfig = {
+  ingressUrl: get('INGRESS_URL', 'http://localhost:3000'),
   redis: {
     enabled: get('REDIS_ENABLED', 'false') === 'true',
     host: get('REDIS_HOST', 'localhost'),
@@ -21,8 +22,6 @@ export const nextServerConfig = {
         deadline: Number(get('HMPPS_AUTH_TIMEOUT_DEADLINE', '10000')),
       },
       agent: new AgentConfig(Number(get('HMPPS_AUTH_TIMEOUT_RESPONSE', '10000'))),
-      authClientId: get('AUTH_CODE_CLIENT_ID', 'clientid'),
-      authClientSecret: get('AUTH_CODE_CLIENT_SECRET', 'clientsecret'),
       systemClientId: get('CLIENT_CREDS_CLIENT_ID', 'clientid'),
       systemClientSecret: get('CLIENT_CREDS_CLIENT_SECRET', 'clientsecret'),
     },
@@ -34,5 +33,20 @@ export const nextServerConfig = {
       },
       agent: new AgentConfig(Number(get('PEOPLE_ON_PROBATION_API_TIMEOUT_RESPONSE', '5000'))),
     },
+  },
+  session: {
+    secret: get('SESSION_SECRET', 'app-insecure-default-session'),
+    expiryMinutes: Number(get('WEB_SESSION_TIMEOUT_IN_MINUTES', '120')),
+  },
+  oneLogin: {
+    issuerUrl: get('ONE_LOGIN_ISSUER_URL', ''),
+    clientId: get('ONE_LOGIN_CLIENT_ID', ''),
+    redirectUri: get('ONE_LOGIN_REDIRECT_URI', `${get('INGRESS_URL', 'http://localhost:3000')}/sign-in/callback`),
+    postLogoutRedirectUri: get('ONE_LOGIN_POST_LOGOUT_REDIRECT_URI', get('INGRESS_URL', 'http://localhost:3000')),
+    scopes: get('ONE_LOGIN_SCOPES', 'openid email phone'),
+    vtr: get('ONE_LOGIN_VTR', 'Cl.Cm'),
+    keyId: get('ONE_LOGIN_KEY_ID', ''),
+    privateKeyBase64: process.env.ONE_LOGIN_PRIVATE_KEY_BASE64,
+    publicKeyBase64: process.env.ONE_LOGIN_PUBLIC_KEY_BASE64,
   },
 }
