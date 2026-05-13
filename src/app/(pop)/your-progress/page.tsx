@@ -46,7 +46,7 @@ export default async function YourProgress({
   if (!progressData) {
     return (
       <>
-        <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+        <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
           Back
         </a>
         <h1 className="govuk-heading-xl">Your progress</h1>
@@ -57,7 +57,7 @@ export default async function YourProgress({
 
   return (
     <>
-      <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+      <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
         Back
       </a>
 

@@ -20,7 +20,7 @@ export default async function ProbationConditions({
       <>
         <div className="govuk-grid-row">
           <div className="govuk-grid-column-full">
-            <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+            <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
               Back
             </a>
             <h1 className="govuk-heading-xl">Your requirements and licence conditions</h1>
@@ -35,7 +35,7 @@ export default async function ProbationConditions({
     <>
       <div className="govuk-grid-row">
         <div className="govuk-grid-column-full">
-          <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+          <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
             Back
           </a>
           <h1 className="govuk-heading-xl">Your requirements and licence conditions</h1>

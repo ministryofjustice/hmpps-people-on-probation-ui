@@ -18,7 +18,7 @@ export default async function Conditions({
   if (!orderSummary) {
     return (
       <>
-        <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+        <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
           Back
         </a>
         <h1 className="govuk-heading-xl">Your probation requirements</h1>
@@ -29,7 +29,7 @@ export default async function Conditions({
 
   return (
     <>
-      <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+      <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
         Back
       </a>
 

@@ -29,7 +29,7 @@ export default async function ExpectationsPage({
 
   return (
     <>
-      <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+      <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
         Back
       </a>
 

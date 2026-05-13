@@ -19,7 +19,7 @@ export default async function ProbationOfficerDetails({
   if (!probationOfficer) {
     return (
       <>
-        <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+        <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
           Back
         </a>
         <h1 className="govuk-heading-xl govuk-!-margin-bottom-1">Probation officer details</h1>
@@ -30,7 +30,7 @@ export default async function ProbationOfficerDetails({
 
   return (
     <>
-      <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+      <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
         Back
       </a>
 

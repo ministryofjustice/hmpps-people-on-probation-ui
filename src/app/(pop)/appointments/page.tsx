@@ -39,7 +39,7 @@ export default async function Appointments({
   if (!appointments) {
     return (
       <>
-        <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+        <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
           Back
         </a>
         <h1 className="govuk-heading-xl">Your appointments</h1>
@@ -54,7 +54,7 @@ export default async function Appointments({
 
   return (
     <>
-      <a className="govuk-back-link" href={withCrn('/', selectedCrn)}>
+      <a className="govuk-back-link" href={withCrn('/dashboard', selectedCrn)}>
         Back
       </a>
 

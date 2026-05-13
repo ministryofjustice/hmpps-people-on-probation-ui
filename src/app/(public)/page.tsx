@@ -1,3 +1,6 @@
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/server/auth/currentUser'
+
 export const dynamic = 'force-dynamic'
 
 function normaliseReturnTo(returnTo?: string | string[]) {
@@ -10,6 +13,11 @@ export default async function PublicStartPage({
 }: {
   searchParams?: Promise<{ returnTo?: string | string[] | undefined }>
 }) {
+  const currentUser = await getCurrentUser()
+  if (currentUser) {
+    redirect('/dashboard')
+  }
+
   const resolvedSearchParams = searchParams ? await searchParams : undefined
   const signInStartHref = `/sign-in/start?returnTo=${encodeURIComponent(normaliseReturnTo(resolvedSearchParams?.returnTo))}`
 
