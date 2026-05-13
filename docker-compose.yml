@@ -47,7 +47,7 @@ services:
       ONE_LOGIN_CLIENT_ID: ${ONE_LOGIN_CLIENT_ID:-}
       ONE_LOGIN_REDIRECT_URI: http://localhost:3000/sign-in/callback
       ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: http://localhost:3000
-      ONE_LOGIN_SCOPES: ${ONE_LOGIN_SCOPES:-email,phone,openid}
+      ONE_LOGIN_SCOPES: ${ONE_LOGIN_SCOPES:-openid email phone}
       ONE_LOGIN_VTR: ${ONE_LOGIN_VTR:-Cl.Cm}
       ONE_LOGIN_KEY_ID: ${ONE_LOGIN_KEY_ID:-}
       ONE_LOGIN_PRIVATE_KEY_BASE64: ${ONE_LOGIN_PRIVATE_KEY_BASE64:-}

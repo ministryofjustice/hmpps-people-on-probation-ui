@@ -32,7 +32,7 @@ generic-service:
     REDIS_TLS_ENABLED: 'true'
     AUDIT_SQS_REGION: 'eu-west-2'
     AUDIT_SERVICE_NAME: 'HMPPS518' # Your audit service name
-    ONE_LOGIN_SCOPES: 'email,phone,openid'
+    ONE_LOGIN_SCOPES: 'openid email phone'
     ONE_LOGIN_VTR: 'Cl.Cm'
 
   # Pre-existing kubernetes secrets to load as environment variables in the deployment.
