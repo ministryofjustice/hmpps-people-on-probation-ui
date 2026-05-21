@@ -1,0 +1,62 @@
+.govuk-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: govuk-spacing(3);
+
+  @include govuk-media-query($from: tablet) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.govuk-card-link {
+  display: block;
+  border: 1px solid $govuk-border-colour;
+  background-color: govuk-colour('white');
+  padding: govuk-spacing(4);
+  text-decoration: none;
+  transition: border-color 0.1s ease-in-out;
+
+  &:hover {
+    border-color: govuk-colour('black');
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    background-color: govuk-colour('white');
+    border-color: $govuk-border-colour;
+    box-shadow: none;
+  }
+}
+
+.govuk-card-link--button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.govuk-card-link__title {
+  @include govuk-font($size: 19, $weight: 'bold');
+  color: govuk-colour('blue');
+  text-decoration: underline;
+  margin: 0;
+}
+
+.govuk-card-link__description {
+  @include govuk-font($size: 16);
+  color: govuk-colour('black');
+  margin: govuk-spacing(2) 0 0;
+}
+
+.govuk-card-link:hover .govuk-card-link__title {
+  text-decoration: none;
+}
+
+.govuk-card-link:focus .govuk-card-link__title {
+  color: govuk-colour('blue');
+  text-decoration: none;
+}
+
+.govuk-card-link:active .govuk-card-link__title {
+  font-weight: bold;
+}

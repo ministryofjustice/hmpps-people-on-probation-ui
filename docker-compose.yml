@@ -1,5 +1,4 @@
 services:
-
   hmpps-auth:
     image: ghcr.io/ministryofjustice/hmpps-auth:latest
     networks:
@@ -12,19 +11,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - APPLICATION_AUTHENTICATION_UI_ALLOWLIST=0.0.0.0/0
-
-  hmpps-template-kotlin:
-    image: ghcr.io/ministryofjustice/hmpps-template-kotlin:latest
-    networks:
-      - hmpps
-    container_name: hmpps-template-kotlin
-    ports:
-      - "8080:8080"
-    healthcheck:
-      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8080"]
-    environment:
-      - HMPPS_AUTH_URL=http://hmpps-auth:8080/auth
-      - EXAMPLE_API_URL=http://localhost:8080
 
   app:
     build:
@@ -40,21 +26,33 @@ services:
     healthcheck:
       test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/3000"]
     environment:
-      - PRODUCT_ID=UNASSIGNED
-      - REDIS_ENABLED=false
-      - REDIS_HOST=localhost
-      - HMPPS_AUTH_EXTERNAL_URL=http://localhost:9090/auth
-      - HMPPS_AUTH_URL=http://hmpps-auth:8080/auth
-      # These will need to match new creds in the seed auth service auth
-      - AUTH_CODE_CLIENT_ID=hmpps-typescript-template
-      - AUTH_CODE_CLIENT_SECRET=clientsecret
-      - CLIENT_CREDS_CLIENT_ID=hmpps-typescript-template-system
-      - CLIENT_CREDS_CLIENT_SECRET=clientsecret
-      - SESSION_SECRET=somesecretvalue
-      - TOKEN_VERIFICATION_API_URL=http://hmpps-auth:8080/auth
-      - TOKEN_VERIFICATION_ENABLED=false
-      - INGRESS_URL=http://localhost:3000
-      - NO_HTTPS=true
+      PRODUCT_ID: UNASSIGNED
+      REDIS_ENABLED: "false"
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      REDIS_TLS_ENABLED: "false"
+      HMPPS_AUTH_EXTERNAL_URL: http://localhost:9090/auth
+      HMPPS_AUTH_URL: http://hmpps-auth:8080/auth
+      CLIENT_CREDS_CLIENT_ID: ${CLIENT_CREDS_CLIENT_ID:-hmpps-typescript-template-system}
+      CLIENT_CREDS_CLIENT_SECRET: ${CLIENT_CREDS_CLIENT_SECRET:-clientsecret}
+      PEOPLE_ON_PROBATION_API_URL: https://people-on-probation-api-dev.hmpps.service.justice.gov.uk
+      PEOPLE_ON_PROBATION_API_TIMEOUT_RESPONSE: 5000
+      PEOPLE_ON_PROBATION_API_TIMEOUT_DEADLINE: 5000
+      POP_CHATBOT_API_URL: ${POP_CHATBOT_API_URL:-chatbot-api-url}
+      POP_CHATBOT_API_KEY: ${POP_CHATBOT_API_KEY:-chatbot-api-key}
+      SESSION_SECRET: ${SESSION_SECRET:-somesecretvalue}
+      WEB_SESSION_TIMEOUT_IN_MINUTES: 120
+      INGRESS_URL: http://localhost:3000
+      ONE_LOGIN_ISSUER_URL: ${ONE_LOGIN_ISSUER_URL:-https://oidc.integration.account.gov.uk}
+      ONE_LOGIN_CLIENT_ID: ${ONE_LOGIN_CLIENT_ID:-}
+      ONE_LOGIN_REDIRECT_URI: http://localhost:3000/sign-in/callback
+      ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: http://localhost:3000
+      ONE_LOGIN_SCOPES: ${ONE_LOGIN_SCOPES:-openid email phone}
+      ONE_LOGIN_VTR: ${ONE_LOGIN_VTR:-Cl.Cm}
+      ONE_LOGIN_KEY_ID: ${ONE_LOGIN_KEY_ID:-}
+      ONE_LOGIN_PRIVATE_KEY_BASE64: ${ONE_LOGIN_PRIVATE_KEY_BASE64:-}
+      ONE_LOGIN_PUBLIC_KEY_BASE64: ${ONE_LOGIN_PUBLIC_KEY_BASE64:-}
+      NO_HTTPS: "true"
 
 networks:
   hmpps:
