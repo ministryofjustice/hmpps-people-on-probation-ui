@@ -3,6 +3,7 @@ import 'server-only'
 import { randomUUID } from 'crypto'
 import { getRedisClient } from '../data/redisClient'
 import { nextServerConfig } from '../config'
+import type { RegisteredUserResponse } from '../data/peopleOnProbationApiClient'
 
 export type AuthenticatedUserSession = {
   id: string
@@ -11,6 +12,7 @@ export type AuthenticatedUserSession = {
   phoneNumber?: string
   displayName?: string
   idToken?: string
+  registeredUserDetails?: RegisteredUserResponse
   authenticatedAt: number
   expiresAt: number
 }
@@ -36,7 +38,10 @@ function pruneExpiredInMemorySessions() {
 }
 
 export function createAuthenticatedUserSession(
-  user: Pick<AuthenticatedUserSession, 'userId' | 'email' | 'phoneNumber' | 'displayName' | 'idToken'>,
+  user: Pick<
+    AuthenticatedUserSession,
+    'userId' | 'email' | 'phoneNumber' | 'displayName' | 'idToken' | 'registeredUserDetails'
+  >,
 ): AuthenticatedUserSession {
   const now = Date.now()
 

@@ -29,6 +29,15 @@ jest.mock('../../../../lib/server/auth/redirects', () => ({
 
 describe('/sign-in/callback', () => {
   const completeOneLoginRegistration = jest.fn()
+  const getCurrentRegisteredUser = jest.fn()
+  const registeredUserDetails = {
+    id: 'registered-user-id',
+    personReference: 'X123456',
+    email: 'person@example.com',
+    mobileNumber: '+447700900123',
+    status: 'ACTIVE',
+    createdAt: '2026-05-21T00:00:00.000Z',
+  }
 
   function requestForCallback() {
     return {
@@ -41,7 +50,12 @@ describe('/sign-in/callback', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(getPeopleOnProbationService as jest.Mock).mockReturnValue({ completeOneLoginRegistration })
+    completeOneLoginRegistration.mockResolvedValue(registeredUserDetails)
+    getCurrentRegisteredUser.mockResolvedValue(registeredUserDetails)
+    ;(getPeopleOnProbationService as jest.Mock).mockReturnValue({
+      completeOneLoginRegistration,
+      getCurrentRegisteredUser,
+    })
     ;(authenticateOneLoginCallback as jest.Mock).mockResolvedValue({
       userId: 'one-login-sub',
       email: 'person@example.com',
@@ -66,11 +80,20 @@ describe('/sign-in/callback', () => {
       email: 'person@example.com',
       mobileNumber: '+447700900123',
     })
-    expect(createAuthenticatedUserSession).toHaveBeenCalledWith(expect.objectContaining({ userId: 'one-login-sub' }))
+    expect(getCurrentRegisteredUser).not.toHaveBeenCalled()
+    expect(createAuthenticatedUserSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'one-login-sub',
+        registeredUserDetails,
+      }),
+    )
+    expect(completeOneLoginRegistration.mock.invocationCallOrder[0]).toBeLessThan(
+      (createAuthenticatedUserSession as jest.Mock).mock.invocationCallOrder[0],
+    )
     expect(saveAuthenticatedUserSession).toHaveBeenCalledWith({ id: 'session-id' })
   })
 
-  it('does not complete registration for normal sign in', async () => {
+  it('gets current registered user details for normal sign in', async () => {
     ;(getOneLoginTransaction as jest.Mock).mockResolvedValue({
       id: 'transaction-id',
       state: 'state',
@@ -80,6 +103,16 @@ describe('/sign-in/callback', () => {
     await GET(requestForCallback() as never)
 
     expect(completeOneLoginRegistration).not.toHaveBeenCalled()
+    expect(getCurrentRegisteredUser).toHaveBeenCalledWith({ oneLoginSubject: 'one-login-sub' })
+    expect(createAuthenticatedUserSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'one-login-sub',
+        registeredUserDetails,
+      }),
+    )
+    expect(getCurrentRegisteredUser.mock.invocationCallOrder[0]).toBeLessThan(
+      (createAuthenticatedUserSession as jest.Mock).mock.invocationCallOrder[0],
+    )
     expect(saveAuthenticatedUserSession).toHaveBeenCalledWith({ id: 'session-id' })
   })
 
@@ -91,6 +124,21 @@ describe('/sign-in/callback', () => {
       registrationInviteToken: 'invite-token',
     })
     completeOneLoginRegistration.mockRejectedValue(new Error('completion failed'))
+
+    const response = await GET(requestForCallback() as never)
+
+    expect(deleteOneLoginTransaction).toHaveBeenCalledWith('transaction-id')
+    expect(saveAuthenticatedUserSession).not.toHaveBeenCalled()
+    expect(response.headers.get('location')).toEqual('https://example.test/autherror')
+  })
+
+  it('redirects to autherror and does not create a session if current registered user lookup fails', async () => {
+    ;(getOneLoginTransaction as jest.Mock).mockResolvedValue({
+      id: 'transaction-id',
+      state: 'state',
+      returnTo: '/dashboard',
+    })
+    getCurrentRegisteredUser.mockRejectedValue(new Error('lookup failed'))
 
     const response = await GET(requestForCallback() as never)
 

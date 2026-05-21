@@ -118,6 +118,20 @@ export type CompleteOneLoginRegistrationRequest = {
   mobileNumber?: string
 }
 
+export type CurrentRegisteredUserRequest = {
+  oneLoginSubject: string
+}
+
+export interface RegisteredUserResponse {
+  id: string
+  personReference: string
+  email?: string
+  mobileNumber?: string
+  status: string
+  createdAt: string
+  lastSignedInAt?: string
+}
+
 export interface PeopleOnProbationApiErrorResponse {
   status: number
   errorCode: string
@@ -168,9 +182,19 @@ export default class PeopleOnProbationApiClient extends RestClient {
   }
 
   completeOneLoginRegistration(request: CompleteOneLoginRegistrationRequest) {
-    return this.post<void, PeopleOnProbationApiErrorResponse>(
+    return this.post<RegisteredUserResponse, PeopleOnProbationApiErrorResponse>(
       {
         path: '/v1/registration-invites/complete-one-login',
+        data: request,
+      },
+      asSystem(),
+    )
+  }
+
+  getCurrentRegisteredUser(request: CurrentRegisteredUserRequest) {
+    return this.post<RegisteredUserResponse, PeopleOnProbationApiErrorResponse>(
+      {
+        path: '/v1/users/current',
         data: request,
       },
       asSystem(),

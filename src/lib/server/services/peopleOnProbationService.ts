@@ -1,6 +1,9 @@
 import 'server-only'
 
-import PeopleOnProbationApiClient, { CompleteOneLoginRegistrationRequest } from '../data/peopleOnProbationApiClient'
+import PeopleOnProbationApiClient, {
+  type CompleteOneLoginRegistrationRequest,
+  type CurrentRegisteredUserRequest,
+} from '../data/peopleOnProbationApiClient'
 import { createAuthenticationClient } from '../data/authenticationClient'
 
 export default class PeopleOnProbationService {
@@ -32,6 +35,10 @@ export default class PeopleOnProbationService {
 
   completeOneLoginRegistration(request: CompleteOneLoginRegistrationRequest) {
     return this.peopleOnProbationApiClient.completeOneLoginRegistration(request)
+  }
+
+  getCurrentRegisteredUser(request: CurrentRegisteredUserRequest) {
+    return this.peopleOnProbationApiClient.getCurrentRegisteredUser(request)
   }
 }
 

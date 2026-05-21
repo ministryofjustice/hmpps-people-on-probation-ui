@@ -10,9 +10,27 @@ import {
   getAuthenticatedUserSessionTtlSeconds,
   saveAuthenticatedUserSession,
 } from '../../../../lib/server/auth/sessionStore'
-import { authenticateOneLoginCallback } from '../../../../lib/server/auth/oneLoginToken'
+import { authenticateOneLoginCallback, type OneLoginAuthenticatedUser } from '../../../../lib/server/auth/oneLoginToken'
 import { getApplicationRedirectUrl } from '../../../../lib/server/auth/redirects'
 import { getPeopleOnProbationService } from '../../../../lib/server/services/peopleOnProbationService'
+
+async function getRegisteredUserDetails(
+  transaction: { registrationInviteToken?: string },
+  oneLoginUser: OneLoginAuthenticatedUser,
+) {
+  if (transaction.registrationInviteToken) {
+    return getPeopleOnProbationService().completeOneLoginRegistration({
+      token: transaction.registrationInviteToken,
+      oneLoginSubject: oneLoginUser.userId,
+      email: oneLoginUser.email,
+      mobileNumber: oneLoginUser.phoneNumber,
+    })
+  }
+
+  return getPeopleOnProbationService().getCurrentRegisteredUser({
+    oneLoginSubject: oneLoginUser.userId,
+  })
+}
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -40,23 +58,17 @@ export async function GET(request: NextRequest) {
   }
 
   const oneLoginUser = await authenticateOneLoginCallback(code, transaction)
-  if (transaction.registrationInviteToken) {
-    try {
-      await getPeopleOnProbationService().completeOneLoginRegistration({
-        token: transaction.registrationInviteToken,
-        oneLoginSubject: oneLoginUser.userId,
-        email: oneLoginUser.email,
-        mobileNumber: oneLoginUser.phoneNumber,
-      })
-    } catch {
-      await deleteOneLoginTransaction(transactionId)
-      const response = redirectToAuthError()
-      clearOneLoginTransactionCookie(response.cookies)
-      return response
-    }
+  let registeredUserDetails
+  try {
+    registeredUserDetails = await getRegisteredUserDetails(transaction, oneLoginUser)
+  } catch {
+    await deleteOneLoginTransaction(transactionId)
+    const response = redirectToAuthError()
+    clearOneLoginTransactionCookie(response.cookies)
+    return response
   }
 
-  const session = createAuthenticatedUserSession(oneLoginUser)
+  const session = createAuthenticatedUserSession({ ...oneLoginUser, registeredUserDetails })
   await saveAuthenticatedUserSession(session)
   await deleteOneLoginTransaction(transactionId)
 
