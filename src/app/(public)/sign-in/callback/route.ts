@@ -12,6 +12,7 @@ import {
 } from '../../../../lib/server/auth/sessionStore'
 import { authenticateOneLoginCallback } from '../../../../lib/server/auth/oneLoginToken'
 import { getApplicationRedirectUrl } from '../../../../lib/server/auth/redirects'
+import { getPeopleOnProbationService } from '../../../../lib/server/services/peopleOnProbationService'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -39,6 +40,22 @@ export async function GET(request: NextRequest) {
   }
 
   const oneLoginUser = await authenticateOneLoginCallback(code, transaction)
+  if (transaction.registrationInviteToken) {
+    try {
+      await getPeopleOnProbationService().completeOneLoginRegistration({
+        token: transaction.registrationInviteToken,
+        oneLoginSubject: oneLoginUser.userId,
+        email: oneLoginUser.email,
+        mobileNumber: oneLoginUser.phoneNumber,
+      })
+    } catch {
+      await deleteOneLoginTransaction(transactionId)
+      const response = redirectToAuthError()
+      clearOneLoginTransactionCookie(response.cookies)
+      return response
+    }
+  }
+
   const session = createAuthenticatedUserSession(oneLoginUser)
   await saveAuthenticatedUserSession(session)
   await deleteOneLoginTransaction(transactionId)

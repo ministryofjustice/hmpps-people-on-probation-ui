@@ -105,6 +105,27 @@ export interface PagedAppointmentsResponse {
   page: PageMetadataResponse
 }
 
+export interface RegistrationInviteValidationResponse {
+  id: string
+  status: string
+  expiresAt: string
+}
+
+export type CompleteOneLoginRegistrationRequest = {
+  token: string
+  oneLoginSubject: string
+  email?: string
+  mobileNumber?: string
+}
+
+export interface PeopleOnProbationApiErrorResponse {
+  status: number
+  errorCode: string
+  userMessage: string
+  developerMessage: string
+  moreInfo: string
+}
+
 export default class PeopleOnProbationApiClient extends RestClient {
   constructor(authenticationClient: AuthenticationClient) {
     super('People on Probation API', nextServerConfig.apis.peopleOnProbationApi, logger, authenticationClient)
@@ -132,6 +153,26 @@ export default class PeopleOnProbationApiClient extends RestClient {
   getPastAppointments(crn: string, page = 0, size = 10) {
     return this.get<PagedAppointmentsResponse>(
       { path: `/v1/person/${crn}/past-appointments`, query: { page, size } },
+      asSystem(),
+    )
+  }
+
+  validateRegistrationInvite(token: string) {
+    return this.post<RegistrationInviteValidationResponse, PeopleOnProbationApiErrorResponse>(
+      {
+        path: '/v1/registration-invites/validate',
+        data: { token },
+      },
+      asSystem(),
+    )
+  }
+
+  completeOneLoginRegistration(request: CompleteOneLoginRegistrationRequest) {
+    return this.post<void, PeopleOnProbationApiErrorResponse>(
+      {
+        path: '/v1/registration-invites/complete-one-login',
+        data: request,
+      },
       asSystem(),
     )
   }

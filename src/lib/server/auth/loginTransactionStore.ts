@@ -11,6 +11,7 @@ export type OneLoginTransaction = {
   codeVerifier: string
   codeChallenge: string
   returnTo: string
+  registrationInviteToken?: string
   createdAt: number
 }
 
@@ -44,7 +45,10 @@ function normaliseReturnTo(returnTo?: string | null) {
   return returnTo
 }
 
-export function createOneLoginTransaction(returnTo?: string | null): OneLoginTransaction {
+export function createOneLoginTransaction(
+  returnTo?: string | null,
+  registrationInviteToken?: string,
+): OneLoginTransaction {
   const codeVerifier = randomBase64Url(64)
 
   return {
@@ -54,6 +58,7 @@ export function createOneLoginTransaction(returnTo?: string | null): OneLoginTra
     codeVerifier,
     codeChallenge: createCodeChallenge(codeVerifier),
     returnTo: normaliseReturnTo(returnTo),
+    registrationInviteToken,
     createdAt: Date.now(),
   }
 }

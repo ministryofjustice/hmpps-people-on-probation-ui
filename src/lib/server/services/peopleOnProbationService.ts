@@ -1,6 +1,7 @@
 import 'server-only'
 
-import PeopleOnProbationApiClient from '../data/peopleOnProbationApiClient'
+import PeopleOnProbationApiClient, { CompleteOneLoginRegistrationRequest } from '../data/peopleOnProbationApiClient'
+import { createAuthenticationClient } from '../data/authenticationClient'
 
 export default class PeopleOnProbationService {
   constructor(private readonly peopleOnProbationApiClient: PeopleOnProbationApiClient) {}
@@ -24,4 +25,21 @@ export default class PeopleOnProbationService {
   getPastAppointments(crn: string, page = 0, size = 10) {
     return this.peopleOnProbationApiClient.getPastAppointments(crn, page, size)
   }
+
+  validateRegistrationInvite(token: string) {
+    return this.peopleOnProbationApiClient.validateRegistrationInvite(token)
+  }
+
+  completeOneLoginRegistration(request: CompleteOneLoginRegistrationRequest) {
+    return this.peopleOnProbationApiClient.completeOneLoginRegistration(request)
+  }
+}
+
+let peopleOnProbationService: PeopleOnProbationService | null = null
+
+export function getPeopleOnProbationService() {
+  if (peopleOnProbationService) return peopleOnProbationService
+
+  peopleOnProbationService = new PeopleOnProbationService(new PeopleOnProbationApiClient(createAuthenticationClient()))
+  return peopleOnProbationService
 }

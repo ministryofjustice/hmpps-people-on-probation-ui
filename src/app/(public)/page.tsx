@@ -8,10 +8,14 @@ function normaliseReturnTo(returnTo?: string | string[]) {
   return returnTo
 }
 
+function normaliseToken(token?: string | string[]) {
+  return typeof token === 'string' && token.trim() ? token.trim() : null
+}
+
 export default async function PublicStartPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ returnTo?: string | string[] | undefined }>
+  searchParams?: Promise<{ returnTo?: string | string[] | undefined; token?: string | string[] | undefined }>
 }) {
   const currentUser = await getCurrentUser()
   if (currentUser) {
@@ -19,7 +23,14 @@ export default async function PublicStartPage({
   }
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined
-  const signInStartHref = `/sign-in/start?returnTo=${encodeURIComponent(normaliseReturnTo(resolvedSearchParams?.returnTo))}`
+  const signInStartParams = new URLSearchParams({
+    returnTo: normaliseReturnTo(resolvedSearchParams?.returnTo),
+  })
+  const registrationInviteToken = normaliseToken(resolvedSearchParams?.token)
+  if (registrationInviteToken) {
+    signInStartParams.set('token', registrationInviteToken)
+  }
+  const signInStartHref = `/sign-in/start?${signInStartParams.toString()}`
 
   return (
     <div className="govuk-grid-row">

@@ -3,8 +3,12 @@ export default {
     '^.+\\.tsx?$': ['ts-jest'],
   },
   collectCoverageFrom: ['server/**/*.{ts,js,jsx,mjs}'],
-  testMatch: ['<rootDir>/(server|job)/**/?(*.)(cy|test).{ts,js,jsx,mjs}'],
+  testMatch: ['<rootDir>/(server|job|src)/**/?(*.)(cy|test).{ts,js,jsx,mjs}'],
   testEnvironment: 'node',
+  moduleNameMapper: {
+    '^server-only$': '<rootDir>/testutils/serverOnlyMock.ts',
+  },
+  modulePathIgnorePatterns: ['<rootDir>/.next'],
   reporters: [
     'default',
     [

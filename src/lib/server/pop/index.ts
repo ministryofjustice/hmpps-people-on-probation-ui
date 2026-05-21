@@ -1,13 +1,12 @@
 import 'server-only'
 
 import logger from '../../../../logger'
-import PeopleOnProbationApiClient, {
+import {
   type AppointmentResponse,
   type RequirementResponse,
   type SentenceResponse,
 } from '../data/peopleOnProbationApiClient'
-import PeopleOnProbationService from '../services/peopleOnProbationService'
-import { createAuthenticationClient } from '../data/authenticationClient'
+import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
 import { getStaticProfile, hasStaticProfile } from './staticData'
 
 export const defaultPopCrn = 'X975562'
@@ -152,10 +151,6 @@ export type PopDashboard = {
     inputPlaceholder: string
     sendLabel: string
   }
-}
-
-function createService() {
-  return new PeopleOnProbationService(new PeopleOnProbationApiClient(createAuthenticationClient()))
 }
 
 async function returnNullWhenUnavailable<T>(operation: string, fetchData: () => Promise<T>): Promise<T | null> {
@@ -368,7 +363,7 @@ export async function getPopUserDetails(crn: string): Promise<PopUserDetails | n
   if (staticData) return staticData
 
   return returnNullWhenUnavailable('getPopUserDetails', async () => {
-    const personalDetails = await createService().getPersonalDetails(crn)
+    const personalDetails = await getPeopleOnProbationService().getPersonalDetails(crn)
     const emergencyContact = personalDetails.emergencyContacts[0]
 
     return {
@@ -430,8 +425,8 @@ export async function getPopAppointments(crn: string): Promise<PopAppointmentsDe
 
   return returnNullWhenUnavailable('getPopAppointments', async () => {
     const [futureAppointments, pastAppointments] = await Promise.all([
-      createService().getFutureAppointments(crn, 0, 10),
-      createService().getPastAppointments(crn, 0, 10),
+      getPeopleOnProbationService().getFutureAppointments(crn, 0, 10),
+      getPeopleOnProbationService().getPastAppointments(crn, 0, 10),
     ])
 
     return {
@@ -453,7 +448,7 @@ export async function getPopOrderSummary(crn: string): Promise<PopOrderSummary |
   if (staticData) return staticData
 
   return returnNullWhenUnavailable('getPopOrderSummary', async () => {
-    const sentences = await createService().getSentences(crn)
+    const sentences = await getPeopleOnProbationService().getSentences(crn)
     const sentence = getPrimarySentence(sentences.sentences)
 
     return {
@@ -479,7 +474,7 @@ export async function getPopProgress(crn: string): Promise<PopProgressDetails | 
   if (staticData) return staticData
 
   return returnNullWhenUnavailable('getPopProgress', async () => {
-    const sentences = await createService().getSentences(crn)
+    const sentences = await getPeopleOnProbationService().getSentences(crn)
     const primarySentence = getPrimarySentence(sentences.sentences)
 
     return {
@@ -498,7 +493,7 @@ export async function getPopProgress(crn: string): Promise<PopProgressDetails | 
 
 export async function getPopRequirementsAndConditions(crn: string): Promise<string[] | null> {
   return returnNullWhenUnavailable('getPopRequirementsAndConditions', async () => {
-    const sentences = await createService().getSentences(crn)
+    const sentences = await getPeopleOnProbationService().getSentences(crn)
     const primarySentence = getPrimarySentence(sentences.sentences)
     const requirementConditions = (primarySentence?.requirements || []).map(
       requirement => `${requirement.type || 'Requirement'}: ${requirement.description || 'No description provided'}`,
