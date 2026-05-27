@@ -50,7 +50,7 @@ function getRequiredOneLoginConfig() {
   }
 }
 
-export async function buildOneLoginAuthorizeUrl(transaction: OneLoginTransaction) {
+export default async function buildOneLoginAuthorizeUrl(transaction: OneLoginTransaction) {
   const { authorization_endpoint: authorizationEndpoint } = await getOneLoginDiscoveryDocument()
   const { clientId, redirectUri, scopes, vtr } = getRequiredOneLoginConfig()
 

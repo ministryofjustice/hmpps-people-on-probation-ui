@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import logger from '../../logger'
-import { buildOneLoginAuthorizeUrl } from '../auth/oneLoginAuthorize'
+import buildOneLoginAuthorizeUrl from '../auth/oneLoginAuthorize'
 import { authenticateOneLoginCallback, type OneLoginAuthenticatedUser } from '../auth/oneLoginToken'
 import {
   createOneLoginTransaction,

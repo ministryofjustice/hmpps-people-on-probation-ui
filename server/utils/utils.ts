@@ -64,7 +64,7 @@ export const formatRemainingDuration = (endDateStr: string): string => {
   // differenceInCalendarMonths overshoots when end day < today day
   // e.g. today=May 27, end=Jun 21 next year → returns 13, but addMonths(today,13)=Jun 27 > Jun 21
   let months = differenceInCalendarMonths(end, today)
-  if (isAfter(addMonths(today, months), end)) months--
+  if (isAfter(addMonths(today, months), end)) months -= 1
 
   const days = differenceInDays(end, addMonths(today, months))
 
