@@ -20,7 +20,7 @@ type RequirementRowView = {
 function toRequirementRowView(req: RequirementResponse): RequirementRowView {
   const type = req.type || req.description || 'Requirement'
   const hasAmount = req.required && req.required > 0 && req.unit
-  const value = hasAmount ? `${req.required} ${formatUnit(req.unit, req.required)}` : (req.description || '')
+  const value = hasAmount ? `${req.required} ${formatUnit(req.unit, req.required)}` : req.description || ''
   return { type, value }
 }
 

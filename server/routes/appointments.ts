@@ -54,7 +54,9 @@ export default function appointmentsRoutes(services: Services): Router {
         services.peopleOnProbationService.getPastAppointments(crn, 0, 10),
       ])
 
-      const missedPassedAppointment = pastAppointments.content.find(a => a.nationalStandards === true && a.attended === false)
+      const missedPassedAppointment = pastAppointments.content.find(
+        a => a.nationalStandards === true && a.attended === false,
+      )
 
       const missedAlert: MissedAlertView | null = missedPassedAppointment
         ? {

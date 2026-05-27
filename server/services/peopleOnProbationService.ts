@@ -45,9 +45,7 @@ let peopleOnProbationService: PeopleOnProbationService | null = null
 export function getPeopleOnProbationService() {
   if (peopleOnProbationService) return peopleOnProbationService
 
-  peopleOnProbationService = new PeopleOnProbationService(
-    new PeopleOnProbationApiClient(getAuthenticationClient()),
-  )
+  peopleOnProbationService = new PeopleOnProbationService(new PeopleOnProbationApiClient(getAuthenticationClient()))
 
   return peopleOnProbationService
 }

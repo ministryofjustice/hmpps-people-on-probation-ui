@@ -62,10 +62,12 @@ function toRequirementView(req: RequirementResponse): RequirementView | null {
   const startDate = req.actualStartDate ?? req.expectedStartDate
   const endDate = req.expectedEndDate ?? req.actualEndDate
   if (startDate && endDate) {
-    const { percentComplete, remainingLabel, startDate: fmtStart, endDate: fmtEnd } = calculateDateProgress(
-      startDate,
-      endDate,
-    )
+    const {
+      percentComplete,
+      remainingLabel,
+      startDate: fmtStart,
+      endDate: fmtEnd,
+    } = calculateDateProgress(startDate, endDate)
     return { label, percentComplete, remainingLabel, startDate: fmtStart, endDate: fmtEnd }
   }
 

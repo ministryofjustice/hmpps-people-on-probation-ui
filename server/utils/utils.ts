@@ -1,4 +1,13 @@
-import { format, isValid, parseISO, startOfDay, isAfter, differenceInCalendarMonths, differenceInDays, addMonths } from 'date-fns'
+import {
+  format,
+  isValid,
+  parseISO,
+  startOfDay,
+  isAfter,
+  differenceInCalendarMonths,
+  differenceInDays,
+  addMonths,
+} from 'date-fns'
 import type { AddressResponse, PersonNameResponse } from '../data/peopleOnProbationApiClient'
 
 const properCase = (word: string): string =>

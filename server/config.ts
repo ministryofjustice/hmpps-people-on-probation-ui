@@ -90,8 +90,16 @@ export default {
   oneLogin: {
     issuerUrl: get('ONE_LOGIN_ISSUER_URL', '', requiredInProduction) as string,
     clientId: get('ONE_LOGIN_CLIENT_ID', '', requiredInProduction) as string,
-    redirectUri: get('ONE_LOGIN_REDIRECT_URI', 'http://localhost:3000/sign-in/callback', requiredInProduction) as string,
-    postLogoutRedirectUri: get('ONE_LOGIN_POST_LOGOUT_REDIRECT_URI', 'http://localhost:3000', requiredInProduction) as string,
+    redirectUri: get(
+      'ONE_LOGIN_REDIRECT_URI',
+      'http://localhost:3000/sign-in/callback',
+      requiredInProduction,
+    ) as string,
+    postLogoutRedirectUri: get(
+      'ONE_LOGIN_POST_LOGOUT_REDIRECT_URI',
+      'http://localhost:3000',
+      requiredInProduction,
+    ) as string,
     scopes: get('ONE_LOGIN_SCOPES', 'openid email phone') as string,
     vtr: get('ONE_LOGIN_VTR', 'Cl.Cm') as string,
     keyId: get('ONE_LOGIN_KEY_ID', '', requiredInProduction) as string,

@@ -89,7 +89,9 @@ export default function routes(services: Services): Router {
           futureAppointments.content.find(appointment => appointment.nationalStandards === true) ?? undefined
 
         const missedAppointment =
-          pastAppointments.content.find(appointment => appointment.nationalStandards === true && appointment.attended === false) ?? undefined
+          pastAppointments.content.find(
+            appointment => appointment.nationalStandards === true && appointment.attended === false,
+          ) ?? undefined
 
         return res.render('pages/index', {
           nextAppointment: toNextAppointmentView(nextAppointment),
