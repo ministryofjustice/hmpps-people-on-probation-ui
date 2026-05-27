@@ -1,0 +1,86 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "../macros/showDetails.njk" import showDetails %}
+{% set pageTitle = "Requirements" %}
+{% set currentPage = "requirements" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Home", href: "/" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-l">Requirements</h1>
+
+  {% if lastUpdatedAt %}
+    <p class="govuk-body govuk-secondary-text-colour">Last updated on {{ lastUpdatedAt }}</p>
+  {% endif %}
+
+  {% include "../partials/mini-hub.njk" %}
+
+  <div class="govuk-!-margin-top-6">
+
+    <p class="govuk-body">
+      Make sure you follow the requirements from your order. If you don't, you could breach your probation, and go back to prison.
+    </p>
+    <p class="govuk-body">
+      You may also want to know about your <a class="govuk-link govuk-link--no-visited-state" href="/expectations">expectations while on probation</a>.
+    </p>
+
+    <div class="pop-summary-card govuk-!-margin-bottom-6">
+      <div class="pop-summary-card__header">
+        <span class="pop-summary-card__type">Order details</span>
+      </div>
+      <dl class="pop-summary-card__details">
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Charge</dt>
+          <dd class="pop-summary-card__value">
+            {% if orderDetails.charge %}
+              {{ showDetails({ id: "charge-detail", text: orderDetails.charge }) }}
+            {% endif %}
+          </dd>
+        </div>
+        {% if orderDetails.type %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Order type</dt>
+            <dd class="pop-summary-card__value">{{ orderDetails.type }}</dd>
+          </div>
+        {% endif %}
+        {% if orderDetails.startDate %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Start date</dt>
+            <dd class="pop-summary-card__value">{{ orderDetails.startDate }}</dd>
+          </div>
+        {% endif %}
+        {% if orderDetails.endDate %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">End date</dt>
+            <dd class="pop-summary-card__value">{{ orderDetails.endDate }}</dd>
+          </div>
+        {% endif %}
+      </dl>
+    </div>
+
+    {% if requirements.length %}
+      <div class="pop-summary-card">
+        <div class="pop-summary-card__header">
+          <span class="pop-summary-card__type">Requirements</span>
+          <div class="pop-summary-card__actions">
+            <a class="govuk-link govuk-link--no-visited-state" href="/progress">View progress</a>
+          </div>
+        </div>
+        <dl class="pop-summary-card__details">
+          {% for req in requirements %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">{{ req.type }}</dt>
+              <dd class="pop-summary-card__value">{{ req.value }}</dd>
+            </div>
+          {% endfor %}
+        </dl>
+      </div>
+    {% endif %}
+
+  </div>
+
+{% endblock %}
+

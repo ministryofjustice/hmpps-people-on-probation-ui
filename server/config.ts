@@ -14,6 +14,21 @@ function get<T>(name: string, fallback: T, options = { requireInProduction: fals
 
 const requiredInProduction = { requireInProduction: true }
 
+const localAuth = {
+  enabled: get('LOCAL_AUTH_ENABLED', 'false') === 'true',
+  oneLoginSubject: get('LOCAL_AUTH_ONE_LOGIN_SUBJECT', '') as string,
+  email: get('LOCAL_AUTH_EMAIL', 'local@example.com') as string,
+  displayName: get('LOCAL_AUTH_DISPLAY_NAME', 'Local User') as string,
+}
+
+if (production && localAuth.enabled) {
+  throw new Error('LOCAL_AUTH_ENABLED must not be true in production')
+}
+
+if (localAuth.enabled && !localAuth.oneLoginSubject) {
+  throw new Error('LOCAL_AUTH_ONE_LOGIN_SUBJECT must be set when LOCAL_AUTH_ENABLED is true')
+}
+
 const auditConfig = () => {
   const auditEnabled = get('AUDIT_ENABLED', 'false') === 'true'
   return {
@@ -51,39 +66,42 @@ export default {
     hmppsAuth: {
       url: get('HMPPS_AUTH_URL', 'http://localhost:9090/auth', requiredInProduction),
       healthPath: '/health/ping',
-      externalUrl: get('HMPPS_AUTH_EXTERNAL_URL', get('HMPPS_AUTH_URL', 'http://localhost:9090/auth')),
       timeout: {
         response: Number(get('HMPPS_AUTH_TIMEOUT_RESPONSE', 10000)),
         deadline: Number(get('HMPPS_AUTH_TIMEOUT_DEADLINE', 10000)),
       },
       agent: new AgentConfig(Number(get('HMPPS_AUTH_TIMEOUT_RESPONSE', 10000))),
-      authClientId: get('AUTH_CODE_CLIENT_ID', 'clientid', requiredInProduction),
-      authClientSecret: get('AUTH_CODE_CLIENT_SECRET', 'clientsecret', requiredInProduction),
       systemClientId: get('CLIENT_CREDS_CLIENT_ID', 'clientid', requiredInProduction),
       systemClientSecret: get('CLIENT_CREDS_CLIENT_SECRET', 'clientsecret', requiredInProduction),
     },
-    tokenVerification: {
-      url: get('TOKEN_VERIFICATION_API_URL', 'http://localhost:8100', requiredInProduction),
+    peopleOnProbationApi: {
+      url: get('PEOPLE_ON_PROBATION_API_URL', 'http://localhost:8080', requiredInProduction),
       healthPath: '/health/ping',
       timeout: {
-        response: Number(get('TOKEN_VERIFICATION_API_TIMEOUT_RESPONSE', 5000)),
-        deadline: Number(get('TOKEN_VERIFICATION_API_TIMEOUT_DEADLINE', 5000)),
+        response: Number(get('PEOPLE_ON_PROBATION_API_TIMEOUT_RESPONSE', 5000)),
+        deadline: Number(get('PEOPLE_ON_PROBATION_API_TIMEOUT_DEADLINE', 5000)),
       },
-      agent: new AgentConfig(Number(get('TOKEN_VERIFICATION_API_TIMEOUT_RESPONSE', 5000))),
-      enabled: get('TOKEN_VERIFICATION_ENABLED', 'false') === 'true',
-    },
-    exampleApi: {
-      url: get('EXAMPLE_API_URL', 'http://localhost:8080', requiredInProduction),
-      healthPath: '/health/ping',
-      timeout: {
-        response: Number(get('EXAMPLE_API_TIMEOUT_RESPONSE', 5000)),
-        deadline: Number(get('EXAMPLE_API_TIMEOUT_DEADLINE', 5000)),
-      },
-      agent: new AgentConfig(Number(get('EXAMPLE_API_TIMEOUT_RESPONSE', 5000))),
+      agent: new AgentConfig(Number(get('PEOPLE_ON_PROBATION_API_TIMEOUT_RESPONSE', 5000))),
     },
   },
   sqs: {
     audit: auditConfig(),
+  },
+  oneLogin: {
+    issuerUrl: get('ONE_LOGIN_ISSUER_URL', '', requiredInProduction) as string,
+    clientId: get('ONE_LOGIN_CLIENT_ID', '', requiredInProduction) as string,
+    redirectUri: get('ONE_LOGIN_REDIRECT_URI', 'http://localhost:3000/sign-in/callback', requiredInProduction) as string,
+    postLogoutRedirectUri: get('ONE_LOGIN_POST_LOGOUT_REDIRECT_URI', 'http://localhost:3000', requiredInProduction) as string,
+    scopes: get('ONE_LOGIN_SCOPES', 'openid email phone') as string,
+    vtr: get('ONE_LOGIN_VTR', 'Cl.Cm') as string,
+    keyId: get('ONE_LOGIN_KEY_ID', '', requiredInProduction) as string,
+    privateKeyBase64: process.env.ONE_LOGIN_PRIVATE_KEY_BASE64,
+    publicKeyBase64: process.env.ONE_LOGIN_PUBLIC_KEY_BASE64,
+  },
+  localAuth,
+  popChatbot: {
+    apiUrl: get('POP_CHATBOT_API_URL', '', requiredInProduction) as string,
+    apiKey: process.env.POP_CHATBOT_API_KEY,
   },
   ingressUrl: get('INGRESS_URL', 'http://localhost:3000', requiredInProduction),
   environmentName: get('ENVIRONMENT_NAME', ''),

@@ -15,23 +15,33 @@ import { createRedisClient } from './redisClient'
 import config from '../config'
 import HmppsAuditClient from './hmppsAuditClient'
 import logger from '../../logger'
-import ExampleApiClient from './exampleApiClient'
+import PeopleOnProbationApiClient from './peopleOnProbationApiClient'
 
-export const dataAccess = () => {
-  const hmppsAuthClient = new AuthenticationClient(
+let authenticationClient: AuthenticationClient | null = null
+
+export function getAuthenticationClient(): AuthenticationClient {
+  if (authenticationClient) return authenticationClient
+
+  authenticationClient = new AuthenticationClient(
     config.apis.hmppsAuth,
     logger,
     config.redis.enabled ? new RedisTokenStore(createRedisClient()) : new InMemoryTokenStore(),
   )
 
+  return authenticationClient
+}
+
+export const dataAccess = () => {
+  const hmppsAuthClient = getAuthenticationClient()
+
   return {
     applicationInfo,
     hmppsAuthClient,
-    exampleApiClient: new ExampleApiClient(hmppsAuthClient),
+    peopleOnProbationApiClient: new PeopleOnProbationApiClient(hmppsAuthClient),
     hmppsAuditClient: new HmppsAuditClient(config.sqs.audit),
   }
 }
 
 export type DataAccess = ReturnType<typeof dataAccess>
 
-export { AuthenticationClient, HmppsAuditClient, ExampleApiClient }
+export { AuthenticationClient, HmppsAuditClient, PeopleOnProbationApiClient }

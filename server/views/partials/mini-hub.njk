@@ -1,0 +1,31 @@
+{#-
+  Mini hub navigation partial.
+  Parameters:
+    currentPage (string): key of the active page — matches the `key` on each nav item.
+      Accepted values: 'appointments', 'progress', 'goals', 'requirements',
+                       'expectations', 'probation-officer', 'details'
+-#}
+
+{% set hubItems = [
+  { key: 'appointments',      href: '/appointments',      text: 'Appointments and activities' },
+  { key: 'progress',          href: '/progress',          text: 'Your probation progress' },
+  { key: 'goals',             href: '/goals',             text: 'Your probation goals' },
+  { key: 'requirements',      href: '/requirements',      text: 'Requirements' },
+  { key: 'expectations',      href: '/expectations',      text: 'Expectations' },
+  { key: 'probation-officer', href: '/probation-officer', text: 'Probation officer details' },
+  { key: 'details',           href: '/details',           text: 'Your details' }
+] %}
+
+<nav class="pop-mini-hub" aria-label="Section navigation">
+  <ul class="pop-mini-hub__list govuk-list">
+    {% for item in hubItems %}
+      <li class="pop-mini-hub__item">
+        {% if item.key === currentPage %}
+          <span class="pop-mini-hub__current" aria-current="page">{{ item.text }}</span>
+        {% else %}
+          <a class="govuk-link govuk-link--no-visited-state pop-mini-hub__link" href="{{ item.href }}">{{ item.text }}</a>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</nav>

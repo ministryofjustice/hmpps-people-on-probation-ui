@@ -1,0 +1,166 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "moj/components/alert/macro.njk" import mojAlert %}
+
+{% set pageTitle = "Appointments and activities" %}
+{% set currentPage = "appointments" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Home", href: "/" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-l">Appointments and activities</h1>
+
+  {% include "../partials/mini-hub.njk" %}
+
+  <div class="govuk-!-margin-top-6">
+
+    {% if missedAlert %}
+      {{ mojAlert({
+        variant: "error",
+        title: "You missed a mandatory appointment on " + missedAlert.date,
+        showTitleAsHeading: true,
+        dismissible: true,
+        html: '
+          <p class="govuk-body">Appointment: \'' + (missedAlert.description or missedAlert.type) + '\'' + (' with ' + missedAlert.practitionerName if missedAlert.practitionerName else "") + (', on ' + missedAlert.date if missedAlert.date else "") + (', ' + missedAlert.timeRange if missedAlert.timeRange else "") + '</p>
+          <p class="govuk-body govuk-!-margin-bottom-0">
+            Contact <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">your probation officer</a> as soon as possible to explain why you missed this appointment.
+          </p>
+        '
+      }) }}
+    {% endif %}
+
+    <p class="govuk-body">
+      Appointments and activities are a major part of your probation order. If you
+      have problems attending an appointment,
+      <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">let your probation officer know as soon as possible</a>.
+    </p>
+
+    <h2 class="govuk-heading-m">Upcoming appointments and activities</h2>
+
+    {% set whyDetailsHtml %}
+      <ul class="govuk-list govuk-list--bullet">
+        <li>Your probation officer might not have updated your account yet.{% if lastUpdatedAt %} Last update: {{ lastUpdatedAt }}{% endif %}</li>
+        <li>Tag appointments are sent by the electronic monitoring service</li>
+        <li>Appointments outside the Probation Service are sent through other channels</li>
+      </ul>
+    {% endset %}
+
+    {% call govukInsetText({ classes: "guidance-panel" }) %}
+      <p class="govuk-body govuk-!-margin-bottom-4">This list might not show all appointments</p>
+      {{ govukDetails({ summaryText: "Why this might happen", html: whyDetailsHtml }) }}
+    {% endcall %}
+
+    {% if futureAppointments.length %}
+      {% for appointment in futureAppointments %}
+        <div class="pop-summary-card">
+          <div class="pop-summary-card__header">
+            <span class="pop-summary-card__type">
+              {{ appointment.type or appointment.description }}
+            </span>
+            <div class="pop-summary-card__actions">
+              {% if appointment.address.length %}
+                <a class="govuk-link govuk-link--no-visited-state" href="#">View on map</a>
+                <span class="pop-summary-card__separator" aria-hidden="true">|</span>
+              {% endif %}
+              <a class="govuk-link govuk-link--no-visited-state" href="#">Add to calendar</a>
+            </div>
+            {% if appointment.nationalStandards %}
+              {{ govukTag({ text: "Mandatory", classes: "govuk-tag--black" }) }}
+            {% endif %}
+          </div>
+
+          <dl class="pop-summary-card__details">
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Date and time</dt>
+              <dd class="pop-summary-card__value">{{ appointment.date or "" }}</dd>
+            </div>
+            {% if appointment.timeRange %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Time</dt>
+                <dd class="pop-summary-card__value">{{ appointment.timeRange }}</dd>
+              </div>
+            {% endif %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Location</dt>
+              <dd class="pop-summary-card__value">
+                {% for line in appointment.address %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+              </dd>
+            </div>
+            {% if appointment.practitionerName %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Key contact</dt>
+                <dd class="pop-summary-card__value">{{ appointment.practitionerName }}</dd>
+              </div>
+            {% endif %}
+          </dl>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="govuk-body">You have no upcoming appointments.</p>
+    {% endif %}
+
+    <h2 class="govuk-heading-m govuk-!-padding-top-6">Past appointments</h2>
+
+    {% if pastAppointments.length %}
+      {% for appointment in pastAppointments %}
+        <div class="pop-summary-card">
+          <div class="pop-summary-card__header">
+            <span class="pop-summary-card__type">
+              {{ appointment.type or appointment.description }}
+            </span>
+            {% if appointment.nationalStandards %}
+              {{ govukTag({ text: "Mandatory", classes: "govuk-tag--black" }) }}
+            {% endif %}
+          </div>
+
+          <dl class="pop-summary-card__details">
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Date</dt>
+              <dd class="pop-summary-card__value">{{ appointment.date or "" }}</dd>
+            </div>
+            {% if appointment.timeRange %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Time</dt>
+                <dd class="pop-summary-card__value">{{ appointment.timeRange }}</dd>
+              </div>
+            {% endif %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Location</dt>
+              <dd class="pop-summary-card__value">
+                {% for line in appointment.address %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+              </dd>
+            </div>
+            {% if appointment.practitionerName %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Key contact</dt>
+                <dd class="pop-summary-card__value">{{ appointment.practitionerName }}</dd>
+              </div>
+            {% endif %}
+            {% if appointment.attended !== undefined %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Status</dt>
+                <dd class="pop-summary-card__value">
+                  {% if appointment.attended === true %}
+                    {{ govukTag({ text: "Attended", classes: "govuk-tag--green" }) }}
+                  {% elif appointment.attended === false %}
+                    {{ govukTag({ text: "Missed", classes: "govuk-tag--red" }) }}
+                  {% endif %}
+                </dd>
+              </div>
+            {% endif %}
+          </dl>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="govuk-body">You have no past appointments.</p>
+    {% endif %}
+
+  </div>
+
+{% endblock %}
