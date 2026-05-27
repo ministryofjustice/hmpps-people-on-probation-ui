@@ -1,1 +1,1 @@
-export { resetStubs } from './mockApis/wiremock'
+export { resetStubs as default } from './mockApis/wiremock'
