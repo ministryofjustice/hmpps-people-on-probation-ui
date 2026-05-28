@@ -29,6 +29,44 @@ function getCacheTtlSeconds(cacheControl: string | null) {
   return maxAge ? Number(maxAge) : 24 * 60 * 60
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function isAbsoluteUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
+function assertValidDiscoveryDocument(value: unknown): asserts value is OneLoginDiscoveryDocument {
+  if (!value || typeof value !== 'object') {
+    throw new Error('One Login discovery document is not an object')
+  }
+
+  const document = value as Partial<OneLoginDiscoveryDocument>
+  const requiredUrlFields: Array<keyof OneLoginDiscoveryDocument> = [
+    'issuer',
+    'authorization_endpoint',
+    'token_endpoint',
+    'userinfo_endpoint',
+    'jwks_uri',
+  ]
+
+  for (const field of requiredUrlFields) {
+    if (!isNonEmptyString(document[field]) || !isAbsoluteUrl(document[field])) {
+      throw new Error(`One Login discovery document is missing or has invalid ${field}`)
+    }
+  }
+
+  if (document.end_session_endpoint && !isAbsoluteUrl(document.end_session_endpoint)) {
+    throw new Error('One Login discovery document has invalid end_session_endpoint')
+  }
+}
+
 export async function getOneLoginDiscoveryDocument() {
   if (cachedDiscoveryDocument && cachedDiscoveryDocument.expiresAt > Date.now()) {
     return cachedDiscoveryDocument.document
@@ -45,7 +83,9 @@ export async function getOneLoginDiscoveryDocument() {
       throw new Error(`Failed to retrieve One Login discovery document: ${response.status}`)
     }
 
-    const document = (await response.json()) as OneLoginDiscoveryDocument
+    const document = await response.json()
+    assertValidDiscoveryDocument(document)
+
     cachedDiscoveryDocument = {
       document,
       expiresAt: Date.now() + getCacheTtlSeconds(response.headers.get('cache-control')) * 1000,
