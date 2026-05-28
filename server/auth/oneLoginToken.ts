@@ -27,6 +27,8 @@ type OneLoginUserInfo = {
   name?: string
 }
 
+const clockSkewToleranceSeconds = 30
+
 function getRequiredClientId() {
   const { clientId } = config.oneLogin
   if (!clientId) throw new Error('ONE_LOGIN_CLIENT_ID is required to complete a One Login journey')
@@ -101,7 +103,7 @@ async function verifyIdToken(idToken: string, nonce: string, discoveryDocument: 
     throw new Error('One Login ID token did not include a subject')
   }
 
-  if (!payload.iat || payload.iat > Math.floor(Date.now() / 1000)) {
+  if (!payload.iat || payload.iat > Math.floor(Date.now() / 1000) + clockSkewToleranceSeconds) {
     throw new Error('One Login ID token issued-at time is invalid')
   }
 

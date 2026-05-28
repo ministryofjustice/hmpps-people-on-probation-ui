@@ -29,7 +29,7 @@ export default function requirementsRoutes(services: Services): Router {
 
   router.use(requireAuthentication)
 
-  router.get('/', async (req, res, next) => {
+  router.get('/', async (_req, res, next) => {
     try {
       const crn = res.locals.user?.registeredUserDetails?.personReference
       if (!crn) return res.redirect('/autherror')

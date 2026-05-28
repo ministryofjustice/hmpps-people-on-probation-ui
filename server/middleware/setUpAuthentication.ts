@@ -15,6 +15,7 @@ import {
   saveAuthenticatedUserSession,
   deleteAuthenticatedUserSession,
   getAuthenticatedUserSessionTtlSeconds,
+  getAuthenticatedUserSession,
 } from '../auth/sessionStore'
 import {
   setOneLoginTransactionCookie,
@@ -187,6 +188,8 @@ export default function setUpAuthentication(): Router {
   router.get('/sign-out', async (req, res, next) => {
     try {
       const sessionId = getAppSessionCookie(req)
+      const session = sessionId ? await getAuthenticatedUserSession(sessionId) : null
+      const idToken = session?.idToken
 
       if (sessionId) {
         await deleteAuthenticatedUserSession(sessionId)
@@ -202,7 +205,12 @@ export default function setUpAuthentication(): Router {
 
       if (endSessionEndpoint) {
         const signOutUrl = new URL(endSessionEndpoint)
-        signOutUrl.searchParams.set('post_logout_redirect_uri', config.oneLogin.postLogoutRedirectUri)
+        if (idToken) {
+          signOutUrl.searchParams.set('id_token_hint', idToken)
+          signOutUrl.searchParams.set('post_logout_redirect_uri', config.oneLogin.postLogoutRedirectUri)
+        } else {
+          logger.warn('Signing out without One Login ID token; redirecting to One Login logout without post logout redirect')
+        }
         return res.redirect(signOutUrl.toString())
       }
 

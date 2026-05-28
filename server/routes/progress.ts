@@ -7,7 +7,7 @@ import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
 
 type DateProgressResult = {
   percentComplete: number
-  remainingLabel: string
+  remainingDuration: string
   startDate: string
   endDate: string
 }
@@ -20,7 +20,7 @@ function calculateDateProgress(startDateStr: string, endDateStr: string): DatePr
   const completedDays = Math.min(Math.max(Math.round((today.getTime() - start.getTime()) / 86_400_000), 0), totalDays)
   return {
     percentComplete: Math.round((completedDays / totalDays) * 100),
-    remainingLabel: formatRemainingDuration(endDateStr),
+    remainingDuration: formatRemainingDuration(endDateStr),
     startDate: formatDate(startDateStr) ?? startDateStr,
     endDate: formatDate(endDateStr) ?? endDateStr,
   }
@@ -30,7 +30,7 @@ type OverallOrderView = {
   type?: string
   startDate?: string
   endDate?: string
-  remainingLabel: string
+  remainingDuration: string
   percentComplete: number
 }
 
@@ -45,30 +45,30 @@ type RequirementView = {
   // Date-based (actualStartDate/actualEndDate available)
   startDate?: string
   endDate?: string
-  remainingLabel?: string
+  remainingDuration?: string
 }
 
-function toRequirementView(req: RequirementResponse): RequirementView | null {
-  const label = req.type || req.description || 'Requirement'
+function toRequirementView(requirement: RequirementResponse): RequirementView | null {
+  const label = requirement.type || requirement.description || 'Requirement'
 
-  if (req.required && req.required > 0) {
-    const completed = Math.min(req.completed ?? 0, req.required)
-    const remaining = Math.max(req.required - completed, 0)
-    const percentComplete = Math.round((completed / req.required) * 100)
-    const unitLabel = formatUnit(req.unit, remaining)
-    return { label, required: req.required, completed, remaining, unitLabel, percentComplete }
+  if (requirement.required && requirement.required > 0) {
+    const completed = Math.min(requirement.completed ?? 0, requirement.required)
+    const remaining = Math.max(requirement.required - completed, 0)
+    const percentComplete = Math.round((completed / requirement.required) * 100)
+    const unitLabel = formatUnit(requirement.unit, remaining)
+    return { label, required: requirement.required, completed, remaining, unitLabel, percentComplete }
   }
 
-  const startDate = req.actualStartDate ?? req.expectedStartDate
-  const endDate = req.expectedEndDate ?? req.actualEndDate
+  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
+  const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
   if (startDate && endDate) {
     const {
       percentComplete,
-      remainingLabel,
+      remainingDuration,
       startDate: fmtStart,
       endDate: fmtEnd,
     } = calculateDateProgress(startDate, endDate)
-    return { label, percentComplete, remainingLabel, startDate: fmtStart, endDate: fmtEnd }
+    return { label, percentComplete, remainingDuration, startDate: fmtStart, endDate: fmtEnd }
   }
 
   return null
@@ -89,11 +89,11 @@ export default function progressRoutes(services: Services): Router {
 
       let overallOrder: OverallOrderView | null = null
       if (sentence?.startDate && sentence?.expectedEndDate) {
-        const { percentComplete, remainingLabel, startDate, endDate } = calculateDateProgress(
+        const { percentComplete, remainingDuration, startDate, endDate } = calculateDateProgress(
           sentence.startDate,
           sentence.expectedEndDate,
         )
-        overallOrder = { type: sentence.type, startDate, endDate, remainingLabel, percentComplete }
+        overallOrder = { type: sentence.type, startDate, endDate, remainingDuration, percentComplete }
       }
 
       const requirements = (sentence?.requirements ?? [])

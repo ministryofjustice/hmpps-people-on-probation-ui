@@ -30,7 +30,7 @@
               {{ overallOrder.percentComplete }}%
             </progress>
           </div>
-          <p class="govuk-body pop-progress__remaining">{{ overallOrder.remainingLabel }} left</p>
+          <p class="govuk-body pop-progress__remaining">{{ overallOrder.remainingDuration }} left</p>
         </div>
       </div>
 
@@ -53,7 +53,7 @@
           {% endif %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">Time remaining</dt>
-            <dd class="pop-summary-card__value">{{ overallOrder.remainingLabel }}</dd>
+            <dd class="pop-summary-card__value">{{ overallOrder.remainingDuration }}</dd>
           </div>
         </dl>
       </div>
@@ -62,20 +62,20 @@
     {% if requirements.length %}
       <h2 class="govuk-heading-m">Order requirements</h2>
 
-      {% for req in requirements %}
+      {% for requirement in requirements %}
         <div class="pop-progress govuk-!-margin-bottom-4">
-          <p class="pop-progress__title">{{ req.label }} – progress</p>
+          <p class="pop-progress__title">{{ requirement.label }} – progress</p>
           <div class="pop-progress__bar-row">
             <div class="pop-progress__bar-wrapper">
-              <progress class="pop-progress__bar pop-progress__bar--blue" value="{{ req.percentComplete }}" max="100">
-                {{ req.percentComplete }}%
+              <progress class="pop-progress__bar pop-progress__bar--blue" value="{{ requirement.percentComplete }}" max="100">
+                {{ requirement.percentComplete }}%
               </progress>
             </div>
             <p class="govuk-body pop-progress__remaining">
-            {%- if req.remaining -%}
-              {{ req.remaining }} {{ req.unitLabel }}
+            {%- if requirement.remaining is defined -%}
+              {{ requirement.remaining }} {{ requirement.unitLabel }}
             {%- else -%}
-              {{ req.remainingLabel }}
+              {{ requirement.remainingDuration }}
             {%- endif %} left
           </p>
           </div>
@@ -83,39 +83,39 @@
 
         <div class="pop-summary-card govuk-!-margin-bottom-6">
           <div class="pop-summary-card__header">
-            <span class="pop-summary-card__type">{{ req.label }}</span>
-            {% if not req.required %}
+            <span class="pop-summary-card__type">{{ requirement.label }}</span>
+            {% if not requirement.required %}
               <div class="pop-summary-card__actions">
                 <a class="govuk-link govuk-link--no-visited-state" href="/requirements">View requirements</a>
               </div>
             {% endif %}
           </div>
           <dl class="pop-summary-card__details">
-            {% if req.required %}
+            {% if requirement.required %}
               <div class="pop-summary-card__row">
-                <dt class="pop-summary-card__key">Total {{ req.unitLabel }} on order</dt>
-                <dd class="pop-summary-card__value">{{ req.required }} {{ req.unitLabel }}</dd>
+                <dt class="pop-summary-card__key">Total {{ requirement.unitLabel }} on order</dt>
+                <dd class="pop-summary-card__value">{{ requirement.required }} {{ requirement.unitLabel }}</dd>
               </div>
               <div class="pop-summary-card__row">
-                <dt class="pop-summary-card__key">{{ req.unitLabel | capitalize }} completed</dt>
-                <dd class="pop-summary-card__value">{{ req.completed }} {{ req.unitLabel }}</dd>
+                <dt class="pop-summary-card__key">{{ requirement.unitLabel | capitalize }} completed</dt>
+                <dd class="pop-summary-card__value">{{ requirement.completed }} {{ requirement.unitLabel }}</dd>
               </div>
               <div class="pop-summary-card__row">
-                <dt class="pop-summary-card__key">{{ req.unitLabel | capitalize }} remaining</dt>
-                <dd class="pop-summary-card__value">{{ req.remaining }} {{ req.unitLabel }}</dd>
+                <dt class="pop-summary-card__key">{{ requirement.unitLabel | capitalize }} remaining</dt>
+                <dd class="pop-summary-card__value">{{ requirement.remaining }} {{ requirement.unitLabel }}</dd>
               </div>
-            {% elif req.startDate %}
+            {% elif requirement.startDate %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Start date</dt>
-                <dd class="pop-summary-card__value">{{ req.startDate }}</dd>
+                <dd class="pop-summary-card__value">{{ requirement.startDate }}</dd>
               </div>
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">End date</dt>
-                <dd class="pop-summary-card__value">{{ req.endDate }}</dd>
+                <dd class="pop-summary-card__value">{{ requirement.endDate }}</dd>
               </div>
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Time remaining</dt>
-                <dd class="pop-summary-card__value">{{ req.remainingLabel }}</dd>
+                <dd class="pop-summary-card__value">{{ requirement.remainingDuration }}</dd>
               </div>
             {% endif %}
           </dl>

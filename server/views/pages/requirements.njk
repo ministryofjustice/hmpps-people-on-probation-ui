@@ -70,10 +70,10 @@
           </div>
         </div>
         <dl class="pop-summary-card__details">
-          {% for req in requirements %}
+          {% for requirement in requirements %}
             <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">{{ req.type }}</dt>
-              <dd class="pop-summary-card__value">{{ req.value }}</dd>
+              <dt class="pop-summary-card__key">{{ requirement.type }}</dt>
+              <dd class="pop-summary-card__value">{{ requirement.value }}</dd>
             </div>
           {% endfor %}
         </dl>

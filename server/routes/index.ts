@@ -21,7 +21,7 @@ type MissedAppointmentView = {
 
 type OrderProgressView = {
   percentComplete: number
-  remainingLabel: string
+  remainingDuration: string
 }
 
 function toNextAppointmentView(appointment?: AppointmentResponse): NextAppointmentView | null {
@@ -55,7 +55,7 @@ function toOrderProgressView(sentences: SentenceResponse[]): OrderProgressView |
 
   return {
     percentComplete,
-    remainingLabel: formatRemainingDuration(sentence.expectedEndDate),
+    remainingDuration: formatRemainingDuration(sentence.expectedEndDate),
   }
 }
 

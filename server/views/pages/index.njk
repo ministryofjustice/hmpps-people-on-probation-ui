@@ -13,7 +13,7 @@
         {{ mojAlert({
           title: "Next appointment",
           variant: "information",
-          html: '<p class="govuk-heading-m govuk-!-margin-bottom-1">Your next mandatory appointment is on ' + nextAppointment.date + ', ' + nextAppointment.timeRange + '</p><p class="govuk-body govuk-!-margin-bottom-0">See more detail <a class="govuk-link govuk-link--no-visited-state" href="/appointments">about this appointment</a></p>'
+          html: '<p class="govuk-heading-m govuk-!-margin-bottom-1">Your next mandatory appointment is on ' + nextAppointment.date + (', ' + nextAppointment.timeRange if nextAppointment.timeRange else '') + '</p><p class="govuk-body govuk-!-margin-bottom-0">See more detail <a class="govuk-link govuk-link--no-visited-state" href="/appointments">about this appointment</a></p>'
         }) }}
       {% endif %}
 
@@ -36,7 +36,7 @@
                 {{ orderProgress.percentComplete }}%
               </progress>
             </div>
-            <p class="govuk-body pop-progress__remaining">{{ orderProgress.remainingLabel }} left</p>
+            <p class="govuk-body pop-progress__remaining">{{ orderProgress.remainingDuration }} left</p>
           </div>
         </div>
       {% endif %}
