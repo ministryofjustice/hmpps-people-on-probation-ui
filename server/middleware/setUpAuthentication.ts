@@ -209,7 +209,9 @@ export default function setUpAuthentication(): Router {
           signOutUrl.searchParams.set('id_token_hint', idToken)
           signOutUrl.searchParams.set('post_logout_redirect_uri', config.oneLogin.postLogoutRedirectUri)
         } else {
-          logger.warn('Signing out without One Login ID token; redirecting to One Login logout without post logout redirect')
+          logger.warn(
+            'Signing out without One Login ID token; redirecting to One Login logout without post logout redirect',
+          )
         }
         return res.redirect(signOutUrl.toString())
       }
