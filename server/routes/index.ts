@@ -42,7 +42,7 @@ function toMissedAppointmentView(appointment?: AppointmentResponse): MissedAppoi
 }
 
 function toOrderProgressView(sentences: SentenceResponse[]): OrderProgressView | null {
-  const sentence = sentences.find(s => s.startDate && s.expectedEndDate)
+  const sentence = sentences[0]
   if (!sentence?.startDate || !sentence?.expectedEndDate) return null
 
   const start = new Date(sentence.startDate)

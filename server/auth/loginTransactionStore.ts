@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'crypto'
 import { getRedisClient } from '../data/redisClient'
 import config from '../config'
+import { normaliseReturnTo } from './returnTo'
 
 export type OneLoginTransaction = {
   id: string
@@ -36,11 +37,6 @@ function pruneExpiredInMemoryTransactions() {
       inMemoryTransactions.delete(key)
     }
   }
-}
-
-function normaliseReturnTo(returnTo?: string | null) {
-  if (!returnTo?.startsWith('/') || returnTo.startsWith('//')) return '/'
-  return returnTo
 }
 
 export function createOneLoginTransaction(

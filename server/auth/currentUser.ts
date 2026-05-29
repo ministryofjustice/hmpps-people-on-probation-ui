@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { getAppSessionCookie } from './cookies'
 import { getAuthenticatedUserSession } from './sessionStore'
+import { normaliseReturnTo } from './returnTo'
 
 export async function loadCurrentUser(req: Request, res: Response, next: NextFunction) {
   const sessionId = getAppSessionCookie(req)
@@ -13,11 +14,6 @@ export async function loadCurrentUser(req: Request, res: Response, next: NextFun
   }
 
   next()
-}
-
-function normaliseReturnTo(returnTo: string) {
-  if (!returnTo.startsWith('/') || returnTo.startsWith('//')) return '/'
-  return returnTo
 }
 
 export function requireAuthentication(req: Request, res: Response, next: NextFunction) {

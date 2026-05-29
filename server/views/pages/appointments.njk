@@ -21,17 +21,21 @@
   <div class="govuk-!-margin-top-6">
 
     {% if missedAlert %}
+      {% set missedAlertHtml %}
+        <p class="govuk-body">
+          Appointment: '{{ missedAlert.description or missedAlert.type }}'{% if missedAlert.practitionerName %} with {{ missedAlert.practitionerName }}{% endif %}{% if missedAlert.date %}, on {{ missedAlert.date }}{% endif %}{% if missedAlert.timeRange %}, {{ missedAlert.timeRange }}{% endif %}
+        </p>
+        <p class="govuk-body govuk-!-margin-bottom-0">
+          Contact <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">your probation officer</a> as soon as possible to explain why you missed this appointment.
+        </p>
+      {% endset %}
+
       {{ mojAlert({
         variant: "error",
         title: "You missed a mandatory appointment on " + missedAlert.date,
         showTitleAsHeading: true,
         dismissible: true,
-        html: '
-          <p class="govuk-body">Appointment: \'' + (missedAlert.description or missedAlert.type) + '\'' + (' with ' + missedAlert.practitionerName if missedAlert.practitionerName else "") + (', on ' + missedAlert.date if missedAlert.date else "") + (', ' + missedAlert.timeRange if missedAlert.timeRange else "") + '</p>
-          <p class="govuk-body govuk-!-margin-bottom-0">
-            Contact <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">your probation officer</a> as soon as possible to explain why you missed this appointment.
-          </p>
-        '
+        html: missedAlertHtml
       }) }}
     {% endif %}
 
