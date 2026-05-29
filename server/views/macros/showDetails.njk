@@ -1,0 +1,22 @@
+{#
+  showDetails macro — replaces masked text with actual content on link click.
+
+  Parameters:
+    id (string, required):  Unique ID for the content panel.
+    text (string):          The content to reveal.
+    maskedText (string):    Placeholder shown while hidden. Defaults to "**************".
+    showText (string):      Link label when collapsed. Defaults to "Show details".
+    hideText (string):      Link label when expanded. Defaults to "Hide details".
+#}
+{% macro showDetails(params) %}
+  <div class="pop-show-details">
+    <p class="govuk-body govuk-!-margin-bottom-0 pop-show-details__masked">{{ params.maskedText if params.maskedText else "**************" }}</p>
+    <p class="govuk-body govuk-!-margin-bottom-0 pop-show-details__revealed" id="{{ params.id }}" hidden>{{ params.text }}</p>
+    <button type="button"
+            class="pop-show-details__btn"
+            aria-expanded="false"
+            aria-controls="{{ params.id }}"
+            data-show-text="{{ params.showText if params.showText else 'Show details' }}"
+            data-hide-text="{{ params.hideText if params.hideText else 'Hide details' }}">{{ params.showText if params.showText else "Show details" }}</button>
+  </div>
+{% endmacro %}

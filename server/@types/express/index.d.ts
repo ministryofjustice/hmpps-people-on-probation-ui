@@ -1,7 +1,6 @@
-import { HmppsUser } from '../../interfaces/hmppsUser'
+import type { AuthenticatedUserSession } from '../../auth/sessionStore'
 
 export declare module 'express-session' {
-  // Declare that the session will potentially contain these additional fields
   interface SessionData {
     returnTo: string
   }
@@ -9,20 +8,13 @@ export declare module 'express-session' {
 
 export declare global {
   namespace Express {
-    interface User {
-      username: string
-      token: string
-      authSource: string
-    }
-
     interface Request {
-      verified?: boolean
       id: string
-      logout(done: (err: unknown) => void): void
+      flash(type: string, message?: string | string[]): string[] | void
     }
 
     interface Locals {
-      user: HmppsUser
+      user?: AuthenticatedUserSession
     }
   }
 }

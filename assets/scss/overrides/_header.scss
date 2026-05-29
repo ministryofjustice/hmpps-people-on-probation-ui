@@ -1,0 +1,52 @@
+// GOV.UK rebrand service navigation
+.govuk-service-navigation {
+  background-color: #f4f8fb;
+  border-bottom-color: #8eb8dc;
+}
+
+// Always show service name and nav items on one row (no mobile collapse)
+.govuk-service-navigation__container {
+  flex-direction: row;
+  align-items: center;
+}
+
+.govuk-service-navigation__item,
+.govuk-service-navigation__service-name {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: govuk-spacing(3) 0;
+}
+
+// Wrapper fills remaining space; list pushes items to the right
+.govuk-service-navigation__wrapper {
+  flex-grow: 1;
+}
+
+.govuk-service-navigation__list {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+
+// Sign out link: text underline instead of GOV.UK border indicators
+.govuk-service-navigation__item--active {
+  @include govuk-media-query($until: tablet) {
+    margin-left: 0;
+    padding-left: 0;
+    border-left-width: 0;
+  }
+
+  @include govuk-media-query($from: tablet) {
+    border-bottom-width: 0;
+    padding-bottom: govuk-spacing(3);
+  }
+
+  .govuk-service-navigation__link:not(:hover):not(:active) {
+    text-decoration: underline;
+  }
+}
+
+// Phase banner: constrain to page width
+.govuk-phase-banner {
+  @include govuk-width-container;
+}

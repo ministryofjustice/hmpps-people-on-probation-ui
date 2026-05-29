@@ -1,0 +1,124 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% set pageTitle = "Your details" %}
+{% set currentPage = "details" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Home", href: "/" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-l">Your details</h1>
+
+  {% if lastUpdatedAt %}
+    <p class="govuk-body govuk-secondary-text-colour">Last updated on {{ lastUpdatedAt }}</p>
+  {% endif %}
+
+  {% include "../partials/mini-hub.njk" %}
+
+  <div class="govuk-!-margin-top-6">
+
+    <p class="govuk-body">
+      To update your details, <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">contact your probation officer</a>.
+    </p>
+
+    <div class="pop-summary-card govuk-!-margin-bottom-6">
+      <div class="pop-summary-card__header">
+        <span class="pop-summary-card__type">Your personal details</span>
+      </div>
+      <dl class="pop-summary-card__details">
+        {% if personal.name %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Name</dt>
+            <dd class="pop-summary-card__value">{{ personal.name }}</dd>
+          </div>
+        {% endif %}
+        {% if personal.preferredName %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Preferred name</dt>
+            <dd class="pop-summary-card__value">{{ personal.preferredName }}</dd>
+          </div>
+        {% endif %}
+        {% if personal.dateOfBirth %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Date of birth</dt>
+            <dd class="pop-summary-card__value">{{ personal.dateOfBirth }}</dd>
+          </div>
+        {% endif %}
+      </dl>
+    </div>
+
+    <div class="pop-summary-card govuk-!-margin-bottom-6">
+      <div class="pop-summary-card__header">
+        <span class="pop-summary-card__type">Your contact details</span>
+      </div>
+      <dl class="pop-summary-card__details">
+        {% if contact.address.length %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Address</dt>
+            <dd class="pop-summary-card__value">
+              {% for line in contact.address %}
+                {{ line }}{% if not loop.last %}<br>{% endif %}
+              {% endfor %}
+            </dd>
+          </div>
+        {% endif %}
+        {% if contact.phoneNumber %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Phone number</dt>
+            <dd class="pop-summary-card__value">{{ contact.phoneNumber }}</dd>
+          </div>
+        {% endif %}
+        {% if contact.mobileNumber %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Mobile number</dt>
+            <dd class="pop-summary-card__value">{{ contact.mobileNumber }}</dd>
+          </div>
+        {% endif %}
+        {% if contact.emailAddress %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Email address</dt>
+            <dd class="pop-summary-card__value">{{ contact.emailAddress }}</dd>
+          </div>
+        {% endif %}
+      </dl>
+    </div>
+
+    {% for ec in emergencyContacts %}
+      <div class="pop-summary-card govuk-!-margin-bottom-6">
+        <div class="pop-summary-card__header">
+          <span class="pop-summary-card__type">Emergency contact details</span>
+        </div>
+        <dl class="pop-summary-card__details">
+          {% if ec.name %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Name</dt>
+              <dd class="pop-summary-card__value">{{ ec.name }}</dd>
+            </div>
+          {% endif %}
+          {% if ec.relationship %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Relationship</dt>
+              <dd class="pop-summary-card__value">{{ ec.relationship }}</dd>
+            </div>
+          {% endif %}
+          {% if ec.phoneNumber %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Phone number</dt>
+              <dd class="pop-summary-card__value">{{ ec.phoneNumber }}</dd>
+            </div>
+          {% endif %}
+          {% if ec.emailAddress %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Email address</dt>
+              <dd class="pop-summary-card__value">{{ ec.emailAddress }}</dd>
+            </div>
+          {% endif %}
+        </dl>
+      </div>
+    {% endfor %}
+
+  </div>
+
+{% endblock %}

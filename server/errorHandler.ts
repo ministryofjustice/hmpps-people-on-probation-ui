@@ -4,7 +4,11 @@ import logger from '../logger'
 
 export default function createErrorHandler(production: boolean) {
   return (error: HTTPError, req: Request, res: Response, next: NextFunction): void => {
-    logger.error(`Error handling request for '${req.originalUrl}', user '${res.locals.user?.username}'`, error)
+    if (error.status === 404) {
+      logger.info(`Not found: '${req.originalUrl}', user '${res.locals.user?.userId}'`)
+    } else {
+      logger.error(`Error handling request for '${req.originalUrl}', user '${res.locals.user?.userId}'`, error)
+    }
 
     if (error.status === 401 || error.status === 403) {
       logger.info('Logging user out')

@@ -1,12 +1,100 @@
 {% extends "../partials/layout.njk" %}
+{% from "moj/components/alert/macro.njk" import mojAlert %}
 
-{% set pageTitle = applicationName + " - Home" %}
-{% set mainClasses = "govuk-body" %}
+{% set pageTitle = applicationName %}
 
 {% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
 
-  <h1>This site is under construction...</h1>
-  <p>Please check back later when there is content to view.</p>
-  <p data-qa="timestamp">The time is currently {{ currentTime }}</p>
+      <h1 class="govuk-heading-l">Check your probation account</h1>
 
+      {% if nextAppointment %}
+        {{ mojAlert({
+          title: "Next appointment",
+          variant: "information",
+          html: '<p class="govuk-heading-m govuk-!-margin-bottom-1">Your next mandatory appointment is on ' + nextAppointment.date + (', ' + nextAppointment.timeRange if nextAppointment.timeRange else '') + '</p><p class="govuk-body govuk-!-margin-bottom-0">See more detail <a class="govuk-link govuk-link--no-visited-state" href="/appointments">about this appointment</a></p>'
+        }) }}
+      {% endif %}
+
+      {% if missedAppointment %}
+        {{ mojAlert({
+          variant: "error",
+          title: "You missed a mandatory appointment on " + missedAppointment.date,
+          showTitleAsHeading: true,
+          html: '<p class="govuk-body govuk-!-margin-bottom-0">See more detail <a class="govuk-link govuk-link--no-visited-state" href="/appointments">about this appointment</a></p>',
+          dismissible: true
+        }) }}
+      {% endif %}
+
+      {% if orderProgress %}
+        <div class="pop-progress govuk-!-margin-bottom-6">
+          <h2 class="govuk-heading-m">Overall order progress</h2>
+          <div class="pop-progress__bar-row">
+            <div class="pop-progress__bar-wrapper">
+              <progress class="pop-progress__bar" value="{{ orderProgress.percentComplete }}" max="100">
+                {{ orderProgress.percentComplete }}%
+              </progress>
+            </div>
+            <p class="govuk-body pop-progress__remaining">{{ orderProgress.remainingDuration }} left</p>
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="govuk-grid-row pop-card-row govuk-!-margin-bottom-4">
+        <div class="govuk-grid-column-one-half">
+          <a href="/appointments" class="pop-card">
+            <h2 class="govuk-heading-m pop-card__title">Appointments and activities</h2>
+            <p class="govuk-body pop-card__body">Check your upcoming and past appointments</p>
+          </a>
+        </div>
+        <div class="govuk-grid-column-one-half">
+          <a href="/progress" class="pop-card">
+            <h2 class="govuk-heading-m pop-card__title">Your probation progress</h2>
+            <p class="govuk-body pop-card__body">See what you've completed and how much you have left</p>
+          </a>
+        </div>
+      </div>
+
+      <div class="govuk-grid-row pop-card-row govuk-!-margin-bottom-4">
+        <div class="govuk-grid-column-one-half">
+          <a href="/requirements" class="pop-card">
+            <h2 class="govuk-heading-m pop-card__title">Requirements</h2>
+            <p class="govuk-body pop-card__body">See the requirements from your court order</p>
+          </a>
+        </div>
+        <div class="govuk-grid-column-one-half">
+          <a href="/goals" class="pop-card">
+            <h2 class="govuk-heading-m pop-card__title">Your probation goals</h2>
+            <p class="govuk-body pop-card__body">See your goals and how you are progressing</p>
+          </a>
+        </div>
+      </div>
+
+      <div class="govuk-grid-row pop-card-row govuk-!-margin-bottom-4">
+        <div class="govuk-grid-column-one-half">
+          <a href="/details" class="pop-card">
+            <h2 class="govuk-heading-m pop-card__title">Your details</h2>
+            <p class="govuk-body pop-card__body">Check your contact details and emergency contact</p>
+          </a>
+        </div>
+        <div class="govuk-grid-column-one-half">
+          <a href="/probation-officer" class="pop-card">
+            <h2 class="govuk-heading-m pop-card__title">Probation officer details</h2>
+            <p class="govuk-body pop-card__body">Find out how to contact your probation officer</p>
+          </a>
+        </div>
+      </div>
+
+      <div class="govuk-grid-row pop-card-row">
+        <div class="govuk-grid-column-one-half">
+          <a href="/expectations" class="pop-card">
+            <h2 class="govuk-heading-m pop-card__title">Expectations</h2>
+            <p class="govuk-body pop-card__body">Understand what is expected of you</p>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
 {% endblock %}

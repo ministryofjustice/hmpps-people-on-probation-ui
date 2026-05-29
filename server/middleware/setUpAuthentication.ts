@@ -1,90 +1,221 @@
-import passport from 'passport'
-import flash from 'connect-flash'
 import { Router } from 'express'
-import { Strategy } from 'passport-oauth2'
-import { VerificationClient, AuthenticatedRequest } from '@ministryofjustice/hmpps-auth-clients'
-import config from '../config'
-import { HmppsUser } from '../interfaces/hmppsUser'
-import generateOauthClientToken from '../utils/clientCredentials'
 import logger from '../../logger'
+import buildOneLoginAuthorizeUrl from '../auth/oneLoginAuthorize'
+import { authenticateOneLoginCallback, type OneLoginAuthenticatedUser } from '../auth/oneLoginToken'
+import {
+  createOneLoginTransaction,
+  saveOneLoginTransaction,
+  getOneLoginTransaction,
+  deleteOneLoginTransaction,
+  getOneLoginTransactionTtlSeconds,
+  type OneLoginTransaction,
+} from '../auth/loginTransactionStore'
+import {
+  createAuthenticatedUserSession,
+  saveAuthenticatedUserSession,
+  deleteAuthenticatedUserSession,
+  getAuthenticatedUserSessionTtlSeconds,
+  getAuthenticatedUserSession,
+} from '../auth/sessionStore'
+import {
+  setOneLoginTransactionCookie,
+  clearOneLoginTransactionCookie,
+  getOneLoginTransactionCookie,
+  setAppSessionCookie,
+  clearAppSessionCookie,
+  getAppSessionCookie,
+} from '../auth/cookies'
+import { getOneLoginDiscoveryDocument } from '../auth/oneLoginDiscovery'
+import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
+import config from '../config'
+import normaliseReturnTo from '../auth/returnTo'
 
-passport.serializeUser((user, done) => {
-  // Not used but required for Passport
-  done(null, user)
-})
+function normaliseToken(token?: string | null): string | null {
+  return typeof token === 'string' && token.trim() ? token.trim() : null
+}
 
-passport.deserializeUser((user, done) => {
-  // Not used but required for Passport
-  done(null, user as Express.User)
-})
+async function getRegisteredUserDetails(transaction: OneLoginTransaction, oneLoginUser: OneLoginAuthenticatedUser) {
+  if (transaction.registrationInviteToken) {
+    return getPeopleOnProbationService().completeOneLoginRegistration({
+      token: transaction.registrationInviteToken,
+      oneLoginSubject: oneLoginUser.userId,
+      email: oneLoginUser.email,
+      mobileNumber: oneLoginUser.phoneNumber,
+    })
+  }
 
-passport.use(
-  new Strategy(
-    {
-      authorizationURL: `${config.apis.hmppsAuth.externalUrl}/oauth/authorize`,
-      tokenURL: `${config.apis.hmppsAuth.url}/oauth/token`,
-      clientID: config.apis.hmppsAuth.authClientId,
-      clientSecret: config.apis.hmppsAuth.authClientSecret,
-      callbackURL: `${config.ingressUrl}/sign-in/callback`,
-      state: true,
-      customHeaders: { Authorization: generateOauthClientToken() },
-    },
-    (token, refreshToken, params, profile, done) => {
-      return done(null, { token, username: params.user_name, authSource: params.auth_source })
-    },
-  ),
-)
+  return getPeopleOnProbationService().getCurrentRegisteredUser({
+    oneLoginSubject: oneLoginUser.userId,
+  })
+}
 
-export default function setupAuthentication() {
+export default function setUpAuthentication(): Router {
   const router = Router()
-  const tokenVerificationClient = new VerificationClient(config.apis.tokenVerification, logger)
 
-  router.use(passport.initialize())
-  router.use(passport.session())
-  router.use(flash())
+  // Local-only sign in path for running the app without GOV.UK One Login.
+  // Guarded by LOCAL_AUTH_ENABLED and blocked from production in config.
+  router.get('/local/sign-in', async (req, res, next) => {
+    try {
+      if (!config.localAuth.enabled) {
+        return res.redirect('/')
+      }
 
-  router.get('/autherror', (req, res) => {
-    res.status(401)
-    return res.render('autherror')
-  })
+      const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : null
+      let registeredUserDetails
 
-  router.get('/sign-in', passport.authenticate('oauth2'))
+      try {
+        registeredUserDetails = await getPeopleOnProbationService().getCurrentRegisteredUser({
+          oneLoginSubject: config.localAuth.oneLoginSubject,
+        })
+      } catch (err) {
+        logger.warn({ err }, 'Failed to fetch registered user details during local sign in')
+        return res.redirect('/autherror')
+      }
 
-  router.get('/sign-in/callback', (req, res, next) =>
-    passport.authenticate('oauth2', {
-      successReturnToOrRedirect: req.session.returnTo || '/',
-      failureRedirect: '/autherror',
-    })(req, res, next),
-  )
-
-  const authUrl = config.apis.hmppsAuth.externalUrl
-  const authParameters = `client_id=${config.apis.hmppsAuth.authClientId}&redirect_uri=${config.ingressUrl}`
-
-  router.use('/sign-out', (req, res, next) => {
-    const authSignOutUrl = `${authUrl}/sign-out?${authParameters}`
-    if (req.user) {
-      req.logout(err => {
-        if (err) return next(err)
-        return req.session.destroy(() => res.redirect(authSignOutUrl))
+      const session = createAuthenticatedUserSession({
+        userId: config.localAuth.oneLoginSubject,
+        email: config.localAuth.email,
+        displayName: config.localAuth.displayName,
+        registeredUserDetails,
       })
-    } else res.redirect(authSignOutUrl)
-  })
 
-  router.use('/account-details', (req, res) => {
-    res.redirect(`${authUrl}/account-details?${authParameters}`)
-  })
+      await saveAuthenticatedUserSession(session)
+      setAppSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
 
-  router.use(async (req, res, next) => {
-    if (req.isAuthenticated() && (await tokenVerificationClient.verifyToken(req as unknown as AuthenticatedRequest))) {
-      return next()
+      return res.redirect(normaliseReturnTo(returnTo))
+    } catch (err) {
+      return next(err)
     }
-    req.session.returnTo = req.originalUrl
-    return res.redirect('/sign-in')
   })
 
-  router.use((req, res, next) => {
-    res.locals.user = req.user as HmppsUser
-    next()
+  router.get('/sign-in/start', async (req, res, next) => {
+    try {
+      const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : null
+      const rawToken = typeof req.query.token === 'string' ? req.query.token : null
+      const registrationInviteToken = normaliseToken(rawToken)
+
+      if (registrationInviteToken) {
+        try {
+          await getPeopleOnProbationService().validateRegistrationInvite(registrationInviteToken)
+        } catch (err) {
+          logger.warn({ err }, 'Registration invite token validation failed')
+          return res.redirect('/autherror')
+        }
+      }
+
+      const transaction = createOneLoginTransaction(returnTo, registrationInviteToken ?? undefined)
+      await saveOneLoginTransaction(transaction)
+
+      setOneLoginTransactionCookie(res, transaction.id, getOneLoginTransactionTtlSeconds())
+
+      const authorizeUrl = await buildOneLoginAuthorizeUrl(transaction)
+      return res.redirect(authorizeUrl.toString())
+    } catch (err) {
+      return next(err)
+    }
+  })
+
+  router.get('/sign-in/callback', async (req, res, next) => {
+    try {
+      const transactionId = getOneLoginTransactionCookie(req)
+
+      if (!transactionId) {
+        logger.warn('One Login callback received without transaction cookie')
+        return res.redirect('/autherror')
+      }
+
+      const transaction = await getOneLoginTransaction(transactionId)
+
+      if (!transaction) {
+        logger.warn('One Login callback received with unknown or expired transaction')
+        clearOneLoginTransactionCookie(res)
+        return res.redirect('/autherror')
+      }
+
+      const { code, state, error } = req.query
+
+      if (error || typeof code !== 'string' || typeof state !== 'string') {
+        logger.warn({ error }, 'One Login callback error or missing code/state')
+        await deleteOneLoginTransaction(transactionId)
+        clearOneLoginTransactionCookie(res)
+        return res.redirect('/autherror')
+      }
+
+      if (state !== transaction.state) {
+        logger.warn('One Login callback state mismatch')
+        await deleteOneLoginTransaction(transactionId)
+        clearOneLoginTransactionCookie(res)
+        return res.redirect('/autherror')
+      }
+
+      const oneLoginUser = await authenticateOneLoginCallback(code, transaction)
+
+      let registeredUserDetails
+      try {
+        registeredUserDetails = await getRegisteredUserDetails(transaction, oneLoginUser)
+      } catch (err) {
+        logger.warn({ err }, 'Failed to fetch registered user details after One Login callback')
+        await deleteOneLoginTransaction(transactionId)
+        clearOneLoginTransactionCookie(res)
+        return res.redirect('/autherror')
+      }
+
+      const session = createAuthenticatedUserSession({
+        userId: oneLoginUser.userId,
+        email: oneLoginUser.email,
+        phoneNumber: oneLoginUser.phoneNumber,
+        displayName: oneLoginUser.displayName,
+        idToken: oneLoginUser.idToken,
+        registeredUserDetails,
+      })
+
+      await saveAuthenticatedUserSession(session)
+      await deleteOneLoginTransaction(transactionId)
+
+      clearOneLoginTransactionCookie(res)
+      setAppSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
+
+      return res.redirect(transaction.returnTo || '/')
+    } catch (err) {
+      return next(err)
+    }
+  })
+
+  router.get('/sign-out', async (req, res, next) => {
+    try {
+      const sessionId = getAppSessionCookie(req)
+      const session = sessionId ? await getAuthenticatedUserSession(sessionId) : null
+      const idToken = session?.idToken
+
+      if (sessionId) {
+        await deleteAuthenticatedUserSession(sessionId)
+        clearAppSessionCookie(res)
+      }
+
+      if (config.localAuth.enabled) {
+        return res.redirect('/')
+      }
+
+      const discoveryDocument = await getOneLoginDiscoveryDocument().catch((): null => null)
+      const endSessionEndpoint = discoveryDocument?.end_session_endpoint
+
+      if (endSessionEndpoint) {
+        const signOutUrl = new URL(endSessionEndpoint)
+        if (idToken) {
+          signOutUrl.searchParams.set('id_token_hint', idToken)
+          signOutUrl.searchParams.set('post_logout_redirect_uri', config.oneLogin.postLogoutRedirectUri)
+        } else {
+          logger.warn(
+            'Signing out without One Login ID token; redirecting to One Login logout without post logout redirect',
+          )
+        }
+        return res.redirect(signOutUrl.toString())
+      }
+
+      return res.redirect('/')
+    } catch (err) {
+      return next(err)
+    }
   })
 
   return router

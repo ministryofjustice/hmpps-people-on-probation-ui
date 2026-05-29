@@ -1,0 +1,77 @@
+.pop-summary-card {
+  border: 1px solid $govuk-border-colour;
+  margin-bottom: govuk-spacing(6);
+
+  &__header {
+    background-color: govuk-colour('light-grey');
+    padding: govuk-spacing(4);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: govuk-spacing(5);
+  }
+
+  &__type {
+    @include govuk-font($size: 19, $weight: bold);
+    flex: 1 0 0;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: govuk-spacing(2);
+    flex-shrink: 0;
+
+    a {
+      @include govuk-font($size: 19, $weight: bold);
+    }
+
+    @include govuk-media-query($until: tablet) {
+      order: 3;
+      flex-basis: 100%;
+    }
+  }
+
+  &__separator {
+    color: $govuk-border-colour;
+    @include govuk-font($size: 19);
+  }
+
+  &__details {
+    margin: 0;
+    padding: 0 govuk-spacing(4);
+  }
+
+  &__row {
+    display: flex;
+    align-items: flex-start;
+    border-bottom: 1px solid $govuk-border-colour;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__key {
+    @include govuk-font($size: 19, $weight: bold);
+    flex: 1 0 0;
+    padding: govuk-spacing(2) govuk-spacing(4) govuk-spacing(2) 0;
+    margin: 0;
+  }
+
+  &__value {
+    @include govuk-font($size: 19);
+    flex: 1 0 0;
+    padding: govuk-spacing(2) 0;
+    margin: 0;
+  }
+}
+
+// Black tag variant for Mandatory appointments
+.govuk-tag--black {
+  background: govuk-colour('black');
+  color: govuk-colour('white');
+}
