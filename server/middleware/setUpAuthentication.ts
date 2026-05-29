@@ -28,7 +28,7 @@ import {
 import { getOneLoginDiscoveryDocument } from '../auth/oneLoginDiscovery'
 import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
 import config from '../config'
-import { normaliseReturnTo } from '../auth/returnTo'
+import normaliseReturnTo from '../auth/returnTo'
 
 function normaliseToken(token?: string | null): string | null {
   return typeof token === 'string' && token.trim() ? token.trim() : null

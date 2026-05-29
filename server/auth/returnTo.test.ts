@@ -1,4 +1,4 @@
-import { normaliseReturnTo } from './returnTo'
+import normaliseReturnTo from './returnTo'
 
 describe('normaliseReturnTo', () => {
   it.each([

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { getAppSessionCookie } from './cookies'
 import { getAuthenticatedUserSession } from './sessionStore'
-import { normaliseReturnTo } from './returnTo'
+import normaliseReturnTo from './returnTo'
 
 export async function loadCurrentUser(req: Request, res: Response, next: NextFunction) {
   const sessionId = getAppSessionCookie(req)
