@@ -101,7 +101,14 @@ export default function routes(services: Services): Router {
       }
 
       const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : null
-      return res.render('pages/start', { returnTo })
+      const token = typeof req.query.token === 'string' ? req.query.token : null
+      const signInStartParams = new URLSearchParams()
+
+      if (returnTo) signInStartParams.set('returnTo', returnTo)
+      if (token) signInStartParams.set('token', token)
+
+      const signInStartUrl = `/sign-in/start${signInStartParams.size ? `?${signInStartParams.toString()}` : ''}`
+      return res.render('pages/start', { signInStartUrl })
     } catch (error) {
       return next(error)
     }
