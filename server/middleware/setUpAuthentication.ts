@@ -29,6 +29,7 @@ import { getOneLoginDiscoveryDocument } from '../auth/oneLoginDiscovery'
 import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
 import config from '../config'
 import normaliseReturnTo from '../auth/returnTo'
+import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
 
 function normaliseToken(token?: string | null): string | null {
   return typeof token === 'string' && token.trim() ? token.trim() : null
@@ -51,6 +52,14 @@ async function getRegisteredUserDetails(transaction: OneLoginTransaction, oneLog
 
 export default function setUpAuthentication(): Router {
   const router = Router()
+
+  router.get('/.well-known/jwks.json', (_req, res, next) => {
+    try {
+      return res.json({ keys: [getOneLoginPublicJwk()] })
+    } catch (err) {
+      return next(err)
+    }
+  })
 
   // Local-only sign in path for running the app without GOV.UK One Login.
   // Guarded by LOCAL_AUTH_ENABLED and blocked from production in config.
