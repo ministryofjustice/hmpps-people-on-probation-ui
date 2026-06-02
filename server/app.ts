@@ -38,7 +38,22 @@ export default function createApp(services: Services): express.Application {
 
   app.use(routes(services))
 
-  app.use((req, res, next) => next(createError(404, 'Not found')))
+  app.get('/autherror', (_req, res) => {
+    res.status(403)
+    res.render('pages/auth-error')
+  })
+
+  app.get('/invite-expired', (_req, res) => {
+    res.status(410)
+    res.render('pages/invite-expired')
+  })
+
+  app.get('/signIn-error', (_req, res) => {
+    res.status(500)
+    res.render('pages/sign-in-error')
+  })
+
+  app.use((_req, _res, next) => next(createError(404, 'Not found')))
   app.use(errorHandler(process.env.NODE_ENV === 'production'))
 
   return app

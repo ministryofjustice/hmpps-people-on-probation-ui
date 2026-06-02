@@ -1,7 +1,10 @@
 import express from 'express'
 import request from 'supertest'
+import cookieParser from 'cookie-parser'
 import setUpAuthentication from './setUpAuthentication'
 import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
+import { appSessionCookieName } from '../auth/cookies'
+import { createAuthenticatedUserSession, saveAuthenticatedUserSession } from '../auth/sessionStore'
 
 jest.mock('../auth/oneLoginAuthorize', () => jest.fn())
 jest.mock('../auth/oneLoginToken', () => ({
@@ -51,6 +54,34 @@ describe('setUpAuthentication', () => {
             },
           ],
         })
+    })
+  })
+
+  describe('POST /session/keep-alive', () => {
+    it('returns unauthorized when there is no app session cookie', async () => {
+      const app = express()
+      app.use(cookieParser())
+      app.use(setUpAuthentication())
+
+      await request(app).post('/session/keep-alive').expect(401)
+    })
+
+    it('refreshes the app session when there is a valid app session cookie', async () => {
+      const app = express()
+      app.use(cookieParser())
+      app.use(setUpAuthentication())
+
+      const session = createAuthenticatedUserSession({
+        userId: 'user-id',
+        email: 'user@example.com',
+      })
+      await saveAuthenticatedUserSession(session)
+
+      await request(app)
+        .post('/session/keep-alive')
+        .set('Cookie', `${appSessionCookieName}=${session.id}`)
+        .expect(204)
+        .expect('Set-Cookie', new RegExp(`${appSessionCookieName}=`))
     })
   })
 })

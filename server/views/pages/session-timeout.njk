@@ -1,0 +1,19 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageTitle = "You have been signed out" %}
+
+{% block content %}
+  <div class="govuk-grid-row govuk-!-margin-top-9">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Your session has been reset</h1>
+
+      <p class="govuk-body">For your security, you’ll need to sign in again.</p>
+
+      {{ govukButton({
+        text: "Sign in again",
+        href: "/"
+      }) }}
+    </div>
+  </div>
+{% endblock %}

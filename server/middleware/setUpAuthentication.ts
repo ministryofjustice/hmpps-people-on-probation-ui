@@ -16,6 +16,7 @@ import {
   deleteAuthenticatedUserSession,
   getAuthenticatedUserSessionTtlSeconds,
   getAuthenticatedUserSession,
+  refreshAuthenticatedUserSession,
 } from '../auth/sessionStore'
 import {
   setOneLoginTransactionCookie,
@@ -33,6 +34,13 @@ import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
 
 function normaliseToken(token?: string | null): string | null {
   return typeof token === 'string' && token.trim() ? token.trim() : null
+}
+
+function authErrorRedirect(err: unknown): string | null {
+  const status = (err as { status?: number })?.status
+  if (status === 409 || status === 410) return '/invite-expired'
+  if (status && status >= 400 && status < 500) return '/signIn-error'
+  return null
 }
 
 async function getRegisteredUserDetails(transaction: OneLoginTransaction, oneLoginUser: OneLoginAuthenticatedUser) {
@@ -61,6 +69,39 @@ export default function setUpAuthentication(): Router {
     }
   })
 
+  router.post('/session/keep-alive', async (req, res, next) => {
+    try {
+      const sessionId = getAppSessionCookie(req)
+      if (!sessionId) return res.sendStatus(401)
+
+      const session = await refreshAuthenticatedUserSession(sessionId)
+      if (!session) {
+        clearAppSessionCookie(res)
+        return res.sendStatus(401)
+      }
+
+      setAppSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
+      return res.sendStatus(204)
+    } catch (err) {
+      return next(err)
+    }
+  })
+
+  router.get('/session-timeout', async (req, res, next) => {
+    try {
+      const sessionId = getAppSessionCookie(req)
+      if (sessionId) {
+        await deleteAuthenticatedUserSession(sessionId)
+        clearAppSessionCookie(res)
+      }
+
+      req.session?.destroy(() => undefined)
+      return res.render('pages/session-timeout')
+    } catch (err) {
+      return next(err)
+    }
+  })
+
   // Local-only sign in path for running the app without GOV.UK One Login.
   // Guarded by LOCAL_AUTH_ENABLED and blocked from production in config.
   router.get('/local/sign-in', async (req, res, next) => {
@@ -78,7 +119,8 @@ export default function setUpAuthentication(): Router {
         })
       } catch (err) {
         logger.warn({ err }, 'Failed to fetch registered user details during local sign in')
-        return res.redirect('/autherror')
+        const redirect = authErrorRedirect(err)
+        return redirect ? res.redirect(redirect) : next(err)
       }
 
       const session = createAuthenticatedUserSession({
@@ -106,9 +148,10 @@ export default function setUpAuthentication(): Router {
       if (registrationInviteToken) {
         try {
           await getPeopleOnProbationService().validateRegistrationInvite(registrationInviteToken)
-        } catch (err) {
+        } catch (err: unknown) {
           logger.warn({ err }, 'Registration invite token validation failed')
-          return res.redirect('/autherror')
+          const redirect = authErrorRedirect(err)
+          return redirect ? res.redirect(redirect) : next(err)
         }
       }
 
@@ -130,7 +173,7 @@ export default function setUpAuthentication(): Router {
 
       if (!transactionId) {
         logger.warn('One Login callback received without transaction cookie')
-        return res.redirect('/autherror')
+        return res.redirect('/signIn-error')
       }
 
       const transaction = await getOneLoginTransaction(transactionId)
@@ -138,7 +181,7 @@ export default function setUpAuthentication(): Router {
       if (!transaction) {
         logger.warn('One Login callback received with unknown or expired transaction')
         clearOneLoginTransactionCookie(res)
-        return res.redirect('/autherror')
+        return res.redirect('/signIn-error')
       }
 
       const { code, state, error } = req.query
@@ -147,14 +190,14 @@ export default function setUpAuthentication(): Router {
         logger.warn({ error }, 'One Login callback error or missing code/state')
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
-        return res.redirect('/autherror')
+        return res.redirect('/signIn-error')
       }
 
       if (state !== transaction.state) {
         logger.warn('One Login callback state mismatch')
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
-        return res.redirect('/autherror')
+        return res.redirect('/signIn-error')
       }
 
       const oneLoginUser = await authenticateOneLoginCallback(code, transaction)
@@ -162,11 +205,12 @@ export default function setUpAuthentication(): Router {
       let registeredUserDetails
       try {
         registeredUserDetails = await getRegisteredUserDetails(transaction, oneLoginUser)
-      } catch (err) {
+      } catch (err: unknown) {
         logger.warn({ err }, 'Failed to fetch registered user details after One Login callback')
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
-        return res.redirect('/autherror')
+        const redirect = authErrorRedirect(err)
+        return redirect ? res.redirect(redirect) : next(err)
       }
 
       const session = createAuthenticatedUserSession({

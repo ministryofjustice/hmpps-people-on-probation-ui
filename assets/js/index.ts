@@ -17,3 +17,100 @@ document.querySelectorAll<HTMLElement>('.pop-show-details').forEach(wrapper => {
     revealed.hidden = isExpanded
   })
 })
+
+document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWarning => {
+  const dialog = timeoutWarning.querySelector<HTMLElement>('.pop-timeout-warning__dialog')
+  const staySignedInButton = timeoutWarning.querySelector<HTMLButtonElement>('.pop-timeout-warning__stay-signed-in')
+  const countdown = timeoutWarning.querySelector<HTMLElement>('.pop-timeout-warning__countdown')
+  const { warningAfterSeconds, countdownSeconds, keepAliveUrl, timeoutUrl } = timeoutWarning.dataset
+  const warningAfterSecondsValue = Number(warningAfterSeconds)
+  const countdownSecondsValue = Number(countdownSeconds)
+
+  if (!dialog || !staySignedInButton || !countdown || !keepAliveUrl || !timeoutUrl) return
+  if (
+    !Number.isFinite(warningAfterSecondsValue) ||
+    !Number.isFinite(countdownSecondsValue) ||
+    countdownSecondsValue <= 0
+  )
+    return
+
+  let warningTimer: number | undefined
+  let countdownTimer: number | undefined
+  let remainingSeconds = countdownSecondsValue
+  let lastFocusedElement: HTMLElement | null = null
+
+  const formatRemainingTime = (seconds: number) => {
+    const minutes = Math.ceil(seconds / 60)
+    return minutes === 1 ? '1 minute' : `${minutes} minutes`
+  }
+
+  const clearTimers = () => {
+    if (warningTimer) window.clearTimeout(warningTimer)
+    if (countdownTimer) window.clearInterval(countdownTimer)
+  }
+
+  const redirectToTimeoutPage = () => {
+    window.location.assign(timeoutUrl)
+  }
+
+  const startWarningTimer = () => {
+    clearTimers()
+    warningTimer = window.setTimeout(showWarning, warningAfterSecondsValue * 1000)
+  }
+
+  const hideWarning = () => {
+    timeoutWarning.setAttribute('hidden', '')
+    if (countdownTimer) window.clearInterval(countdownTimer)
+    countdownTimer = undefined
+    lastFocusedElement?.focus()
+  }
+
+  function showWarning() {
+    lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    remainingSeconds = countdownSecondsValue
+    countdown.textContent = formatRemainingTime(remainingSeconds)
+    timeoutWarning.removeAttribute('hidden')
+    dialog.focus()
+
+    countdownTimer = window.setInterval(() => {
+      remainingSeconds -= 1
+      countdown.textContent = formatRemainingTime(Math.max(remainingSeconds, 0))
+
+      if (remainingSeconds <= 0) {
+        clearTimers()
+        redirectToTimeoutPage()
+      }
+    }, 1000)
+  }
+
+  const resetIdleTimer = () => {
+    if (!timeoutWarning.hasAttribute('hidden')) return
+    startWarningTimer()
+  }
+
+  staySignedInButton.addEventListener('click', async () => {
+    staySignedInButton.disabled = true
+
+    try {
+      const response = await fetch(keepAliveUrl, { method: 'POST' })
+      if (!response.ok) {
+        redirectToTimeoutPage()
+        return
+      }
+
+      hideWarning()
+      startWarningTimer()
+    } catch {
+      redirectToTimeoutPage()
+    } finally {
+      staySignedInButton.disabled = false
+    }
+  })
+
+  const idleResetEvents = ['click', 'keydown', 'mousemove', 'touchstart']
+  idleResetEvents.forEach(eventName => {
+    document.addEventListener(eventName, resetIdleTimer, { passive: true })
+  })
+
+  startWarningTimer()
+})
