@@ -5,15 +5,16 @@ generic-service:
   replicaCount: 2
 
   ingress:
-    host: people-on-probation-preprod.hmpps.service.justice.gov.uk
+    host: probation-account-preprod.hmpps.service.justice.gov.uk
+    className: modsec-non-prod
 
   env:
-    INGRESS_URL: "https://people-on-probation-preprod.hmpps.service.justice.gov.uk"
+    INGRESS_URL: "https://probation-account-preprod.hmpps.service.justice.gov.uk"
     HMPPS_AUTH_URL: "https://sign-in-preprod.hmpps.service.justice.gov.uk/auth"
     ONE_LOGIN_ISSUER_URL: "https://oidc.integration.account.gov.uk"
     PEOPLE_ON_PROBATION_API_URL: "https://people-on-probation-api-preprod.hmpps.service.justice.gov.uk"
-    ONE_LOGIN_REDIRECT_URI: "https://people-on-probation-preprod.hmpps.service.justice.gov.uk/sign-in/callback"
-    ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: "https://people-on-probation-preprod.hmpps.service.justice.gov.uk"
+    ONE_LOGIN_REDIRECT_URI: "https://probation-account-preprod.hmpps.service.justice.gov.uk/sign-in/callback"
+    ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: "https://probation-account-preprod.hmpps.service.justice.gov.uk"
     ENVIRONMENT_NAME: PRE-PRODUCTION
     AUDIT_ENABLED: "false"
     POP_CHATBOT_API_URL: "https://probationchatbot-production.up.railway.app/chatbot/chat-embed"
