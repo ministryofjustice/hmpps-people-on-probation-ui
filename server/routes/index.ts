@@ -9,6 +9,7 @@ import progressRoutes from './progress'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
 import detailsRoutes from './details'
+import chatbotRoutes from './chatbot'
 
 type NextAppointmentView = {
   date?: string
@@ -69,6 +70,7 @@ export default function routes(services: Services): Router {
   router.use('/requirements', requirementsRoutes(services))
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
+  router.use('/api/chatbot', chatbotRoutes())
 
   router.get('/', async (req, res, next) => {
     try {

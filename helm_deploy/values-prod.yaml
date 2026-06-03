@@ -13,7 +13,8 @@ generic-service:
     ONE_LOGIN_REDIRECT_URI: "https://people-on-probation.hmpps.service.justice.gov.uk/sign-in/callback"
     ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: "https://people-on-probation.hmpps.service.justice.gov.uk"
     AUDIT_ENABLED: "false"
-    POP_CHATBOT_API_URL: "https://probationchatbot-production.up.railway.app/chatbot/chat-embed"
+    # POP_CHATBOT_API_URL intentionally unset — no chatbot deployed in prod yet.
+    POP_CHATBOT_API_URL: ""
 
 generic-prometheus-alerts:
   alertSeverity: hmpps-people-on-probation

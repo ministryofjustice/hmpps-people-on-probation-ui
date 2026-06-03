@@ -3,6 +3,9 @@
 
 {% block head %}
   <link href="{{ '/assets/css/index.css' | assetMap }}" rel="stylesheet"/>
+  {% if user %}
+    <link href="{{ '/assets/css/chatbot.css' | assetMap }}" rel="stylesheet"/>
+  {% endif %}
 {% endblock %}
 
 {% block pageTitle %}{{ pageTitle | default(applicationName) }}{% endblock %}
@@ -26,6 +29,11 @@
 
 {% block bodyEnd %}
   <script type="module" src="{{ '/assets/js/index.js' | assetMap }}"></script>
+  {% if user %}
+    <div id="chatbot-root"></div>
+    <meta name="csrf-token" content="{{ csrfToken }}">
+    <script type="module" src="{{ '/assets/js/chatbot.js' | assetMap }}"></script>
+  {% endif %}
 {% endblock %}
 
 {% block footer %}

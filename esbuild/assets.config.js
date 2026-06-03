@@ -32,6 +32,8 @@ const getAssetsConfig = buildConfig => ({
   target: 'es2018',
   external: ['/assets/*'],
   bundle: true,
+  jsx: 'automatic',
+  loader: { '.tsx': 'tsx' },
   plugins: [
     cleanPlugin(globSync(buildConfig.assets.clear)),
     manifestPlugin({
