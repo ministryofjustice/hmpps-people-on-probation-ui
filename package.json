@@ -12,7 +12,7 @@
     "start": "node $NODE_OPTIONS dist/server.js | bunyan -o short",
     "start:dev": "npm run build:chatbot-css && node esbuild/esbuild --watch",
     "start-feature": " node $NODE_DEBUG_OPTION --env-file=feature.env dist/server.js | bunyan -o short",
-    "start-feature:dev": "node esbuild/esbuild --watch --env feature.env",
+    "start-feature:dev": "npm run build:chatbot-css && node esbuild/esbuild --watch --env feature.env",
     "lint": "eslint . --cache --max-warnings 0",
     "lint-fix": "eslint . --cache --max-warnings 0 --fix",
     "typecheck": "tsc && tsc -p integration_tests",

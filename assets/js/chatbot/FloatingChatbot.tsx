@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ChatWidget from './ChatWidget'
 import { ChatbotConfig } from './config-types'
 
@@ -6,7 +6,6 @@ type Props = {
   apiBaseUrl: string
   domain?: string
   config?: ChatbotConfig
-  userContext?: Record<string, unknown> | null
   label?: string
 }
 
@@ -14,16 +13,18 @@ const BUTTON_SIZE = 72
 const BUTTON_BOTTOM = 24
 const PANEL_GAP = 16
 
-export default function FloatingChatbot({
-  apiBaseUrl,
-  domain = '',
-  config,
-  userContext,
-  label = 'Chat',
-}: Props) {
+// Apply a CSS property via the JS DOM API rather than React's style prop,
+// because the page CSP blocks inline style="…" attributes.
+function applyStyle(el: HTMLElement | null, property: string, value: string): void {
+  if (el) el.style.setProperty(property, value)
+}
+
+export default function FloatingChatbot({ apiBaseUrl, domain = '', config, label = 'Chat' }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [rightOffset, setRightOffset] = useState(24)
   const [bottomLift, setBottomLift] = useState(0)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   // Align the floating chrome with the right edge of the GOV.UK width container,
   // and lift it above the page footer when it scrolls into view.
@@ -54,20 +55,28 @@ export default function FloatingChatbot({
   const buttonBottom = BUTTON_BOTTOM + bottomLift
   const panelBottom = BUTTON_BOTTOM + BUTTON_SIZE + PANEL_GAP + bottomLift
 
+  // Apply dynamic positioning via DOM API (not React's style prop) so the CSP
+  // policy on inline style attributes doesn't strip our placement.
+  useLayoutEffect(() => {
+    applyStyle(buttonRef.current, 'right', `${rightOffset}px`)
+    applyStyle(buttonRef.current, 'bottom', `${buttonBottom}px`)
+  }, [rightOffset, buttonBottom])
+
+  useLayoutEffect(() => {
+    applyStyle(panelRef.current, 'right', `${rightOffset}px`)
+    applyStyle(panelRef.current, 'bottom', `${panelBottom}px`)
+    applyStyle(panelRef.current, 'max-height', `calc(100vh - ${panelBottom + 24}px)`)
+  }, [rightOffset, panelBottom, isOpen])
+
   return (
     <>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(o => !o)}
         aria-label={isOpen ? 'Close chat' : label}
         aria-expanded={isOpen}
-        className="fixed z-[2147483647] flex items-center justify-center rounded-full border-0 bg-govuk-blue text-white shadow-lg transition-transform hover:scale-105 hover:bg-govuk-blue-dark"
-        style={{
-          width: `${BUTTON_SIZE}px`,
-          height: `${BUTTON_SIZE}px`,
-          right: `${rightOffset}px`,
-          bottom: `${buttonBottom}px`,
-        }}
+        className="chatbot-button fixed z-[2147483647] flex h-[72px] w-[72px] items-center justify-center rounded-full border-0 bg-govuk-blue text-white shadow-lg transition-transform hover:scale-105 hover:bg-govuk-blue-dark"
       >
         {isOpen ? (
           <svg viewBox="0 0 24 24" width={34} height={34} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -82,22 +91,10 @@ export default function FloatingChatbot({
 
       {isOpen && (
         <div
-          className="fixed z-[2147483646] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl"
-          style={{
-            right: `${rightOffset}px`,
-            bottom: `${panelBottom}px`,
-            width: 'clamp(380px, 30vw, 520px)',
-            height: 'min(75vh, 720px)',
-            maxHeight: `calc(100vh - ${panelBottom + 24}px)`,
-            maxWidth: 'calc(100vw - 48px)',
-          }}
+          ref={panelRef}
+          className="chatbot-panel fixed z-[2147483646] h-[min(75vh,720px)] w-[clamp(380px,30vw,520px)] max-w-[calc(100vw-48px)] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl"
         >
-          <ChatWidget
-            apiBaseUrl={apiBaseUrl}
-            domain={domain}
-            config={config}
-            userContext={userContext}
-          />
+          <ChatWidget apiBaseUrl={apiBaseUrl} domain={domain} config={config} />
         </div>
       )}
     </>

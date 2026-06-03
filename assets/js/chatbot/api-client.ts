@@ -16,10 +16,11 @@ class ApiClient {
     onError: (error: string) => void,
     conversationId?: string,
     domain?: string,
-    userContext?: Record<string, unknown>,
   ): Promise<void> {
     const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? ''
 
+    // user_context is intentionally NOT sent — the server builds it from the
+    // authenticated session so a tampered client can't impersonate another user.
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,7 +28,6 @@ class ApiClient {
         message,
         conversation_id: conversationId,
         domain,
-        user_context: userContext,
         _csrf: csrfToken,
       }),
     })

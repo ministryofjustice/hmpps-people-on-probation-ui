@@ -8,7 +8,6 @@ export type ChatWidgetProps = {
   apiBaseUrl: string;
   domain?: string;
   config?: ChatbotConfig;
-  userContext?: Record<string, unknown> | null;
 };
 
 interface Message {
@@ -61,7 +60,7 @@ const markdownComponentsUser = {
   hr: () => <hr className="my-2 border-white/40" />,
 };
 
-function ChatWidget({ apiBaseUrl, domain = '', config, userContext: userContextProp }: ChatWidgetProps) {
+function ChatWidget({ apiBaseUrl, domain = '', config }: ChatWidgetProps) {
   const configForDomain = config ?? defaultConfig;
   const assistantName = configForDomain.assistantName;
   const privacyMessage = configForDomain.privacyMessage;
@@ -84,7 +83,6 @@ function ChatWidget({ apiBaseUrl, domain = '', config, userContext: userContextP
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [pageContext, setPageContext] = useState<Record<string, string> | null>(null);
-  const userContext = userContextProp ?? null;
   const [showPrivacy, setShowPrivacy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const widgetClient = createApiClient(apiBaseUrl);
@@ -327,7 +325,6 @@ function ChatWidget({ apiBaseUrl, domain = '', config, userContext: userContextP
         },
         conversationId || undefined,
         domain,
-        userContext ?? undefined,
       );
     } catch (error) {
       console.error('Error sending message:', error);
