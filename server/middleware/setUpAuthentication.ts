@@ -39,7 +39,8 @@ function normaliseToken(token?: string | null): string | null {
 function authErrorRedirect(err: unknown): string | null {
   const status = (err as { status?: number })?.status
   if (status === 409 || status === 410) return '/invite-expired'
-  if (status && status >= 400 && status < 500) return '/signIn-error'
+  if (status === 401 || status === 403) return '/autherror'
+  if (status && status >= 400 && status < 500) return '/sign-in-error'
   return null
 }
 
@@ -173,7 +174,7 @@ export default function setUpAuthentication(): Router {
 
       if (!transactionId) {
         logger.warn('One Login callback received without transaction cookie')
-        return res.redirect('/signIn-error')
+        return res.redirect('/sign-in-error')
       }
 
       const transaction = await getOneLoginTransaction(transactionId)
@@ -181,7 +182,7 @@ export default function setUpAuthentication(): Router {
       if (!transaction) {
         logger.warn('One Login callback received with unknown or expired transaction')
         clearOneLoginTransactionCookie(res)
-        return res.redirect('/signIn-error')
+        return res.redirect('/sign-in-error')
       }
 
       const { code, state, error } = req.query
@@ -190,14 +191,14 @@ export default function setUpAuthentication(): Router {
         logger.warn({ error }, 'One Login callback error or missing code/state')
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
-        return res.redirect('/signIn-error')
+        return res.redirect('/sign-in-error')
       }
 
       if (state !== transaction.state) {
         logger.warn('One Login callback state mismatch')
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
-        return res.redirect('/signIn-error')
+        return res.redirect('/sign-in-error')
       }
 
       const oneLoginUser = await authenticateOneLoginCallback(code, transaction)

@@ -48,7 +48,7 @@ export default function createApp(services: Services): express.Application {
     res.render('pages/invite-expired')
   })
 
-  app.get('/signIn-error', (_req, res) => {
+  app.get('/sign-in-error', (_req, res) => {
     res.status(500)
     res.render('pages/sign-in-error')
   })
