@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
 import config from '../config'
 import logger from '../../logger'
-import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
+import type { Services } from '../services'
 
 /**
  * Chatbot routes:
@@ -11,7 +11,7 @@ import { getPeopleOnProbationService } from '../services/peopleOnProbationServic
  *                                     embed API with X-API-Key auth, and
  *                                     streams the response back as SSE
  */
-export default function chatbotRoutes(): Router {
+export default function chatbotRoutes(services: Services): Router {
   const router = Router()
 
   router.get('/user-context', async (_req: Request, res: Response) => {
@@ -27,7 +27,7 @@ export default function chatbotRoutes(): Router {
     }
 
     try {
-      const service = getPeopleOnProbationService()
+      const service = services.peopleOnProbationService
       const [personalDetails, sentenceProgress, futureAppointments] = await Promise.all([
         service.getPersonalDetails(crn),
         service.getSentences(crn),

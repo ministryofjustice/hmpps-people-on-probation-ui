@@ -70,7 +70,7 @@ export default function routes(services: Services): Router {
   router.use('/requirements', requirementsRoutes(services))
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
-  router.use('/api/chatbot', chatbotRoutes())
+  router.use('/api/chatbot', chatbotRoutes(services))
 
   router.get('/', async (req, res, next) => {
     try {
