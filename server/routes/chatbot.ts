@@ -15,7 +15,7 @@ export default function chatbotRoutes(): Router {
   const router = Router()
 
   router.get('/user-context', async (_req: Request, res: Response) => {
-    const user = res.locals.user
+    const { user } = res.locals
     const crn = user?.registeredUserDetails?.personReference
     if (!user) {
       res.status(401).json({ error: 'Not authenticated' })
@@ -39,7 +39,7 @@ export default function chatbotRoutes(): Router {
       const upw = (sentence?.requirements ?? []).find(r => r.type === 'Unpaid Work')
       const upwNext = futureAppointments.content.find(a => a.type === 'Unpaid Work')
       const emergency = personalDetails.emergencyContacts?.[0]
-      const practitioner = personalDetails.practitioner
+      const { practitioner } = personalDetails
       const officeAddress = practitioner?.team?.officeAddresses?.[0]
 
       res.json({
@@ -51,9 +51,7 @@ export default function chatbotRoutes(): Router {
         },
         contactDetails: {
           address: [
-            [personalDetails.mainAddress?.houseNumber, personalDetails.mainAddress?.street]
-              .filter(Boolean)
-              .join(' '),
+            [personalDetails.mainAddress?.houseNumber, personalDetails.mainAddress?.street].filter(Boolean).join(' '),
             personalDetails.mainAddress?.town,
             personalDetails.mainAddress?.postcode,
           ]
@@ -107,8 +105,7 @@ export default function chatbotRoutes(): Router {
           ? {
               totalCompletedHours: upw.completed,
               hoursRequired: upw.required,
-              percentCompleted:
-                upw.required && upw.completed ? Math.round((upw.completed / upw.required) * 100) : 0,
+              percentCompleted: upw.required && upw.completed ? Math.round((upw.completed / upw.required) * 100) : 0,
               breakdown: [
                 {
                   title: 'Unpaid Work',
@@ -147,8 +144,8 @@ export default function chatbotRoutes(): Router {
   })
 
   router.post('/chat', async (req: Request, res: Response) => {
-    const apiUrl = config.popChatbot.apiUrl
-    const apiKey = config.popChatbot.apiKey
+    const { apiUrl } = config.popChatbot
+    const { apiKey } = config.popChatbot
 
     if (!res.locals.user) {
       res.status(401).json({ error: 'Not authenticated' })
@@ -171,8 +168,8 @@ export default function chatbotRoutes(): Router {
 
     // Forward only the fields the embed API expects — never proxy
     // unknown fields (e.g. the _csrf token sent for our own CSRF check).
-    const { message, conversation_id, user_context } = req.body ?? {}
-    const upstreamBody = { message, conversation_id, user_context }
+    const { message, conversation_id: conversationId, user_context: userContext } = req.body ?? {}
+    const upstreamBody = { message, conversation_id: conversationId, user_context: userContext }
 
     try {
       const upstream = await fetch(apiUrl, {

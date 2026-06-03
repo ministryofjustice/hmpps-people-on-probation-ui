@@ -1,10 +1,10 @@
 export interface ChatbotConfig {
-  assistantName: string;
-  displayTitle: string;
-  welcomeMessage: string;
-  placeholder: string;
-  privacyMessage: string | null;
-  suggestedQuestions?: string[];
+  assistantName: string
+  displayTitle: string
+  welcomeMessage: string
+  placeholder: string
+  privacyMessage: string | null
+  suggestedQuestions?: string[]
 }
 
 export const defaultConfig: ChatbotConfig = {
@@ -14,4 +14,4 @@ export const defaultConfig: ChatbotConfig = {
   placeholder: 'Ask a question...',
   privacyMessage: null,
   suggestedQuestions: [],
-};
+}

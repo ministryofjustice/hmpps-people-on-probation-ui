@@ -60,7 +60,8 @@
     "react-markdown": "10.1.0",
     "redis": "^5.11.0",
     "remark-gfm": "4.0.1",
-    "superagent": "^10.3.0"
+    "superagent": "^10.3.0",
+    "@tailwindcss/typography": "0.5.19"
   },
   "devDependencies": {
     "@jgoz/esbuild-plugin-typecheck": "^4.0.4",
@@ -69,7 +70,6 @@
     "@ministryofjustice/hmpps-npm-script-allowlist": "0.0.3",
     "@ministryofjustice/hmpps-precommit-hooks": "2.0.2",
     "@playwright/test": "^1.58.2",
-    "@tailwindcss/typography": "0.5.19",
     "@tsconfig/node24": "^24.0.4",
     "@types/bunyan": "^1.8.11",
     "@types/bunyan-format": "^0.2.9",

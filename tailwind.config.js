@@ -1,3 +1,5 @@
+const typography = require('@tailwindcss/typography')
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   // Scope every Tailwind selector to #chatbot-root so styles can't bleed
@@ -18,5 +20,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require('@tailwindcss/typography')],
+  plugins: [typography],
 }

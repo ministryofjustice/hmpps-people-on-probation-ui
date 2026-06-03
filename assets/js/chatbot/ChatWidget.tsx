@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { createApiClient } from './api-client';
+import createApiClient from './api-client';
 import { defaultConfig, ChatbotConfig } from './config-types';
 
 export type ChatWidgetProps = {

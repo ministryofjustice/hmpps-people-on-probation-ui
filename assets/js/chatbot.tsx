@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import FloatingChatbot from './chatbot/FloatingChatbot'
-import { popConfig } from './chatbot/config'
+import popConfig from './chatbot/config'
 import '../styles/chatbot.css'
 
 function ChatbotRoot() {

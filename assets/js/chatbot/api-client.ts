@@ -18,8 +18,7 @@ class ApiClient {
     domain?: string,
     userContext?: Record<string, unknown>,
   ): Promise<void> {
-    const csrfToken =
-      document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? ''
+    const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? ''
 
     const response = await fetch(this.baseUrl, {
       method: 'POST',
@@ -42,6 +41,10 @@ class ApiClient {
     const decoder = new TextDecoder()
     let buffer = ''
 
+    // Streaming SSE requires sequential reads; await-in-loop is the right
+    // pattern here, and skipping non-data lines via continue keeps the
+    // parser readable.
+    /* eslint-disable no-await-in-loop, no-continue */
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
@@ -61,6 +64,7 @@ class ApiClient {
         }
       }
     }
+    /* eslint-enable no-await-in-loop, no-continue */
   }
 
   async sendFeedback(_messageId: string, _feedbackType: string, _value: unknown): Promise<void> {
@@ -72,4 +76,6 @@ class ApiClient {
   }
 }
 
-export const createApiClient = (baseUrl: string) => new ApiClient(baseUrl)
+const createApiClient = (baseUrl: string) => new ApiClient(baseUrl)
+
+export default createApiClient

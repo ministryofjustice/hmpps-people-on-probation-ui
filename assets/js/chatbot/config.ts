@@ -1,6 +1,6 @@
 import { ChatbotConfig } from './config-types'
 
-export const popConfig: ChatbotConfig = {
+const popConfig: ChatbotConfig = {
   assistantName: 'Fred',
   displayTitle: 'AI Probation Assistant',
   placeholder: 'Ask a question about probation...',
@@ -33,3 +33,5 @@ Before we begin, please read our privacy notice:
 • In an emergency, call 999 or contact your probation officer directly.
 `,
 }
+
+export default popConfig
