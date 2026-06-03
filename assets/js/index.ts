@@ -63,8 +63,7 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
     warningTimer = window.setTimeout(showWarning, warningAfterSecondsValue * 1000)
   }
 
-  const getFocusableElements = () =>
-    Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'))
+  const getFocusableElements = () => Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'))
 
   const trapFocus = (event: KeyboardEvent) => {
     if (event.key !== 'Tab') return
