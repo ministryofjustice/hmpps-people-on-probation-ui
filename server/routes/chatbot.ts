@@ -12,11 +12,7 @@ type UserContext = Record<string, unknown>
  * profile. Driven entirely from server-side data so callers can't supply
  * or tamper with the context.
  */
-async function buildUserContext(
-  services: Services,
-  user: { userId: string },
-  crn: string,
-): Promise<UserContext> {
+async function buildUserContext(services: Services, user: { userId: string }, crn: string): Promise<UserContext> {
   const service = services.peopleOnProbationService
   const [personalDetails, sentenceProgress, futureAppointments] = await Promise.all([
     service.getPersonalDetails(crn),
