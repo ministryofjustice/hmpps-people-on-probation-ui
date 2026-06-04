@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express'
 import { getAppSessionCookie } from './cookies'
 import { getAuthenticatedUserSession } from './sessionStore'
 import normaliseReturnTo from './returnTo'
-import config from '../config'
 
 export async function loadCurrentUser(req: Request, res: Response, next: NextFunction) {
   const sessionId = getAppSessionCookie(req)
@@ -11,9 +10,10 @@ export async function loadCurrentUser(req: Request, res: Response, next: NextFun
     const session = await getAuthenticatedUserSession(sessionId)
     if (session) {
       res.locals.user = session
+      const sessionExpiresInSeconds = Math.floor((session.expiresAt - Date.now()) / 1000)
       res.locals.sessionTimeoutWarning = {
-        warningAfterSeconds: Math.max((config.session.expiryMinutes - 5) * 60, 0),
-        countdownSeconds: Math.min(5 * 60, config.session.expiryMinutes * 60),
+        warningAfterSeconds: Math.max(sessionExpiresInSeconds - 5 * 60, 0),
+        countdownSeconds: Math.min(5 * 60, sessionExpiresInSeconds),
       }
     } else {
       res.locals.sessionTimedOut = true
