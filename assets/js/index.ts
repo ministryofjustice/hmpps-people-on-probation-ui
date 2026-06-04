@@ -38,8 +38,6 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
   let countdownTimer: number | undefined
   let remainingSeconds = countdownSecondsValue
   let lastFocusedElement: HTMLElement | null = null
-  let lastIdleReset = 0
-  const idleResetThrottleMs = 5_000
 
   const formatRemainingTime = (seconds: number) => {
     if (seconds < 60) {
@@ -109,14 +107,6 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
     }, 1000)
   }
 
-  const resetIdleTimer = () => {
-    if (!timeoutWarning.hasAttribute('hidden')) return
-    const now = Date.now()
-    if (now - lastIdleReset < idleResetThrottleMs) return
-    lastIdleReset = now
-    startWarningTimer()
-  }
-
   staySignedInButton.addEventListener('click', async () => {
     staySignedInButton.disabled = true
 
@@ -134,11 +124,6 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
     } finally {
       staySignedInButton.disabled = false
     }
-  })
-
-  const idleResetEvents = ['click', 'keydown', 'mousemove', 'touchstart']
-  idleResetEvents.forEach(eventName => {
-    document.addEventListener(eventName, resetIdleTimer, { passive: true })
   })
 
   startWarningTimer()
