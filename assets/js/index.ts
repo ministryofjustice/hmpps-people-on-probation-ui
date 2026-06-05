@@ -4,6 +4,44 @@ import * as mojFrontend from '@ministryofjustice/frontend'
 govukFrontend.initAll()
 mojFrontend.initAll()
 
+const goalTabNav = document.querySelector<HTMLElement>('[data-module="pop-goal-tabs"]')
+if (goalTabNav) {
+  const tabLinks = goalTabNav.querySelectorAll<HTMLAnchorElement>('[data-tab-target]')
+  const panels = document.querySelectorAll<HTMLElement>('#panel-current, #panel-future, #panel-achieved')
+  const lastUpdatedBanner = document.getElementById('goals-last-updated')
+  const achievedBanner = document.getElementById('goals-achieved-banner')
+  const mobileHeading = document.getElementById('goals-mobile-heading')
+
+  tabLinks.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault()
+      const targetId = link.dataset.tabTarget!
+      const isAchieved = targetId === 'panel-achieved'
+
+      panels.forEach(panel => {
+        // eslint-disable-next-line no-param-reassign
+        panel.hidden = panel.id !== targetId
+      })
+
+      tabLinks.forEach(l => {
+        const isActive = l.dataset.tabTarget === targetId
+        l.classList.toggle('moj-sub-navigation__link--active', isActive)
+        if (isActive) {
+          l.setAttribute('aria-current', 'page')
+        } else {
+          l.removeAttribute('aria-current')
+        }
+      })
+
+      if (lastUpdatedBanner) lastUpdatedBanner.hidden = isAchieved
+      if (achievedBanner) achievedBanner.hidden = !isAchieved
+      if (mobileHeading) mobileHeading.textContent = link.textContent?.trim() ?? ''
+
+      window.history.replaceState(null, '', link.href)
+    })
+  })
+}
+
 document.querySelectorAll<HTMLElement>('.pop-show-details').forEach(wrapper => {
   const btn = wrapper.querySelector<HTMLButtonElement>('.pop-show-details__btn')
   const masked = wrapper.querySelector<HTMLElement>('.pop-show-details__masked')

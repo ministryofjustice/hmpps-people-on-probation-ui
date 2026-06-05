@@ -156,6 +156,33 @@ export interface RegisteredUserResponse {
   lastSignedInAt?: string
 }
 
+export interface StepResponse {
+  description?: string
+  status?: string
+  actor?: string
+  statusDate?: string
+}
+
+export interface GoalResponse {
+  goalTitle: string
+  areaOfNeed: string
+  relatedAreaOfNeed: string[]
+  targetDate?: string
+  goalStatus: string
+  steps: StepResponse[]
+}
+
+export interface SentencePlanResponse {
+  crn: string
+  nomis: string
+  planStatus?: string
+  goals: GoalResponse[]
+}
+
+export interface SentencePlansResponse {
+  sentencePlans: SentencePlanResponse[]
+}
+
 export interface PeopleOnProbationApiErrorResponse {
   status: number
   errorCode: string
@@ -223,5 +250,9 @@ export default class PeopleOnProbationApiClient extends RestClient {
       },
       asSystem(),
     )
+  }
+
+  getSentencePlans(crn: string) {
+    return this.get<SentencePlansResponse>({ path: `/v1/person/${crn}/sentence-plans` }, asSystem())
   }
 }

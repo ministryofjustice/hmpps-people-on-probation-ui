@@ -5,6 +5,7 @@ import { loadCurrentUser } from '../auth/currentUser'
 import type { AppointmentResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import { formatDateWithDay, formatTimeRange, formatRemainingDuration } from '../utils/utils'
 import appointmentsRoutes from './appointments'
+import goalsRoutes from './goals'
 import progressRoutes from './progress'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
@@ -65,6 +66,7 @@ export default function routes(services: Services): Router {
   router.use(loadCurrentUser)
 
   router.use('/appointments', appointmentsRoutes(services))
+  router.use('/goals', goalsRoutes(services))
   router.use('/progress', progressRoutes(services))
   router.use('/requirements', requirementsRoutes(services))
   router.use('/probation-officer', probationOfficerRoutes(services))

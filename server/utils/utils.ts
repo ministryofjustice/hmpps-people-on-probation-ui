@@ -64,6 +64,15 @@ export const formatDateTime = (datetimeStr?: string): string | undefined => {
   return `${datePart}, ${timePart}`
 }
 
+export const formatDateTimeWithDay = (datetimeStr?: string): string | undefined => {
+  if (!datetimeStr) return undefined
+  const parsed = parseISO(datetimeStr)
+  if (!isValid(parsed)) return datetimeStr
+  const datePart = format(parsed, 'EEEE d MMMM yyyy')
+  const timePart = (parsed.getMinutes() === 0 ? format(parsed, 'haaa') : format(parsed, 'h:mmaaa')).toLowerCase()
+  return `${datePart}, ${timePart}`
+}
+
 export const formatRemainingDuration = (endDateStr: string): string => {
   const end = parseISO(endDateStr)
   const today = startOfDay(new Date())

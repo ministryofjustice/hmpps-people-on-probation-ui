@@ -58,6 +58,7 @@
   &__key {
     @include govuk-font($size: 19, $weight: bold);
     flex: 1 0 0;
+    min-width: 0;
     padding: govuk-spacing(2) govuk-spacing(4) govuk-spacing(2) 0;
     margin: 0;
   }
@@ -65,8 +66,11 @@
   &__value {
     @include govuk-font($size: 19);
     flex: 1 0 0;
+    min-width: 0;
     padding: govuk-spacing(2) 0;
     margin: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 }
 
