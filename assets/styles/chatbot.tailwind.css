@@ -1,0 +1,104 @@
+/* Scoped reset inside #chatbot-root only — mimics Tailwind preflight without
+   leaking to GOV.UK Frontend on the parent page. */
+#chatbot-root,
+#chatbot-root *,
+#chatbot-root *::before,
+#chatbot-root *::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e5e5e5;
+}
+#chatbot-root {
+  font-family: "GDS Transport", arial, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+#chatbot-root h1,
+#chatbot-root h2,
+#chatbot-root h3,
+#chatbot-root h4,
+#chatbot-root h5,
+#chatbot-root h6,
+#chatbot-root p,
+#chatbot-root blockquote,
+#chatbot-root pre,
+#chatbot-root ol,
+#chatbot-root ul,
+#chatbot-root figure,
+#chatbot-root hr,
+#chatbot-root dl,
+#chatbot-root dd {
+  margin: 0;
+}
+#chatbot-root h1,
+#chatbot-root h2,
+#chatbot-root h3,
+#chatbot-root h4,
+#chatbot-root h5,
+#chatbot-root h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+#chatbot-root ol,
+#chatbot-root ul,
+#chatbot-root menu {
+  list-style: none;
+  padding: 0;
+}
+#chatbot-root li,
+#chatbot-root li > p {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+#chatbot-root button,
+#chatbot-root input,
+#chatbot-root optgroup,
+#chatbot-root select,
+#chatbot-root textarea {
+  font-family: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+#chatbot-root button,
+#chatbot-root [role="button"] {
+  cursor: pointer;
+  background-color: transparent;
+  background-image: none;
+  text-transform: none;
+  appearance: button;
+  -webkit-appearance: button;
+}
+#chatbot-root button:disabled,
+#chatbot-root [role="button"]:disabled {
+  cursor: default;
+}
+#chatbot-root a {
+  color: inherit;
+  text-decoration: inherit;
+}
+#chatbot-root img,
+#chatbot-root svg,
+#chatbot-root video,
+#chatbot-root canvas {
+  display: block;
+  vertical-align: middle;
+  max-width: 100%;
+  height: auto;
+}
+#chatbot-root textarea {
+  resize: vertical;
+}
+#chatbot-root :focus-visible {
+  outline: 2px solid #1d70b8;
+  outline-offset: 2px;
+}
+
+@tailwind components;
+@tailwind utilities;

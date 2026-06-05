@@ -108,7 +108,10 @@ export default {
   },
   localAuth,
   popChatbot: {
-    apiUrl: get('POP_CHATBOT_API_URL', '', requiredInProduction) as string,
+    // Optional — when unset, the chatbot proxy returns a "not configured" message
+    // and the widget displays an error. This lets preprod/prod boot without a
+    // chatbot deployment being available in that environment.
+    apiUrl: get('POP_CHATBOT_API_URL', '') as string,
     apiKey: process.env.POP_CHATBOT_API_KEY,
   },
   ingressUrl: get('INGRESS_URL', 'http://localhost:3000', requiredInProduction),

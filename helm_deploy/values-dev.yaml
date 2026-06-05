@@ -17,7 +17,7 @@ generic-service:
     ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: "https://probation-account-dev.hmpps.service.justice.gov.uk"
     ENVIRONMENT_NAME: DEV
     AUDIT_ENABLED: "false"
-    POP_CHATBOT_API_URL: "https://probationchatbot-production.up.railway.app/chatbot/chat-embed"
+    POP_CHATBOT_API_URL: "https://probationchatbot-dev.apps.live.cloud-platform.service.justice.gov.uk/api/proxy/chatbot/chat-embed"
 
 generic-prometheus-alerts:
   alertSeverity: hmpps-people-on-probation-nonprod
