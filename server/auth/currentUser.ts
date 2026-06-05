@@ -1,14 +1,15 @@
 import { Request, Response, NextFunction } from 'express'
-import { getAppSessionCookie } from './cookies'
-import { getAuthenticatedUserSession } from './sessionStore'
+import { getAppSessionCookie, setAppSessionCookie, clearAppSessionCookie } from './cookies'
+import { refreshAuthenticatedUserSession, getAuthenticatedUserSessionTtlSeconds } from './sessionStore'
 import normaliseReturnTo from './returnTo'
 
 export async function loadCurrentUser(req: Request, res: Response, next: NextFunction) {
   const sessionId = getAppSessionCookie(req)
 
   if (sessionId) {
-    const session = await getAuthenticatedUserSession(sessionId)
+    const session = await refreshAuthenticatedUserSession(sessionId)
     if (session) {
+      setAppSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
       res.locals.user = session
       const sessionExpiresInSeconds = Math.floor((session.expiresAt - Date.now()) / 1000)
       res.locals.sessionTimeoutWarning = {
@@ -16,6 +17,7 @@ export async function loadCurrentUser(req: Request, res: Response, next: NextFun
         countdownSeconds: Math.min(5 * 60, sessionExpiresInSeconds),
       }
     } else {
+      clearAppSessionCookie(res)
       res.locals.sessionTimedOut = true
     }
   }

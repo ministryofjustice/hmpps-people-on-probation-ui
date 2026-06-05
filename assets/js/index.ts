@@ -91,14 +91,14 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
   function showWarning() {
     lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
     remainingSeconds = countdownSecondsValue
-    countdown.textContent = formatRemainingTime(remainingSeconds)
+    countdown!.textContent = formatRemainingTime(remainingSeconds)
     timeoutWarning.removeAttribute('hidden')
-    dialog.focus()
+    dialog!.focus()
     document.addEventListener('keydown', trapFocus)
 
     countdownTimer = window.setInterval(() => {
       remainingSeconds -= 1
-      countdown.textContent = formatRemainingTime(Math.max(remainingSeconds, 0))
+      countdown!.textContent = formatRemainingTime(Math.max(remainingSeconds, 0))
 
       if (remainingSeconds <= 0) {
         clearTimers()
