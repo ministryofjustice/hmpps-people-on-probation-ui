@@ -66,6 +66,19 @@ export async function saveAuthenticatedUserSession(session: AuthenticatedUserSes
   })
 }
 
+export async function refreshAuthenticatedUserSession(sessionId: string) {
+  const session = await getAuthenticatedUserSession(sessionId)
+  if (!session) return null
+
+  const refreshedSession: AuthenticatedUserSession = {
+    ...session,
+    expiresAt: Date.now() + getSessionTtlSeconds() * 1000,
+  }
+
+  await saveAuthenticatedUserSession(refreshedSession)
+  return refreshedSession
+}
+
 export async function getAuthenticatedUserSession(sessionId: string) {
   if (config.redis.enabled) {
     const storedSession = await getRedisClient().get(getRedisKey(sessionId))

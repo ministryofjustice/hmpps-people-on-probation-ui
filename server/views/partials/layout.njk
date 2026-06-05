@@ -1,5 +1,6 @@
 {% extends "govuk/template.njk" %}
 {% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block head %}
   <link href="{{ '/assets/css/index.css' | assetMap }}" rel="stylesheet"/>
@@ -25,6 +26,40 @@
 {% block bodyStart %}{% endblock %}
 
 {% block bodyEnd %}
+  {% if user and sessionTimeoutWarning %}
+    <div
+      class="pop-timeout-warning"
+      data-warning-after-seconds="{{ sessionTimeoutWarning.warningAfterSeconds }}"
+      data-countdown-seconds="{{ sessionTimeoutWarning.countdownSeconds }}"
+      data-keep-alive-url="/session/keep-alive"
+      data-timeout-url="/session-timeout"
+      hidden
+    >
+      <div class="pop-timeout-warning__overlay" aria-hidden="true"></div>
+      <div
+        class="pop-timeout-warning__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pop-timeout-warning-title"
+        aria-describedby="pop-timeout-warning-description"
+        tabindex="-1"
+      >
+        <h2 class="govuk-heading-m" id="pop-timeout-warning-title">Your session will time out</h2>
+        <p class="govuk-body" id="pop-timeout-warning-description">
+          For your security, we will sign you out in
+          <span class="pop-timeout-warning__countdown" aria-live="polite" aria-atomic="true">5 minutes</span>.
+        </p>
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Stay signed in",
+            classes: "pop-timeout-warning__stay-signed-in",
+            type: "button"
+          }) }}
+          <a class="govuk-link pop-timeout-warning__sign-out" href="/sign-out">Sign out</a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
   <script type="module" src="{{ '/assets/js/index.js' | assetMap }}"></script>
 {% endblock %}
 

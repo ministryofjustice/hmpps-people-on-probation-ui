@@ -100,6 +100,10 @@ export default function routes(services: Services): Router {
         })
       }
 
+      if (res.locals.sessionTimedOut) {
+        return res.redirect('/session-timeout')
+      }
+
       const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : null
       const token = typeof req.query.token === 'string' ? req.query.token : null
       const signInStartParams = new URLSearchParams()

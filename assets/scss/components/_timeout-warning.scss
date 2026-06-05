@@ -1,0 +1,28 @@
+.pop-timeout-warning[hidden] {
+  display: none;
+}
+
+.pop-timeout-warning__overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  background: rgb(11 12 12 / 80%);
+}
+
+.pop-timeout-warning__dialog {
+  position: fixed;
+  z-index: 1001;
+  top: 50%;
+  left: 50%;
+  box-sizing: border-box;
+  width: min(90vw, 520px);
+  padding: govuk-spacing(6);
+  transform: translate(-50%, -50%);
+  background: govuk-colour("white");
+  box-shadow: 0 0 0 4px govuk-colour("black");
+}
+
+.pop-timeout-warning__dialog:focus {
+  outline: 3px solid govuk-colour("yellow");
+  outline-offset: 0;
+}

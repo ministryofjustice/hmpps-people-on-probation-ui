@@ -1,7 +1,14 @@
 import express from 'express'
 import request from 'supertest'
+import cookieParser from 'cookie-parser'
 import setUpAuthentication from './setUpAuthentication'
 import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
+import { appSessionCookieName } from '../auth/cookies'
+import {
+  createAuthenticatedUserSession,
+  saveAuthenticatedUserSession,
+  getAuthenticatedUserSession,
+} from '../auth/sessionStore'
 
 jest.mock('../auth/oneLoginAuthorize', () => jest.fn())
 jest.mock('../auth/oneLoginToken', () => ({
@@ -51,6 +58,64 @@ describe('setUpAuthentication', () => {
             },
           ],
         })
+    })
+  })
+
+  function buildApp() {
+    const app = express()
+    app.use(cookieParser())
+    app.use((_req, res, next) => {
+      res.render = (_view: string) => res.send('ok')
+      next()
+    })
+    app.use(setUpAuthentication())
+    return app
+  }
+
+  describe('GET /session-timeout', () => {
+    it('renders the session-timeout page when there is no app session cookie', async () => {
+      await request(buildApp()).get('/session-timeout').expect(200)
+    })
+
+    it('deletes the session and clears the cookie when there is a valid app session cookie', async () => {
+      const session = createAuthenticatedUserSession({ userId: 'user-id', email: 'user@example.com' })
+      await saveAuthenticatedUserSession(session)
+
+      await request(buildApp())
+        .get('/session-timeout')
+        .set('Cookie', `${appSessionCookieName}=${session.id}`)
+        .expect(200)
+        .expect('Set-Cookie', new RegExp(`${appSessionCookieName}=;`))
+
+      expect(await getAuthenticatedUserSession(session.id)).toBeNull()
+    })
+  })
+
+  describe('POST /session/keep-alive', () => {
+    it('returns unauthorized when there is no app session cookie', async () => {
+      const app = express()
+      app.use(cookieParser())
+      app.use(setUpAuthentication())
+
+      await request(app).post('/session/keep-alive').expect(401)
+    })
+
+    it('refreshes the app session when there is a valid app session cookie', async () => {
+      const app = express()
+      app.use(cookieParser())
+      app.use(setUpAuthentication())
+
+      const session = createAuthenticatedUserSession({
+        userId: 'user-id',
+        email: 'user@example.com',
+      })
+      await saveAuthenticatedUserSession(session)
+
+      await request(app)
+        .post('/session/keep-alive')
+        .set('Cookie', `${appSessionCookieName}=${session.id}`)
+        .expect(204)
+        .expect('Set-Cookie', new RegExp(`${appSessionCookieName}=`))
     })
   })
 })
