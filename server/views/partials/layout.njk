@@ -4,6 +4,7 @@
 
 {% block head %}
   <link href="{{ '/assets/css/index.css' | assetMap }}" rel="stylesheet"/>
+  <meta name="csrf-token" content="{{ csrfToken }}">
 {% endblock %}
 
 {% block pageTitle %}{{ pageTitle | default(applicationName) }}{% endblock %}
@@ -61,6 +62,11 @@
     </div>
   {% endif %}
   <script type="module" src="{{ '/assets/js/index.js' | assetMap }}"></script>
+  {% if user and chatbotEnabled %}
+    <link href="{{ '/assets/css/chatbot.css' | assetMap }}" rel="stylesheet"/>
+    <div id="chatbot-root"></div>
+    <script type="module" src="{{ '/assets/js/chatbot.js' | assetMap }}"></script>
+  {% endif %}
 {% endblock %}
 
 {% block footer %}
