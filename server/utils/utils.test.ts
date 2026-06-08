@@ -6,6 +6,7 @@ import {
   formatTime,
   formatTimeRange,
   formatDateTime,
+  formatDateTimeWithDay,
   formatRemainingDuration,
   formatDuration,
   formatUnit,
@@ -100,6 +101,17 @@ describe('formatDateTime', () => {
     ['invalid', 'not-a-date', 'not-a-date'],
   ])('%s', (_: string, input: string | undefined, expected: string | undefined) => {
     expect(formatDateTime(input)).toEqual(expected)
+  })
+})
+
+describe('formatDateTimeWithDay', () => {
+  it.each([
+    ['undefined', undefined, undefined],
+    ['on the hour', '2026-05-18T15:00:00', 'Monday 18 May 2026, 3pm'],
+    ['with minutes', '2026-05-18T15:30:00', 'Monday 18 May 2026, 3:30pm'],
+    ['invalid', 'not-a-date', 'not-a-date'],
+  ])('%s', (_: string, input: string | undefined, expected: string | undefined) => {
+    expect(formatDateTimeWithDay(input)).toEqual(expected)
   })
 })
 

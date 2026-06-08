@@ -39,8 +39,8 @@ export default class PeopleOnProbationService {
     return this.peopleOnProbationApiClient.getCurrentRegisteredUser(request)
   }
 
-  getSentencePlans(crn: string) {
-    return this.peopleOnProbationApiClient.getSentencePlans(crn)
+  getSentencePlan(crn: string) {
+    return this.peopleOnProbationApiClient.getSentencePlan(crn)
   }
 }
 

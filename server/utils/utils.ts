@@ -55,23 +55,20 @@ export const formatTimeRange = (startTime?: string, endTime?: string): string | 
   return start ?? end
 }
 
-export const formatDateTime = (datetimeStr?: string): string | undefined => {
+const formatDateTimeWithPattern = (datetimeStr: string | undefined, datePattern: string): string | undefined => {
   if (!datetimeStr) return undefined
   const parsed = parseISO(datetimeStr)
   if (!isValid(parsed)) return datetimeStr
-  const datePart = format(parsed, 'd MMMM yyyy')
+  const datePart = format(parsed, datePattern)
   const timePart = (parsed.getMinutes() === 0 ? format(parsed, 'haaa') : format(parsed, 'h:mmaaa')).toLowerCase()
   return `${datePart}, ${timePart}`
 }
 
-export const formatDateTimeWithDay = (datetimeStr?: string): string | undefined => {
-  if (!datetimeStr) return undefined
-  const parsed = parseISO(datetimeStr)
-  if (!isValid(parsed)) return datetimeStr
-  const datePart = format(parsed, 'EEEE d MMMM yyyy')
-  const timePart = (parsed.getMinutes() === 0 ? format(parsed, 'haaa') : format(parsed, 'h:mmaaa')).toLowerCase()
-  return `${datePart}, ${timePart}`
-}
+export const formatDateTime = (datetimeStr?: string): string | undefined =>
+  formatDateTimeWithPattern(datetimeStr, 'd MMMM yyyy')
+
+export const formatDateTimeWithDay = (datetimeStr?: string): string | undefined =>
+  formatDateTimeWithPattern(datetimeStr, 'EEEE d MMMM yyyy')
 
 export const formatRemainingDuration = (endDateStr: string): string => {
   const end = parseISO(endDateStr)

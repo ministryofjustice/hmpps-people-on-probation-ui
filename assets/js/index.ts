@@ -33,7 +33,9 @@ if (goalTabNav) {
         }
       })
 
-      if (lastUpdatedBanner) lastUpdatedBanner.hidden = isAchieved
+      const targetPanel = document.getElementById(targetId)
+      const panelHasGoals = !!targetPanel?.querySelector('.pop-goal-card')
+      if (lastUpdatedBanner) lastUpdatedBanner.hidden = isAchieved || !panelHasGoals
       if (achievedBanner) achievedBanner.hidden = !isAchieved
       if (mobileHeading) mobileHeading.textContent = link.textContent?.trim() ?? ''
 

@@ -179,9 +179,6 @@ export interface SentencePlanResponse {
   goals: GoalResponse[]
 }
 
-export interface SentencePlansResponse {
-  sentencePlans: SentencePlanResponse[]
-}
 
 export interface PeopleOnProbationApiErrorResponse {
   status: number
@@ -252,7 +249,7 @@ export default class PeopleOnProbationApiClient extends RestClient {
     )
   }
 
-  getSentencePlans(crn: string) {
-    return this.get<SentencePlansResponse>({ path: `/v1/person/${crn}/sentence-plans` }, asSystem())
+  getSentencePlan(crn: string) {
+    return this.get<SentencePlanResponse>({ path: `/v1/person/${crn}/sentence-plan` }, asSystem())
   }
 }

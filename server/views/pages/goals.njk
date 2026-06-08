@@ -2,7 +2,7 @@
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 
-{% set pageTitle = "Your probation goals" %}
+{% set pageTitle = "Goals" %}
 {% set currentPage = "goals" %}
 
 {% macro goalsList(goals, tab) %}
@@ -109,7 +109,7 @@
     </p>
 
     {% if lastUpdatedAt %}
-      <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6" id="goals-last-updated">
+      <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6" id="goals-last-updated" {% if activeTab === 'achieved' or (activeTab === 'current' and currentGoals | length === 0) or (activeTab === 'future' and futureGoals | length === 0) %}hidden{% endif %}>
         <p class="govuk-body govuk-!-margin-bottom-0">These goals were last updated on {{ lastUpdatedAt }}</p>
       </div>
     {% endif %}

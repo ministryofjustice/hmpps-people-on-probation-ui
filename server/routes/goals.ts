@@ -72,8 +72,7 @@ export default function goalsRoutes(services: Services): Router {
 
       const activeTab: Tab = VALID_TABS.includes(req.query.tab as Tab) ? (req.query.tab as Tab) : 'current'
 
-      const sentencePlans = await services.peopleOnProbationService.getSentencePlans(crn)
-      const plan = sentencePlans.sentencePlans?.[0]
+      const plan = await services.peopleOnProbationService.getSentencePlan(crn)
       const allGoals = plan?.goals ?? []
 
       const currentGoals = allGoals.filter(g => g.goalStatus === 'ACTIVE').map(toGoalView)
