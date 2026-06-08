@@ -179,7 +179,6 @@ export interface SentencePlanResponse {
   goals: GoalResponse[]
 }
 
-
 export interface PeopleOnProbationApiErrorResponse {
   status: number
   errorCode: string

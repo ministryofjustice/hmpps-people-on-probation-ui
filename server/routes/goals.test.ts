@@ -20,8 +20,18 @@ const activePlan: SentencePlanResponse = {
       targetDate: '2026-09-01',
       goalStatus: 'ACTIVE',
       steps: [
-        { description: 'Contact housing service', status: 'COMPLETED', actor: 'PERSON_ON_PROBATION', statusDate: '2026-05-01T10:00:00Z' },
-        { description: 'Submit application', status: 'IN_PROGRESS', actor: 'PROBATION_PRACTITIONER', statusDate: '2026-05-10T10:00:00Z' },
+        {
+          description: 'Contact housing service',
+          status: 'COMPLETED',
+          actor: 'PERSON_ON_PROBATION',
+          statusDate: '2026-05-01T10:00:00Z',
+        },
+        {
+          description: 'Submit application',
+          status: 'IN_PROGRESS',
+          actor: 'PROBATION_PRACTITIONER',
+          statusDate: '2026-05-10T10:00:00Z',
+        },
       ],
     },
     {
@@ -31,7 +41,12 @@ const activePlan: SentencePlanResponse = {
       targetDate: '2026-12-01',
       goalStatus: 'FUTURE',
       steps: [
-        { description: 'Attend budgeting course', status: 'NOT_STARTED', actor: 'PERSON_ON_PROBATION', statusDate: '2026-04-01T10:00:00Z' },
+        {
+          description: 'Attend budgeting course',
+          status: 'NOT_STARTED',
+          actor: 'PERSON_ON_PROBATION',
+          statusDate: '2026-04-01T10:00:00Z',
+        },
       ],
     },
     {
@@ -41,7 +56,12 @@ const activePlan: SentencePlanResponse = {
       targetDate: '2026-03-01',
       goalStatus: 'ACHIEVED',
       steps: [
-        { description: 'See counsellor', status: 'COMPLETED', actor: 'PERSON_ON_PROBATION', statusDate: '2026-03-15T10:00:00Z' },
+        {
+          description: 'See counsellor',
+          status: 'COMPLETED',
+          actor: 'PERSON_ON_PROBATION',
+          statusDate: '2026-03-15T10:00:00Z',
+        },
       ],
     },
   ],

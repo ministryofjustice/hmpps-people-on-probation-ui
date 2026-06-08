@@ -11,7 +11,6 @@ let peopleOnProbationService: {
   getSentences: jest.Mock
 }
 
-
 beforeEach(() => {
   peopleOnProbationService = {
     getFutureAppointments: jest.fn(),
