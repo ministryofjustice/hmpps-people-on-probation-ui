@@ -1,5 +1,6 @@
 import type { Express } from 'express'
 import request from 'supertest'
+import { addDays, format } from 'date-fns'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import { appSessionCookieName } from '../auth/cookies'
 import type { Services } from '../services'
@@ -70,11 +71,12 @@ describe('GET /', () => {
         },
       ],
     })
+    const expectedEndDate = format(addDays(new Date(), 7), 'yyyy-MM-dd')
     peopleOnProbationService.getSentences.mockResolvedValue({
       sentences: [
         {
           startDate: '2026-06-01',
-          expectedEndDate: '2026-06-15',
+          expectedEndDate,
           requirements: [],
           licenceConditions: [],
         },
