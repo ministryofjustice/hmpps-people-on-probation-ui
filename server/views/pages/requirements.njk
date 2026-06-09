@@ -1,7 +1,7 @@
 {% extends "../partials/layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "../macros/showDetails.njk" import showDetails %}
-{% set pageTitle = "Requirements" %}
+{% set pageTitle = "Rules and requirements" %}
 {% set currentPage = "requirements" %}
 
 {% block breadcrumb %}
@@ -10,7 +10,7 @@
 
 {% block content %}
 
-  <h1 class="govuk-heading-l">Requirements</h1>
+  <h1 class="govuk-heading-l">Rules and requirements</h1>
 
   {% if lastUpdatedAt %}
     <p class="govuk-body govuk-secondary-text-colour">Last updated on {{ lastUpdatedAt }}</p>

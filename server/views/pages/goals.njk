@@ -1,0 +1,138 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set pageTitle = "Goals" %}
+{% set currentPage = "goals" %}
+
+{% macro goalsList(goals, tab) %}
+  {% if goals.length %}
+    {% for goal in goals %}
+
+      <div class="pop-goal-card govuk-!-margin-bottom-6">
+
+        <div class="pop-goal-card__header">
+          <p class="pop-goal-card__title">{{ goal.title }}</p>
+        </div>
+
+        {% if goal.targetDate or goal.totalSteps > 0 %}
+          <div class="pop-goal-card__intro">
+            {% if goal.targetDate %}
+              <p class="govuk-body govuk-!-margin-bottom-0">Aim to achieve this by {{ goal.targetDate }}.</p>
+            {% endif %}
+            {% if goal.totalSteps > 0 %}
+              <p class="govuk-body govuk-!-margin-bottom-0">{{ goal.completedSteps }} out of {{ goal.totalSteps }} step{{ "s" if goal.totalSteps !== 1 }} completed.</p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if goal.totalSteps > 0 %}
+          <div class="pop-goal-card__steps">
+            <div class="pop-goal-card__table-wrapper">
+              <table class="govuk-table govuk-!-margin-bottom-0">
+                <thead class="govuk-table__head">
+                  <tr class="govuk-table__row">
+                    <th scope="col" class="govuk-table__header pop-goal-card__col--who">Who will do this</th>
+                    <th scope="col" class="govuk-table__header">Tasks</th>
+                    <th scope="col" class="govuk-table__header pop-goal-card__col--status">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="govuk-table__body">
+                  {% for step in goal.steps %}
+                    <tr class="govuk-table__row">
+                      <td class="govuk-table__cell" data-label="Who will do this">{{ step.actor }}</td>
+                      <td class="govuk-table__cell" data-label="Tasks">{{ step.description }}</td>
+                      <td class="govuk-table__cell" data-label="Status">
+                        {{ govukTag({ text: step.tag.text, classes: step.tag.classes }) }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endif %}
+
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="govuk-body">No {{ tab }} goals.</p>
+  {% endif %}
+{% endmacro %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Home", href: "/" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-l">Goals</h1>
+
+  {% include "../partials/mini-hub.njk" %}
+
+  <div class="govuk-!-margin-top-6">
+
+    <nav class="moj-sub-navigation govuk-!-margin-bottom-6" aria-label="Goal tabs" data-module="pop-goal-tabs">
+      <ul class="moj-sub-navigation__list">
+        <li class="moj-sub-navigation__item">
+          <a class="moj-sub-navigation__link{% if activeTab === 'current' %} moj-sub-navigation__link--active{% endif %}"
+             href="/goals?tab=current"
+             data-tab-target="panel-current"
+             {% if activeTab === 'current' %}aria-current="page"{% endif %}>
+            Current goals ({{ currentGoals | length }})
+          </a>
+        </li>
+        <li class="moj-sub-navigation__item">
+          <a class="moj-sub-navigation__link{% if activeTab === 'future' %} moj-sub-navigation__link--active{% endif %}"
+             href="/goals?tab=future"
+             data-tab-target="panel-future"
+             {% if activeTab === 'future' %}aria-current="page"{% endif %}>
+            Future goals ({{ futureGoals | length }})
+          </a>
+        </li>
+        <li class="moj-sub-navigation__item">
+          <a class="moj-sub-navigation__link{% if activeTab === 'achieved' %} moj-sub-navigation__link--active{% endif %}"
+             href="/goals?tab=achieved"
+             data-tab-target="panel-achieved"
+             {% if activeTab === 'achieved' %}aria-current="page"{% endif %}>
+            Achieved goals ({{ achievedGoals | length }})
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <p class="pop-goals-mobile-heading govuk-!-margin-bottom-4" aria-hidden="true" id="goals-mobile-heading">
+      {% if activeTab === 'current' %}Current goals ({{ currentGoals | length }})
+      {% elif activeTab === 'future' %}Future goals ({{ futureGoals | length }})
+      {% else %}Achieved goals ({{ achievedGoals | length }})
+      {% endif %}
+    </p>
+
+    {% if lastUpdatedAt %}
+      <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6" id="goals-last-updated" {% if activeTab === 'achieved' or (activeTab === 'current' and currentGoals | length === 0) or (activeTab === 'future' and futureGoals | length === 0) %}hidden{% endif %}>
+        <p class="govuk-body govuk-!-margin-bottom-0">These goals were last updated on {{ lastUpdatedAt }}</p>
+      </div>
+    {% endif %}
+
+    {% if achievedAt %}
+      <div class="pop-goal-achieved-banner govuk-!-margin-bottom-6" id="goals-achieved-banner" role="status" {% if activeTab !== 'achieved' %}hidden{% endif %}>
+        <span class="pop-goal-achieved-banner__icon" aria-hidden="true"></span>
+        <p class="govuk-body govuk-!-margin-bottom-0">You achieved this goal on {{ achievedAt }}</p>
+      </div>
+    {% endif %}
+
+    <div id="panel-current" {% if activeTab !== 'current' %}hidden{% endif %}>
+      {{ goalsList(currentGoals, 'current') }}
+    </div>
+
+    <div id="panel-future" {% if activeTab !== 'future' %}hidden{% endif %}>
+      {{ goalsList(futureGoals, 'future') }}
+    </div>
+
+    <div id="panel-achieved" {% if activeTab !== 'achieved' %}hidden{% endif %}>
+      {{ goalsList(achievedGoals, 'achieved') }}
+    </div>
+
+  </div>
+
+{% endblock %}

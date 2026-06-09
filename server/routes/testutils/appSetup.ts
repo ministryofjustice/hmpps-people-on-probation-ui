@@ -8,6 +8,8 @@ import errorHandler from '../../errorHandler'
 import type { Services } from '../../services'
 import AuditService from '../../services/auditService'
 import setUpWebSession from '../../middleware/setUpWebSession'
+import { appSessionCookieName } from '../../auth/cookies'
+import { createAuthenticatedUserSession, saveAuthenticatedUserSession } from '../../auth/sessionStore'
 
 jest.mock('../../services/auditService')
 
@@ -36,6 +38,23 @@ function appSetup(services: Services, production: boolean): Express {
   app.use(errorHandler(production))
 
   return app
+}
+
+export async function createAppSessionCookie(personReference?: string) {
+  const session = createAuthenticatedUserSession({
+    userId: 'one-login-subject',
+    email: 'user@example.com',
+    registeredUserDetails: personReference
+      ? {
+          id: 'registered-user-id',
+          personReference,
+          status: 'ACTIVE',
+          createdAt: '2026-01-01T00:00:00Z',
+        }
+      : undefined,
+  })
+  await saveAuthenticatedUserSession(session)
+  return `${appSessionCookieName}=${session.id}`
 }
 
 export function appWithAllRoutes({
