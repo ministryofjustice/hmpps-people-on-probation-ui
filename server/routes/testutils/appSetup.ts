@@ -60,7 +60,7 @@ export async function createAppSessionCookie(personReference?: string) {
 export function appWithAllRoutes({
   production = false,
   services = {
-    auditService: new AuditService(null) as jest.Mocked<AuditService>,
+    auditService: new AuditService() as jest.Mocked<AuditService>,
   },
 }: {
   production?: boolean

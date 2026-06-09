@@ -3,7 +3,7 @@ generic-service:
   productId: 'HMPPS518' # productId for the product that this belongs too, i.e. DPS001, see README.md for details
 
   # the IRSA service account name for accessing AWS resources
-  # serviceAccountName: "hmpps-people-on-probation-ui"
+  serviceAccountName: "hmpps-people-on-probation-ui"
 
   replicaCount: 4
 
@@ -40,7 +40,7 @@ generic-service:
     REDIS_ENABLED: 'true'
     REDIS_TLS_ENABLED: 'true'
     AUDIT_SQS_REGION: 'eu-west-2'
-    AUDIT_SERVICE_NAME: 'HMPPS518' # Your audit service name
+    AUDIT_SERVICE_NAME: 'hmpps-probation-accounts'
     ONE_LOGIN_SCOPES: 'openid email phone'
     ONE_LOGIN_VTR: 'Cl.Cm'
     WEB_SESSION_TIMEOUT_IN_MINUTES: '15'
@@ -65,8 +65,8 @@ generic-service:
       ONE_LOGIN_PUBLIC_KEY_BASE64: 'ONE_LOGIN_PUBLIC_KEY_BASE64'
     hmpps-people-on-probation-ui-chatbot:
       POP_CHATBOT_API_KEY: 'POP_CHATBOT_API_KEY'
-    # sqs-hmpps-audit-secret:
-    #   AUDIT_SQS_QUEUE_URL: 'sqs_queue_url'
+    sqs-hmpps-audit-secret:
+      AUDIT_SQS_QUEUE_URL: 'sqs_queue_url'
 
 generic-prometheus-alerts:
   targetApplication: hmpps-people-on-probation-ui
