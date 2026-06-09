@@ -318,8 +318,25 @@ describe('GET /goals', () => {
   })
 
   describe('error handling', () => {
-    it('passes API errors to the next error handler', async () => {
-      peopleOnProbationService.getSentencePlan.mockRejectedValue(new Error('API error'))
+    it('renders goals page with empty tabs when the API returns 404', async () => {
+      const notFoundError = Object.assign(new Error('Not found'), { responseStatus: 404 })
+      peopleOnProbationService.getSentencePlan.mockRejectedValue(notFoundError)
+
+      const res = await request(app)
+        .get('/goals')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Current goals (0)')
+      expect(res.text).toContain('Future goals (0)')
+      expect(res.text).toContain('Achieved goals (0)')
+      expect(res.text).not.toContain('goals-last-updated')
+      expect(res.text).not.toContain('goals-achieved-banner')
+    })
+
+    it('passes non-404 API errors to the next error handler', async () => {
+      const serverError = Object.assign(new Error('API error'), { responseStatus: 500 })
+      peopleOnProbationService.getSentencePlan.mockRejectedValue(serverError)
 
       await request(app)
         .get('/goals')
