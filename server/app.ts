@@ -33,7 +33,7 @@ export default function createApp(services: Services): express.Application {
   app.use(setUpWebRequestParsing())
   app.use(setUpStaticResources())
   nunjucksSetup(app)
-  app.use(setUpAuthentication())
+  app.use(setUpAuthentication(services.auditService))
   app.use(setUpCsrf())
 
   app.use(routes(services))

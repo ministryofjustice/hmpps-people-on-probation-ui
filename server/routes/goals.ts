@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
@@ -66,11 +67,11 @@ export default function goalsRoutes(services: Services): Router {
   router.use(requireAuthentication)
 
   router.get('/', async (req, res, next) => {
+    const activeTab: Tab = VALID_TABS.includes(req.query.tab as Tab) ? (req.query.tab as Tab) : 'current'
+
     try {
       const crn = res.locals.user?.registeredUserDetails?.personReference
       if (!crn) return res.redirect('/autherror')
-
-      const activeTab: Tab = VALID_TABS.includes(req.query.tab as Tab) ? (req.query.tab as Tab) : 'current'
 
       const plan = await services.peopleOnProbationService.getSentencePlan(crn)
       const allGoals = plan?.goals ?? []
@@ -104,6 +105,16 @@ export default function goalsRoutes(services: Services): Router {
         achievedAt: achievedAt ? formatDateTimeWithDay(achievedAt) : null,
       })
     } catch (error) {
+      if ((error as SanitisedError).responseStatus === 404) {
+        return res.render('pages/goals', {
+          activeTab,
+          currentGoals: [],
+          futureGoals: [],
+          achievedGoals: [],
+          lastUpdatedAt: null,
+          achievedAt: null,
+        })
+      }
       return next(error)
     }
   })

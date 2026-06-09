@@ -38,7 +38,7 @@ const auditConfig = () => {
       'http://localhost:4566/000000000000/mainQueue',
       auditEnabled && requiredInProduction,
     ),
-    serviceName: get('AUDIT_SERVICE_NAME', 'UNASSIGNED', auditEnabled && requiredInProduction),
+    serviceName: get('AUDIT_SERVICE_NAME', 'hmpps-probation-accounts', auditEnabled && requiredInProduction),
     region: get('AUDIT_SQS_REGION', 'eu-west-2'),
   }
 }

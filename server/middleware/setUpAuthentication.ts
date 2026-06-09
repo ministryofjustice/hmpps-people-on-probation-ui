@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Request, Router } from 'express'
 import logger from '../../logger'
 import buildOneLoginAuthorizeUrl from '../auth/oneLoginAuthorize'
 import { authenticateOneLoginCallback, type OneLoginAuthenticatedUser } from '../auth/oneLoginToken'
@@ -31,6 +31,8 @@ import { getPeopleOnProbationService } from '../services/peopleOnProbationServic
 import config from '../config'
 import normaliseReturnTo from '../auth/returnTo'
 import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
+import AuditService from '../services/auditService'
+import type { RegisteredUserResponse } from '../data/peopleOnProbationApiClient'
 
 function normaliseToken(token?: string | null): string | null {
   return typeof token === 'string' && token.trim() ? token.trim() : null
@@ -59,7 +61,112 @@ async function getRegisteredUserDetails(transaction: OneLoginTransaction, oneLog
   })
 }
 
-export default function setUpAuthentication(): Router {
+function getAuthenticationTimestampDetails(transaction: OneLoginTransaction) {
+  const timestamp = new Date().toISOString()
+  if (transaction.registrationInviteToken) return { registrationTimestamp: timestamp }
+  return { loginTimestamp: timestamp }
+}
+
+async function logAuthenticationAttempt(
+  auditService: AuditService | undefined,
+  req: Request,
+  transaction: OneLoginTransaction,
+  oneLoginUser: OneLoginAuthenticatedUser,
+) {
+  if (!auditService) return
+
+  const eventDetails = {
+    who: oneLoginUser.userId,
+    subjectId: oneLoginUser.userId,
+    subjectType: 'ONE_LOGIN_SUBJECT',
+    correlationId: req.id,
+    details: {
+      attemptedAt: new Date().toISOString(),
+      authenticationType: transaction.registrationInviteToken ? 'registration' : 'sign-in',
+      returnTo: transaction.returnTo,
+    },
+  }
+
+  try {
+    if (transaction.registrationInviteToken) {
+      await auditService.logUserRegistrationAttempt(eventDetails)
+      return
+    }
+
+    await auditService.logUserSignInAttempt(eventDetails)
+  } catch (err) {
+    logger.warn({ err }, 'Failed to send authentication attempt audit event')
+  }
+}
+
+async function logAuthenticationFailure(
+  auditService: AuditService | undefined,
+  req: Request,
+  transaction: OneLoginTransaction,
+  oneLoginUser: OneLoginAuthenticatedUser,
+  reason: string,
+  err?: unknown,
+) {
+  if (!auditService) return
+
+  const eventDetails = {
+    who: oneLoginUser.userId,
+    subjectId: oneLoginUser.userId,
+    subjectType: 'ONE_LOGIN_SUBJECT',
+    correlationId: req.id,
+    details: {
+      failedAt: new Date().toISOString(),
+      authenticationType: transaction.registrationInviteToken ? 'registration' : 'sign-in',
+      reason,
+      errorStatus: (err as { status?: number })?.status,
+    },
+  }
+
+  try {
+    if (transaction.registrationInviteToken) {
+      await auditService.logUserRegistrationFailure(eventDetails)
+      return
+    }
+
+    await auditService.logUserSignInFailure(eventDetails)
+  } catch (auditErr) {
+    logger.warn({ err: auditErr }, 'Failed to send authentication failure audit event')
+  }
+}
+
+async function logSuccessfulAuthentication(
+  auditService: AuditService | undefined,
+  req: Request,
+  transaction: OneLoginTransaction,
+  oneLoginUser: OneLoginAuthenticatedUser,
+  registeredUserDetails: RegisteredUserResponse,
+) {
+  if (!auditService) return
+
+  const eventDetails = {
+    who: oneLoginUser.userId,
+    subjectId: registeredUserDetails.personReference,
+    correlationId: req.id,
+    details: {
+      ...getAuthenticationTimestampDetails(transaction),
+      registeredUserId: registeredUserDetails.id,
+      registeredUserStatus: registeredUserDetails.status,
+    },
+  }
+
+  try {
+    if (transaction.registrationInviteToken) {
+      await auditService.logUserRegistered(eventDetails)
+      return
+    }
+
+    await auditService.logUserSignedIn(eventDetails)
+  } catch (err) {
+    logger.warn({ err }, 'Failed to send authentication audit event')
+  }
+}
+
+export default function setUpAuthentication(auditService?: AuditService): Router {
   const router = Router()
 
   router.get('/.well-known/jwks.json', (_req, res, next) => {
@@ -201,7 +308,17 @@ export default function setUpAuthentication(): Router {
         return res.redirect('/sign-in-error')
       }
 
-      const oneLoginUser = await authenticateOneLoginCallback(code, transaction)
+      let oneLoginUser: OneLoginAuthenticatedUser
+      try {
+        oneLoginUser = await authenticateOneLoginCallback(code, transaction)
+      } catch (err) {
+        logger.warn({ err }, 'One Login authentication failed')
+        await deleteOneLoginTransaction(transactionId)
+        clearOneLoginTransactionCookie(res)
+        return next(err)
+      }
+
+      await logAuthenticationAttempt(auditService, req, transaction, oneLoginUser)
 
       let registeredUserDetails
       try {
@@ -210,6 +327,14 @@ export default function setUpAuthentication(): Router {
         logger.warn({ err }, 'Failed to fetch registered user details after One Login callback')
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
+        await logAuthenticationFailure(
+          auditService,
+          req,
+          transaction,
+          oneLoginUser,
+          'registered_user_details_failed',
+          err,
+        )
         const redirect = authErrorRedirect(err)
         return redirect ? res.redirect(redirect) : next(err)
       }
@@ -228,6 +353,8 @@ export default function setUpAuthentication(): Router {
 
       clearOneLoginTransactionCookie(res)
       setAppSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
+
+      await logSuccessfulAuthentication(auditService, req, transaction, oneLoginUser, registeredUserDetails)
 
       return res.redirect(transaction.returnTo || '/')
     } catch (err) {
