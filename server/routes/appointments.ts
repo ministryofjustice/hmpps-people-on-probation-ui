@@ -38,6 +38,17 @@ type MissedAlertView = {
   practitionerName?: string
 }
 
+const datePattern = /^\d{4}-\d{2}-\d{2}$/
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/
+
+function queryStringValue(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
+function hasInvalidQueryValue(value: unknown): boolean {
+  return value !== undefined && typeof value !== 'string'
+}
+
 function buildCalendarUrl(appointment: AppointmentResponse): string | undefined {
   if (!appointment.date) return undefined
   const params = new URLSearchParams({ date: appointment.date })
@@ -81,12 +92,19 @@ export function generateIcs(params: {
     return `${year}${pad(month)}${pad(day)}T${pad(hour)}${pad(minute)}00`
   }
 
+  const toIcsNextDate = (d: string) => {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const [year, month, day] = d.split('-').map(Number)
+    const nextDate = new Date(Date.UTC(year, month - 1, day + 1))
+    return `${nextDate.getUTCFullYear()}${pad(nextDate.getUTCMonth() + 1)}${pad(nextDate.getUTCDate())}`
+  }
+
   const dtStart = startTime
     ? `DTSTART;TZID=Europe/London:${toIcsDate(date, startTime)}`
     : `DTSTART;VALUE=DATE:${toIcsDate(date)}`
-  let dtEnd = `DTEND;VALUE=DATE:${toIcsDate(date)}`
-  if (startTime) dtEnd = `DTEND;TZID=Europe/London:${toIcsDate(date, startTime)}`
-  if (endTime) dtEnd = `DTEND;TZID=Europe/London:${toIcsDate(date, endTime)}`
+  const dtEnd = startTime
+    ? endTime && `DTEND;TZID=Europe/London:${toIcsDate(date, endTime)}`
+    : `DTEND;VALUE=DATE:${toIcsNextDate(date)}`
 
   const dtstamp = `${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`
   const uid = `${date}-${startTime ?? 'allday'}-${Date.now()}@hmpps-probation`
@@ -100,7 +118,7 @@ export function generateIcs(params: {
     `UID:${uid}`,
     `DTSTAMP:${dtstamp}`,
     dtStart,
-    dtEnd,
+    ...(dtEnd ? [dtEnd] : []),
     `SUMMARY:${escapeIcsText(title ?? 'Appointment')}`,
     ...(location ? [`LOCATION:${escapeIcsText(location)}`] : []),
     'END:VEVENT',
@@ -138,12 +156,29 @@ export default function appointmentsRoutes(services: Services): Router {
   router.use(requireAuthentication)
 
   router.get('/calendar', (req, res) => {
-    const { date, startTime, endTime, title, location } = req.query as Record<string, string>
-    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.sendStatus(400)
+    const { date, startTime, endTime, title, location } = req.query
+    if (Object.keys(req.query).some(key => key.endsWith('[]'))) return res.sendStatus(400)
+    if ([date, startTime, endTime, title, location].some(hasInvalidQueryValue)) return res.sendStatus(400)
 
-    const ics = generateIcs({ date, startTime, endTime, title, location })
+    const calendarDate = queryStringValue(date)
+    const calendarStartTime = queryStringValue(startTime)
+    const calendarEndTime = queryStringValue(endTime)
+    const calendarTitle = queryStringValue(title)
+    const calendarLocation = queryStringValue(location)
+
+    if (!calendarDate || !datePattern.test(calendarDate)) return res.sendStatus(400)
+    if (calendarStartTime && !timePattern.test(calendarStartTime)) return res.sendStatus(400)
+    if (calendarEndTime && !timePattern.test(calendarEndTime)) return res.sendStatus(400)
+
+    const ics = generateIcs({
+      date: calendarDate,
+      startTime: calendarStartTime,
+      endTime: calendarEndTime,
+      title: calendarTitle,
+      location: calendarLocation,
+    })
     res.set('Content-Type', 'text/calendar; charset=utf-8')
-    res.set('Content-Disposition', `attachment; filename="${buildCalendarFilename(date, title)}"`)
+    res.set('Content-Disposition', `attachment; filename="${buildCalendarFilename(calendarDate, calendarTitle)}"`)
     return res.send(ics)
   })
 

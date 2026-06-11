@@ -3,12 +3,14 @@ import request from 'supertest'
 import cookieParser from 'cookie-parser'
 import setUpAuthentication from './setUpAuthentication'
 import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
+import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
 import { appSessionCookieName } from '../auth/cookies'
 import {
   createAuthenticatedUserSession,
   saveAuthenticatedUserSession,
   getAuthenticatedUserSession,
 } from '../auth/sessionStore'
+import config from '../config'
 
 jest.mock('../auth/oneLoginAuthorize', () => jest.fn())
 jest.mock('../auth/oneLoginToken', () => ({
@@ -22,9 +24,18 @@ jest.mock('../services/peopleOnProbationService', () => ({
 }))
 
 const mockedGetOneLoginPublicJwk = getOneLoginPublicJwk as jest.MockedFunction<typeof getOneLoginPublicJwk>
+const mockedGetPeopleOnProbationService = getPeopleOnProbationService as jest.MockedFunction<
+  typeof getPeopleOnProbationService
+>
 
 describe('setUpAuthentication', () => {
+  const localAuth = { ...config.localAuth }
+
   beforeEach(() => {
+    config.localAuth.enabled = localAuth.enabled
+    config.localAuth.oneLoginSubject = localAuth.oneLoginSubject
+    config.localAuth.email = localAuth.email
+    config.localAuth.displayName = localAuth.displayName
     mockedGetOneLoginPublicJwk.mockReturnValue({
       kty: 'RSA',
       n: 'modulus',
@@ -116,6 +127,19 @@ describe('setUpAuthentication', () => {
         .set('Cookie', `${appSessionCookieName}=${session.id}`)
         .expect(204)
         .expect('Set-Cookie', new RegExp(`${appSessionCookieName}=`))
+    })
+  })
+
+  describe('GET /local/sign-in', () => {
+    it('handles unknown local sign-in errors without masking them', async () => {
+      config.localAuth.enabled = true
+      config.localAuth.oneLoginSubject = 'one-login-subject'
+
+      mockedGetPeopleOnProbationService.mockReturnValue({
+        getCurrentRegisteredUser: jest.fn().mockRejectedValue(null),
+      } as unknown as ReturnType<typeof getPeopleOnProbationService>)
+
+      await request(buildApp()).get('/local/sign-in').expect(404)
     })
   })
 })

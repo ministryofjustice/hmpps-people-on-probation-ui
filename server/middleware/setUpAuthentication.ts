@@ -40,7 +40,7 @@ function normaliseToken(token?: string | null): string | null {
 }
 
 function authErrorRedirect(err: unknown): string | null {
-  const { responseStatus } = err as SanitisedError
+  const responseStatus = (err as SanitisedError | null | undefined)?.responseStatus
   if (responseStatus === 409 || responseStatus === 410) return '/invite-expired'
   if (responseStatus === 401 || responseStatus === 403) return '/autherror'
   if (responseStatus && responseStatus >= 400 && responseStatus < 500) return '/sign-in-error'
@@ -119,7 +119,7 @@ async function logAuthenticationFailure(
       failedAt: new Date().toISOString(),
       authenticationType: transaction.registrationInviteToken ? 'registration' : 'sign-in',
       reason,
-      errorStatus: (err as SanitisedError).responseStatus,
+      errorStatus: (err as SanitisedError | null | undefined)?.responseStatus,
     },
   }
 
