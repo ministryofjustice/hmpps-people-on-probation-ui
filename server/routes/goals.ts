@@ -105,7 +105,8 @@ export default function goalsRoutes(services: Services): Router {
         achievedAt: achievedAt ? formatDateTimeWithDay(achievedAt) : null,
       })
     } catch (error) {
-      if ((error as SanitisedError).responseStatus === 404) {
+      const sanitisedError = error as SanitisedError
+      if (sanitisedError.responseStatus === 404) {
         return res.render('pages/goals', {
           activeTab,
           currentGoals: [],

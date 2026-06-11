@@ -1,4 +1,5 @@
 import { Request, Router } from 'express'
+import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 import logger from '../../logger'
 import buildOneLoginAuthorizeUrl from '../auth/oneLoginAuthorize'
 import { authenticateOneLoginCallback, type OneLoginAuthenticatedUser } from '../auth/oneLoginToken'
@@ -39,10 +40,10 @@ function normaliseToken(token?: string | null): string | null {
 }
 
 function authErrorRedirect(err: unknown): string | null {
-  const status = (err as { status?: number })?.status
-  if (status === 409 || status === 410) return '/invite-expired'
-  if (status === 401 || status === 403) return '/autherror'
-  if (status && status >= 400 && status < 500) return '/sign-in-error'
+  const { responseStatus } = err as SanitisedError
+  if (responseStatus === 409 || responseStatus === 410) return '/invite-expired'
+  if (responseStatus === 401 || responseStatus === 403) return '/autherror'
+  if (responseStatus && responseStatus >= 400 && responseStatus < 500) return '/sign-in-error'
   return null
 }
 
@@ -118,7 +119,7 @@ async function logAuthenticationFailure(
       failedAt: new Date().toISOString(),
       authenticationType: transaction.registrationInviteToken ? 'registration' : 'sign-in',
       reason,
-      errorStatus: (err as { status?: number })?.status,
+      errorStatus: (err as SanitisedError).responseStatus,
     },
   }
 
@@ -315,7 +316,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
         logger.warn({ err }, 'One Login authentication failed')
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
-        return next(err)
+        return res.redirect('/sign-in-error')
       }
 
       await logAuthenticationAttempt(auditService, req, transaction, oneLoginUser)

@@ -113,6 +113,11 @@ export const formatAddress = (address?: AddressResponse): string[] => {
   )
 }
 
+export const formatMapUrl = (addressLines: string[]): string | null => {
+  if (!addressLines.length) return null
+  return `https://maps.google.com/?q=${encodeURIComponent(addressLines.join(', '))}`
+}
+
 export const formatPersonName = (name?: PersonNameResponse): string | undefined => {
   if (!name) return undefined
   return [name.forename, name.middleName, name.surname].filter(Boolean).join(' ')
