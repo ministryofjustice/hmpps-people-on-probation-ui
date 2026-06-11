@@ -39,7 +39,7 @@ type MissedAlertView = {
 }
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/
-const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/
 
 function queryStringValue(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined
@@ -65,6 +65,27 @@ export function buildCalendarUrl(appointment: AppointmentResponse): string | und
 
 function escapeIcsText(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/;/g, '\\;').replace(/,/g, '\\,')
+}
+
+function buildCalendarUid({
+  date,
+  startTime,
+  endTime,
+  title,
+}: {
+  date: string
+  startTime?: string
+  endTime?: string
+  title?: string
+}): string {
+  const uidParts = [date, startTime ?? 'allday', endTime ?? 'no-end', title ?? 'appointment']
+  const normalisedUid = uidParts
+    .join('-')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+
+  return `${normalisedUid}@hmpps-probation`
 }
 
 export function buildCalendarFilename(date: string, title?: string): string {
@@ -109,7 +130,7 @@ export function generateIcs(params: {
     : `DTEND;VALUE=DATE:${toIcsNextDate(date)}`
 
   const dtstamp = `${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`
-  const uid = `${date}-${startTime ?? 'allday'}-${Date.now()}@hmpps-probation`
+  const uid = buildCalendarUid({ date, startTime, endTime, title })
 
   const lines = [
     'BEGIN:VCALENDAR',
