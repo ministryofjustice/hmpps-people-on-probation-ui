@@ -69,10 +69,12 @@
             </span>
             <div class="pop-summary-card__actions">
               {% if appointment.address.length %}
-                <a class="govuk-link govuk-link--no-visited-state" href="#">View on map</a>
+                <a class="govuk-link govuk-link--no-visited-state" href="{{ appointment.mapUrl }}" target="_blank" rel="noopener noreferrer">View on map</a>
                 <span class="pop-summary-card__separator" aria-hidden="true">|</span>
               {% endif %}
-              <a class="govuk-link govuk-link--no-visited-state" href="#">Add to calendar</a>
+              {% if appointment.calendarUrl %}
+                <a class="govuk-link govuk-link--no-visited-state" href="{{ appointment.calendarUrl }}">Add to calendar</a>
+              {% endif %}
             </div>
             {% if appointment.nationalStandards %}
               {{ govukTag({ text: "Mandatory", classes: "govuk-tag--black" }) }}
@@ -96,6 +98,28 @@
                 {% for line in appointment.address %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
               </dd>
             </div>
+            {% if appointment.pickUpAddress and appointment.pickUpAddress.length %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Pick up and drop off address</dt>
+                <dd class="pop-summary-card__value">
+                  {% for line in appointment.pickUpAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                  {% if appointment.pickUpMapUrl %}
+                    <br><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer">View on map</a>
+                  {% endif %}
+                </dd>
+              </div>
+            {% endif %}
+            {% if appointment.workAddress and appointment.workAddress.length %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Work address</dt>
+                <dd class="pop-summary-card__value">
+                  {% for line in appointment.workAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                  {% if appointment.workMapUrl %}
+                    <br><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer">View on map</a>
+                  {% endif %}
+                </dd>
+              </div>
+            {% endif %}
             {% if appointment.practitionerName %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Key contact</dt>
@@ -140,6 +164,28 @@
                 {% for line in appointment.address %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
               </dd>
             </div>
+            {% if appointment.pickUpAddress and appointment.pickUpAddress.length %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Pick up and drop off address</dt>
+                <dd class="pop-summary-card__value">
+                  {% for line in appointment.pickUpAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                  {% if appointment.pickUpMapUrl %}
+                    <br><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer">View on map</a>
+                  {% endif %}
+                </dd>
+              </div>
+            {% endif %}
+            {% if appointment.workAddress and appointment.workAddress.length %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Work address</dt>
+                <dd class="pop-summary-card__value">
+                  {% for line in appointment.workAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                  {% if appointment.workMapUrl %}
+                    <br><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer">View on map</a>
+                  {% endif %}
+                </dd>
+              </div>
+            {% endif %}
             {% if appointment.practitionerName %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Key contact</dt>

@@ -58,6 +58,49 @@ document.querySelectorAll<HTMLElement>('.pop-show-details').forEach(wrapper => {
   })
 })
 
+document.addEventListener('click', (e: MouseEvent) => {
+  const link = (e.target as Element).closest<HTMLAnchorElement>('a[href*="/appointments/calendar"]')
+  if (!link) return
+  e.preventDefault()
+
+  const fallbackFilename = () => {
+    const url = new URL(link.href)
+    const title = url.searchParams.get('title') ?? 'appointment'
+    const date = url.searchParams.get('date')
+    const normalisedTitle =
+      title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') || 'appointment'
+    return `${normalisedTitle}${date ? `-${date}` : ''}.ics`
+  }
+
+  const filenameFromResponse = (res: Response) => {
+    const contentDisposition = res.headers.get('content-disposition')
+    return contentDisposition?.match(/filename="([^"]+)"/)?.[1] ?? fallbackFilename()
+  }
+
+  fetch(link.href)
+    .then(res => {
+      if (!res.ok) throw new Error('Calendar download failed')
+      return res.text().then(icsText => ({ filename: filenameFromResponse(res), icsText }))
+    })
+    .then(({ filename, icsText }) => {
+      const blob = new Blob([icsText], { type: 'text/calendar;charset=utf-8' })
+      const blobUrl = URL.createObjectURL(blob)
+      const downloadLink = document.createElement('a')
+      downloadLink.href = blobUrl
+      downloadLink.download = filename
+      document.body.append(downloadLink)
+      downloadLink.click()
+      downloadLink.remove()
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+    })
+    .catch(() => {
+      window.location.href = link.href
+    })
+})
+
 document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWarning => {
   const dialog = timeoutWarning.querySelector<HTMLElement>('.pop-timeout-warning__dialog')
   const staySignedInButton = timeoutWarning.querySelector<HTMLButtonElement>('.pop-timeout-warning__stay-signed-in')
