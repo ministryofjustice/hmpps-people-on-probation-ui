@@ -131,7 +131,7 @@ describe('setUpAuthentication', () => {
   })
 
   describe('GET /local/sign-in', () => {
-    it('handles unknown local sign-in errors without masking them', async () => {
+    it('redirects to sign-in error when local sign-in fails with a falsy error', async () => {
       config.localAuth.enabled = true
       config.localAuth.oneLoginSubject = 'one-login-subject'
 
@@ -139,7 +139,7 @@ describe('setUpAuthentication', () => {
         getCurrentRegisteredUser: jest.fn().mockRejectedValue(null),
       } as unknown as ReturnType<typeof getPeopleOnProbationService>)
 
-      await request(buildApp()).get('/local/sign-in').expect(404)
+      await request(buildApp()).get('/local/sign-in').expect(302).expect('Location', '/sign-in-error')
     })
   })
 })

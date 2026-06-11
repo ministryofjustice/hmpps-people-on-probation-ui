@@ -49,11 +49,13 @@ function hasInvalidQueryValue(value: unknown): boolean {
   return value !== undefined && typeof value !== 'string'
 }
 
-function buildCalendarUrl(appointment: AppointmentResponse): string | undefined {
+export function buildCalendarUrl(appointment: AppointmentResponse): string | undefined {
   if (!appointment.date) return undefined
   const params = new URLSearchParams({ date: appointment.date })
-  if (appointment.startTime) params.set('startTime', appointment.startTime)
-  if (appointment.endTime) params.set('endTime', appointment.endTime)
+  if (appointment.startTime) {
+    params.set('startTime', appointment.startTime)
+    if (appointment.endTime) params.set('endTime', appointment.endTime)
+  }
   const title = appointment.type ?? appointment.description
   if (title) params.set('title', title)
   const location = formatAddress(appointment.location).join(', ')

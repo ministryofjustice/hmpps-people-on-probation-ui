@@ -11,6 +11,7 @@ import {
   formatDuration,
   formatUnit,
   formatAddress,
+  formatMapUrl,
   formatPersonName,
 } from './utils'
 
@@ -213,6 +214,18 @@ describe('formatAddress', () => {
       'Probation Office',
       'High Street',
     ])
+  })
+})
+
+describe('formatMapUrl', () => {
+  it('returns null for an empty address', () => {
+    expect(formatMapUrl([])).toBeNull()
+  })
+
+  it('joins and encodes address lines', () => {
+    expect(formatMapUrl(['Probation Office', 'Market Road', 'Leeds', 'LS2 2BB'])).toEqual(
+      'https://maps.google.com/?q=Probation%20Office%2C%20Market%20Road%2C%20Leeds%2C%20LS2%202BB',
+    )
   })
 })
 

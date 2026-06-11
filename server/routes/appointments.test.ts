@@ -1,7 +1,7 @@
 import type { Express } from 'express'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
-import { buildCalendarFilename, generateIcs } from './appointments'
+import { buildCalendarFilename, buildCalendarUrl, generateIcs } from './appointments'
 
 describe('generateIcs', () => {
   it('escapes text fields for iCalendar clients', () => {
@@ -46,6 +46,31 @@ describe('buildCalendarFilename', () => {
 
   it('falls back to appointment when there is no title', () => {
     expect(buildCalendarFilename('2026-08-10')).toEqual('appointment-2026-08-10.ics')
+  })
+})
+
+describe('buildCalendarUrl', () => {
+  it('includes endTime only when startTime is present', () => {
+    const calendarUrl = buildCalendarUrl({
+      date: '2026-08-10',
+      endTime: '14:30',
+      type: 'Office Appointment',
+    })
+
+    expect(calendarUrl).toBe('/appointments/calendar?date=2026-08-10&title=Office+Appointment')
+  })
+
+  it('includes startTime and endTime together for timed appointments', () => {
+    const calendarUrl = buildCalendarUrl({
+      date: '2026-08-10',
+      startTime: '14:00',
+      endTime: '14:30',
+      type: 'Office Appointment',
+    })
+
+    expect(calendarUrl).toBe(
+      '/appointments/calendar?date=2026-08-10&startTime=14%3A00&endTime=14%3A30&title=Office+Appointment',
+    )
   })
 })
 

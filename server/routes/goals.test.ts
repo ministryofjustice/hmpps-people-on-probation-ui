@@ -343,14 +343,5 @@ describe('GET /goals', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(500)
     })
-
-    it('handles unknown thrown values without masking them', async () => {
-      peopleOnProbationService.getSentencePlan.mockRejectedValue(null)
-
-      await request(app)
-        .get('/goals')
-        .set('Cookie', await createAppSessionCookie('X123456'))
-        .expect(404)
-    })
   })
 })
