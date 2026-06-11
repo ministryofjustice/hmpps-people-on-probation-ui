@@ -37,6 +37,22 @@ describe('generateIcs', () => {
     expect(ics).toContain('DTSTART;VALUE=DATE:20260810')
     expect(ics).toContain('DTEND;VALUE=DATE:20260811')
   })
+
+  it('uses a stable UID for the same appointment', () => {
+    const appointment = {
+      date: '2026-08-10',
+      startTime: '14:00',
+      endTime: '14:30',
+      title: 'Office Appointment',
+      location: 'Probation Office, Market Road, Leeds, LS2 2BB',
+    }
+
+    const firstUid = generateIcs(appointment).match(/^UID:(.+)$/m)?.[1]
+    const secondUid = generateIcs(appointment).match(/^UID:(.+)$/m)?.[1]
+
+    expect(firstUid).toEqual(secondUid)
+    expect(firstUid).toEqual('2026-08-10-14-00-14-30-office-appointment@hmpps-probation')
+  })
 })
 
 describe('buildCalendarFilename', () => {
@@ -92,6 +108,19 @@ describe('GET /appointments/calendar', () => {
     expect(response.text).toContain('DTSTART;TZID=Europe/London:20260810T140000')
     expect(response.text).toContain('DTEND;TZID=Europe/London:20260810T143000')
     expect(response.text).toContain('SUMMARY:Office Appointment')
+  })
+
+  it('accepts start and end times with seconds', async () => {
+    const response = await request(app)
+      .get(
+        '/appointments/calendar?date=2026-06-15&startTime=13%3A00%3A00&endTime=15%3A00%3A00&title=Planned+Office+Visit+%28NS%29',
+      )
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('DTSTART;TZID=Europe/London:20260615T130000')
+    expect(response.text).toContain('DTEND;TZID=Europe/London:20260615T150000')
+    expect(response.text).toContain('SUMMARY:Planned Office Visit (NS)')
   })
 
   it('rejects array query values', async () => {
