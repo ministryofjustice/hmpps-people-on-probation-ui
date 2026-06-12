@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { startOfDay, differenceInDays } from 'date-fns'
+import { startOfDay, differenceInDays, isBefore, addDays } from 'date-fns'
 
 import type { Services } from '../services'
 import { loadCurrentUser } from '../auth/currentUser'
@@ -9,6 +9,7 @@ import {
   formatTimeRange,
   formatIntervalDuration,
   formatRemainingDuration,
+  isMissedMandatoryAppointmentOrActivity,
   parseLocalDate,
 } from '../utils/utils'
 import appointmentsRoutes from './appointments'
@@ -57,9 +58,6 @@ function toMissedAppointmentView(appointment?: AppointmentResponse): MissedAppoi
   }
 }
 
-function isMissedMandatoryAppointmentOrActivity(appointment: AppointmentResponse): boolean {
-  return appointment.attended === false && (appointment.nationalStandards === true || Boolean(appointment.unpaidWork))
-}
 
 function toOrderProgressView(sentences: SentenceResponse[]): OrderProgressView | null {
   const sentence = sentences[0]
@@ -72,10 +70,11 @@ function toOrderProgressView(sentences: SentenceResponse[]): OrderProgressView |
   const totalDays = Math.max(differenceInDays(end, start) + 1, 1)
   const completedDays = Math.min(Math.max(differenceInDays(today, start), 0), totalDays)
   const percentComplete = Math.round((completedDays / totalDays) * 100)
+  const effectiveToday = isBefore(today, end) ? today : addDays(end, 1)
 
   return {
     percentComplete,
-    completedDuration: formatIntervalDuration(start, today),
+    completedDuration: formatIntervalDuration(start, effectiveToday),
     remainingDuration: formatRemainingDuration(sentence.expectedEndDate),
   }
 }

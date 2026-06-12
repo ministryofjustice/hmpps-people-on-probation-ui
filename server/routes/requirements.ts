@@ -1,6 +1,6 @@
 import { Router } from 'express'
 
-import { startOfDay, addDays, differenceInDays } from 'date-fns'
+import { startOfDay, addDays, differenceInDays, isBefore } from 'date-fns'
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
 import { formatDate, formatRemainingDuration, formatIntervalDuration, formatUnit, parseLocalDate } from '../utils/utils'
@@ -21,9 +21,10 @@ function calculateDateProgress(startDateStr: string, endDateStr: string): DatePr
   const today = startOfDay(new Date())
   const totalDays = Math.max(differenceInDays(end, start) + 1, 1)
   const completedDays = Math.min(Math.max(differenceInDays(today, start), 0), totalDays)
+  const effectiveToday = isBefore(today, end) ? today : addDays(end, 1)
   return {
     percentComplete: Math.round((completedDays / totalDays) * 100),
-    completedDuration: formatIntervalDuration(start, today),
+    completedDuration: formatIntervalDuration(start, effectiveToday),
     totalLength: formatIntervalDuration(start, addDays(end, 1)),
     remainingDuration: formatRemainingDuration(endDateStr),
     startDate: formatDate(startDateStr) ?? startDateStr,

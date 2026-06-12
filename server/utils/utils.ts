@@ -1,5 +1,5 @@
 import { format, parse, isValid, parseISO, startOfDay, isBefore, addDays, intervalToDuration } from 'date-fns'
-import type { AddressResponse, PersonNameResponse } from '../data/peopleOnProbationApiClient'
+import type { AddressResponse, AppointmentResponse, PersonNameResponse } from '../data/peopleOnProbationApiClient'
 
 const properCase = (word: string): string =>
   word.length >= 1 ? word[0].toUpperCase() + word.toLowerCase().slice(1) : word
@@ -110,3 +110,6 @@ export const formatPersonName = (name?: PersonNameResponse): string | undefined 
   if (!name) return undefined
   return [name.forename, name.middleName, name.surname].filter(Boolean).join(' ')
 }
+
+export const isMissedMandatoryAppointmentOrActivity = (appointment: AppointmentResponse): boolean =>
+  appointment.attended === false && (appointment.nationalStandards === true || Boolean(appointment.unpaidWork))

@@ -9,6 +9,7 @@ import {
   formatMapUrl,
   formatPersonName,
   formatDateTime,
+  isMissedMandatoryAppointmentOrActivity,
 } from '../utils/utils'
 import type { AppointmentResponse } from '../data/peopleOnProbationApiClient'
 
@@ -49,9 +50,6 @@ function hasInvalidQueryValue(value: unknown): boolean {
   return value !== undefined && typeof value !== 'string'
 }
 
-function isMissedMandatoryAppointmentOrActivity(appointment: AppointmentResponse): boolean {
-  return appointment.attended === false && (appointment.nationalStandards === true || Boolean(appointment.unpaidWork))
-}
 
 export function buildCalendarUrl(appointment: AppointmentResponse): string | undefined {
   if (!appointment.date) return undefined

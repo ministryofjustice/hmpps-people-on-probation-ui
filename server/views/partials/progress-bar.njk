@@ -1,5 +1,14 @@
 {% macro progressBar(params) %}
-<div class="pop-progress__bar-area" data-percent="{{ params.percentComplete }}">
+{% set ariaLabel = params.label if params.label else (params.percentComplete + "% complete") %}
+<div
+  class="pop-progress__bar-area"
+  data-percent="{{ params.percentComplete }}"
+  role="progressbar"
+  aria-valuenow="{{ params.percentComplete }}"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-label="{{ ariaLabel }}"
+>
   <div class="pop-progress__track"></div>
   <div class="pop-progress__fill"></div>
   <div class="pop-progress__marker" role="presentation" aria-hidden="true">

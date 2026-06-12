@@ -5,7 +5,8 @@ govukFrontend.initAll()
 mojFrontend.initAll()
 
 document.querySelectorAll<HTMLElement>('.pop-progress__bar-area[data-percent]').forEach(el => {
-  el.style.setProperty('--pop-progress-pct', `${el.dataset.percent}%`)
+  const pct = Math.min(100, Math.max(0, Number(el.dataset.percent)))
+  if (Number.isFinite(pct)) el.style.setProperty('--pop-progress-pct', `${pct}%`)
 })
 
 const goalTabNav = document.querySelector<HTMLElement>('[data-module="pop-goal-tabs"]')
