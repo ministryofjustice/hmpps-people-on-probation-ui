@@ -49,6 +49,10 @@ function hasInvalidQueryValue(value: unknown): boolean {
   return value !== undefined && typeof value !== 'string'
 }
 
+function isMissedMandatoryAppointmentOrActivity(appointment: AppointmentResponse): boolean {
+  return appointment.attended === false && (appointment.nationalStandards === true || Boolean(appointment.unpaidWork))
+}
+
 export function buildCalendarUrl(appointment: AppointmentResponse): string | undefined {
   if (!appointment.date) return undefined
   const params = new URLSearchParams({ date: appointment.date })
@@ -215,17 +219,15 @@ export default function appointmentsRoutes(services: Services): Router {
         services.peopleOnProbationService.getPastAppointments(crn, 0, 10),
       ])
 
-      const missedPassedAppointment = pastAppointments.content.find(
-        a => a.nationalStandards === true && a.attended === false,
-      )
+      const missedAppointments = pastAppointments.content.filter(isMissedMandatoryAppointmentOrActivity)
 
-      const missedAlert: MissedAlertView | null = missedPassedAppointment
+      const missedAlert: MissedAlertView | null = missedAppointments[0]
         ? {
-            date: formatDateWithDay(missedPassedAppointment.date),
-            timeRange: formatTimeRange(missedPassedAppointment.startTime, missedPassedAppointment.endTime),
-            description: missedPassedAppointment.description,
-            type: missedPassedAppointment.type,
-            practitionerName: formatPersonName(missedPassedAppointment.practitioner?.name),
+            date: formatDateWithDay(missedAppointments[0].date),
+            timeRange: formatTimeRange(missedAppointments[0].startTime, missedAppointments[0].endTime),
+            description: missedAppointments[0].description,
+            type: missedAppointments[0].type,
+            practitionerName: formatPersonName(missedAppointments[0].practitioner?.name),
           }
         : null
 
@@ -238,6 +240,7 @@ export default function appointmentsRoutes(services: Services): Router {
 
       return res.render('pages/appointments', {
         missedAlert,
+        missedAppointmentsCount: missedAppointments.length,
         lastUpdatedAt: formatDateTime(mostRecentUpdate),
         futureAppointments: futureAppointments.content.map(toAppointmentCardView),
         pastAppointments: pastAppointments.content.map(toAppointmentCardView),

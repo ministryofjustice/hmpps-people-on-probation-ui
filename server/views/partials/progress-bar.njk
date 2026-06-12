@@ -1,0 +1,18 @@
+{% macro progressBar(params) %}
+<div class="pop-progress__bar-area" data-percent="{{ params.percentComplete }}">
+  <div class="pop-progress__track"></div>
+  <div class="pop-progress__fill"></div>
+  <div class="pop-progress__marker" role="presentation" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" focusable="false">
+      <circle cx="15" cy="15" r="15" fill="#1d70b8"/>
+      <path d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z" fill="white"/>
+    </svg>
+  </div>
+  {% if params.completedDuration %}
+    <p class="pop-progress__completed">{{ params.completedDuration }} completed</p>
+  {% endif %}
+</div>
+{% if params.remainingDuration %}
+  <p class="pop-progress__remaining">{{ params.remainingDuration }} left</p>
+{% endif %}
+{% endmacro %}

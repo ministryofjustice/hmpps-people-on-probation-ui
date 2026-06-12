@@ -1,38 +1,40 @@
 {% extends "../partials/layout.njk" %}
-{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 {% from "govuk/components/details/macro.njk" import govukDetails %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "moj/components/alert/macro.njk" import mojAlert %}
 
-{% set pageTitle = "Appointments" %}
+{% set pageTitle = "Appointments and activities" %}
 {% set currentPage = "appointments" %}
-
-{% block breadcrumb %}
-  {{ govukBackLink({ text: "Home", href: "/" }) }}
-{% endblock %}
 
 {% block content %}
 
-  <h1 class="govuk-heading-l">Appointments</h1>
-
-  {% include "../partials/mini-hub.njk" %}
+  <h1 class="govuk-heading-xl">Appointments and activities</h1>
 
   <div class="govuk-!-margin-top-6">
 
-    {% if missedAlert %}
+    {% if missedAppointmentsCount > 1 %}
+      {{ mojAlert({
+        variant: "error",
+        title: missedAppointmentsCount + " missed mandatory appointments or activities",
+        showTitleAsHeading: true,
+        dismissible: true,
+        html: '<p class="govuk-body govuk-!-margin-bottom-0">Contact <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">your probation officer</a> as soon as possible to explain why you missed these appointments or activities.</p>'
+      }) }}
+    {% elif missedAlert %}
       {% set missedAlertHtml %}
         <p class="govuk-body">
-          Appointment: '{{ missedAlert.description or missedAlert.type }}'{% if missedAlert.practitionerName %} with {{ missedAlert.practitionerName }}{% endif %}{% if missedAlert.date %}, on {{ missedAlert.date }}{% endif %}{% if missedAlert.timeRange %}, {{ missedAlert.timeRange }}{% endif %}
+          {{ missedAlert.date }}{% if missedAlert.timeRange %}, {{ missedAlert.timeRange }}{% endif %}.<br>
+          ‘{{ missedAlert.description or missedAlert.type }}’{% if missedAlert.practitionerName %} with {{ missedAlert.practitionerName }}{% endif %}.
         </p>
         <p class="govuk-body govuk-!-margin-bottom-0">
-          Contact <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">your probation officer</a> as soon as possible to explain why you missed this appointment.
+          Contact <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">your probation officer</a> as soon as possible to explain why you missed this appointment or activity.
         </p>
       {% endset %}
 
       {{ mojAlert({
         variant: "error",
-        title: "You missed a mandatory appointment on " + missedAlert.date,
+        title: "Missed mandatory appointment or activity",
         showTitleAsHeading: true,
         dismissible: true,
         html: missedAlertHtml
@@ -45,11 +47,11 @@
       <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">let your probation officer know as soon as possible</a>.
     </p>
 
-    <h2 class="govuk-heading-m">Upcoming appointments and activities</h2>
+    <h2 class="govuk-heading-l">Upcoming appointments and activities</h2>
 
     {% set whyDetailsHtml %}
       <ul class="govuk-list govuk-list--bullet">
-        <li>Your probation officer might not have updated your account yet.{% if lastUpdatedAt %} Last update: {{ lastUpdatedAt }}{% endif %}</li>
+        <li>This list might not be up to date yet.{% if lastUpdatedAt %} Last update: {{ lastUpdatedAt }}{% endif %}</li>
         <li>Tag appointments are sent by the electronic monitoring service</li>
         <li>Appointments outside the Probation Service are sent through other channels</li>
       </ul>
@@ -133,7 +135,7 @@
       <p class="govuk-body">You have no upcoming appointments.</p>
     {% endif %}
 
-    <h2 class="govuk-heading-m govuk-!-padding-top-6">Past appointments</h2>
+    <h2 class="govuk-heading-l govuk-!-padding-top-6">Past appointments</h2>
 
     {% if pastAppointments.length %}
       {% for appointment in pastAppointments %}

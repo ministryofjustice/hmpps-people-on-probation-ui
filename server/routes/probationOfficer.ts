@@ -2,7 +2,7 @@ import { Router } from 'express'
 
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
-import { formatDateTime, formatPersonName, formatAddress } from '../utils/utils'
+import { formatPersonName, formatAddress } from '../utils/utils'
 
 export default function probationOfficerRoutes(services: Services): Router {
   const router = Router()
@@ -18,7 +18,6 @@ export default function probationOfficerRoutes(services: Services): Router {
       const { practitioner } = personalDetails
 
       return res.render('pages/probation-officer', {
-        lastUpdatedAt: formatDateTime(practitioner?.lastUpdatedAt),
         officer: practitioner
           ? {
               name: formatPersonName(practitioner.name),

@@ -1,5 +1,4 @@
 {% extends "../partials/layout.njk" %}
-{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 
 {% set pageTitle = "Goals" %}
@@ -15,9 +14,11 @@
           <p class="pop-goal-card__title">{{ goal.title }}</p>
         </div>
 
-        {% if goal.targetDate or goal.totalSteps > 0 %}
+        {% if goal.achievedDate or goal.targetDate or goal.totalSteps > 0 %}
           <div class="pop-goal-card__intro">
-            {% if goal.targetDate %}
+            {% if goal.achievedDate %}
+              <p class="govuk-body govuk-!-margin-bottom-0">Marked as achieved on {{ goal.achievedDate }}.</p>
+            {% elif goal.targetDate %}
               <p class="govuk-body govuk-!-margin-bottom-0">Aim to achieve this by {{ goal.targetDate }}.</p>
             {% endif %}
             {% if goal.totalSteps > 0 %}
@@ -60,15 +61,9 @@
   {% endif %}
 {% endmacro %}
 
-{% block breadcrumb %}
-  {{ govukBackLink({ text: "Home", href: "/" }) }}
-{% endblock %}
-
 {% block content %}
 
-  <h1 class="govuk-heading-l">Goals</h1>
-
-  {% include "../partials/mini-hub.njk" %}
+  <h1 class="govuk-heading-xl">Goals</h1>
 
   <div class="govuk-!-margin-top-6">
 
@@ -111,13 +106,6 @@
     {% if lastUpdatedAt %}
       <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6" id="goals-last-updated" {% if activeTab === 'achieved' or (activeTab === 'current' and currentGoals | length === 0) or (activeTab === 'future' and futureGoals | length === 0) %}hidden{% endif %}>
         <p class="govuk-body govuk-!-margin-bottom-0">These goals were last updated on {{ lastUpdatedAt }}</p>
-      </div>
-    {% endif %}
-
-    {% if achievedAt %}
-      <div class="pop-goal-achieved-banner govuk-!-margin-bottom-6" id="goals-achieved-banner" role="status" {% if activeTab !== 'achieved' %}hidden{% endif %}>
-        <span class="pop-goal-achieved-banner__icon" aria-hidden="true"></span>
-        <p class="govuk-body govuk-!-margin-bottom-0">You achieved this goal on {{ achievedAt }}</p>
       </div>
     {% endif %}
 
