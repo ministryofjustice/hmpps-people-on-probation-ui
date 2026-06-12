@@ -9,6 +9,7 @@ import {
   formatMapUrl,
   formatPersonName,
   formatDateTime,
+  isMissedMandatoryAppointmentOrActivity,
 } from '../utils/utils'
 import type { AppointmentResponse } from '../data/peopleOnProbationApiClient'
 
@@ -215,17 +216,15 @@ export default function appointmentsRoutes(services: Services): Router {
         services.peopleOnProbationService.getPastAppointments(crn, 0, 10),
       ])
 
-      const missedPassedAppointment = pastAppointments.content.find(
-        a => a.nationalStandards === true && a.attended === false,
-      )
+      const missedAppointments = pastAppointments.content.filter(isMissedMandatoryAppointmentOrActivity)
 
-      const missedAlert: MissedAlertView | null = missedPassedAppointment
+      const missedAlert: MissedAlertView | null = missedAppointments[0]
         ? {
-            date: formatDateWithDay(missedPassedAppointment.date),
-            timeRange: formatTimeRange(missedPassedAppointment.startTime, missedPassedAppointment.endTime),
-            description: missedPassedAppointment.description,
-            type: missedPassedAppointment.type,
-            practitionerName: formatPersonName(missedPassedAppointment.practitioner?.name),
+            date: formatDateWithDay(missedAppointments[0].date),
+            timeRange: formatTimeRange(missedAppointments[0].startTime, missedAppointments[0].endTime),
+            description: missedAppointments[0].description,
+            type: missedAppointments[0].type,
+            practitionerName: formatPersonName(missedAppointments[0].practitioner?.name),
           }
         : null
 
@@ -238,6 +237,7 @@ export default function appointmentsRoutes(services: Services): Router {
 
       return res.render('pages/appointments', {
         missedAlert,
+        missedAppointmentsCount: missedAppointments.length,
         lastUpdatedAt: formatDateTime(mostRecentUpdate),
         futureAppointments: futureAppointments.content.map(toAppointmentCardView),
         pastAppointments: pastAppointments.content.map(toAppointmentCardView),

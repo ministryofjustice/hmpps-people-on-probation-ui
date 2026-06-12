@@ -1,14 +1,5 @@
-import {
-  format,
-  isValid,
-  parseISO,
-  startOfDay,
-  isAfter,
-  differenceInCalendarMonths,
-  differenceInDays,
-  addMonths,
-} from 'date-fns'
-import type { AddressResponse, PersonNameResponse } from '../data/peopleOnProbationApiClient'
+import { format, parse, isValid, parseISO, startOfDay, isBefore, addDays, intervalToDuration } from 'date-fns'
+import type { AddressResponse, AppointmentResponse, PersonNameResponse } from '../data/peopleOnProbationApiClient'
 
 const properCase = (word: string): string =>
   word.length >= 1 ? word[0].toUpperCase() + word.toLowerCase().slice(1) : word
@@ -42,7 +33,7 @@ export const formatDate = (dateStr?: string): string | undefined => {
 
 export const formatTime = (time?: string): string | undefined => {
   if (!time) return undefined
-  const parsed = parseISO(`1970-01-01T${time}`)
+  const parsed = parse(time, 'HH:mm', new Date())
   if (!isValid(parsed)) return time
   const pattern = parsed.getMinutes() === 0 ? 'haaa' : 'h:mmaaa'
   return format(parsed, pattern).toLowerCase()
@@ -70,33 +61,30 @@ export const formatDateTime = (datetimeStr?: string): string | undefined =>
 export const formatDateTimeWithDay = (datetimeStr?: string): string | undefined =>
   formatDateTimeWithPattern(datetimeStr, 'EEEE d MMMM yyyy')
 
-export const formatRemainingDuration = (endDateStr: string): string => {
-  const end = parseISO(endDateStr)
-  const today = startOfDay(new Date())
+export const parseLocalDate = (dateStr: string): Date => parse(dateStr, 'yyyy-MM-dd', new Date())
 
-  if (!isAfter(end, today)) return '0 days'
-
-  // differenceInCalendarMonths overshoots when end day < today day
-  // e.g. today=May 27, end=Jun 21 next year → returns 13, but addMonths(today,13)=Jun 27 > Jun 21
-  let months = differenceInCalendarMonths(end, today)
-  if (isAfter(addMonths(today, months), end)) months -= 1
-
-  const days = differenceInDays(end, addMonths(today, months))
-
+export const formatIntervalDuration = (start: Date, end: Date): string => {
+  let { years = 0, months = 0, days = 0 } = intervalToDuration({ start: startOfDay(start), end: startOfDay(end) })
+  if (days >= 30) {
+    months += 1
+    days = 0
+  }
+  if (months >= 12) {
+    years += 1
+    months = 0
+  }
   const parts: string[] = []
+  if (years > 0) parts.push(pluralise(years, 'year'))
   if (months > 0) parts.push(pluralise(months, 'month'))
   if (days > 0) parts.push(pluralise(days, 'day'))
   return parts.join(' ') || '0 days'
 }
 
-export const formatDuration = (days: number): string => {
-  if (days <= 0) return '0 days'
-  const months = Math.floor(days / 30)
-  const remainingDays = days % 30
-  const parts: string[] = []
-  if (months > 0) parts.push(pluralise(months, 'month'))
-  if (remainingDays > 0) parts.push(pluralise(remainingDays, 'day'))
-  return parts.join(' ')
+export const formatRemainingDuration = (endDateStr: string): string => {
+  const end = parseLocalDate(endDateStr)
+  const today = startOfDay(new Date())
+  if (isBefore(end, today)) return '0 days'
+  return formatIntervalDuration(today, addDays(end, 1))
 }
 
 export const formatUnit = (unit: string | undefined, amount: number): string => {
@@ -122,3 +110,6 @@ export const formatPersonName = (name?: PersonNameResponse): string | undefined 
   if (!name) return undefined
   return [name.forename, name.middleName, name.surname].filter(Boolean).join(' ')
 }
+
+export const isMissedMandatoryAppointmentOrActivity = (appointment: AppointmentResponse): boolean =>
+  appointment.attended === false && (appointment.nationalStandards === true || Boolean(appointment.unpaidWork))

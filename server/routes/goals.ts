@@ -33,6 +33,7 @@ type StepView = {
 type GoalView = {
   title: string
   targetDate?: string
+  achievedDate?: string
   completedSteps: number
   totalSteps: number
   steps: StepView[]
@@ -49,9 +50,20 @@ function toStepView(step: StepResponse): StepView {
 function toGoalView(goal: GoalResponse): GoalView {
   const steps = goal.steps.map(toStepView)
   const completedSteps = goal.steps.filter(s => s.status === 'COMPLETED').length
+  const achievedDate =
+    goal.goalStatus === 'ACHIEVED'
+      ? formatDate(
+          goal.steps
+            .map(s => s.statusDate)
+            .filter(Boolean)
+            .sort()
+            .at(-1),
+        )
+      : undefined
   return {
     title: goal.goalTitle,
     targetDate: formatDate(goal.targetDate),
+    achievedDate,
     completedSteps,
     totalSteps: steps.length,
     steps,
@@ -78,18 +90,9 @@ export default function goalsRoutes(services: Services): Router {
 
       const currentGoals = allGoals.filter(g => g.goalStatus === 'ACTIVE').map(toGoalView)
       const futureGoals = allGoals.filter(g => g.goalStatus === 'FUTURE').map(toGoalView)
-      const rawAchievedGoals = allGoals.filter(g => g.goalStatus === 'ACHIEVED')
-      const achievedGoals = rawAchievedGoals.map(toGoalView)
+      const achievedGoals = allGoals.filter(g => g.goalStatus === 'ACHIEVED').map(toGoalView)
 
-      const allStepDates = allGoals
-        .flatMap(g => g.steps)
-        .map(s => s.statusDate)
-        .filter(Boolean)
-        .sort()
-
-      const lastUpdatedAt = allStepDates.at(-1)
-
-      const achievedAt = rawAchievedGoals
+      const lastUpdatedAt = allGoals
         .flatMap(g => g.steps)
         .map(s => s.statusDate)
         .filter(Boolean)
@@ -102,7 +105,6 @@ export default function goalsRoutes(services: Services): Router {
         futureGoals,
         achievedGoals,
         lastUpdatedAt: lastUpdatedAt ? formatDateTimeWithDay(lastUpdatedAt) : null,
-        achievedAt: achievedAt ? formatDateTimeWithDay(achievedAt) : null,
       })
     } catch (error) {
       const responseStatus = (error as SanitisedError | null | undefined)?.responseStatus
@@ -113,7 +115,6 @@ export default function goalsRoutes(services: Services): Router {
           futureGoals: [],
           achievedGoals: [],
           lastUpdatedAt: null,
-          achievedAt: null,
         })
       }
       return next(error)

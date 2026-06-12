@@ -1,12 +1,19 @@
 import { Router } from 'express'
+import { startOfDay, differenceInDays, isBefore, addDays } from 'date-fns'
 
 import type { Services } from '../services'
 import { loadCurrentUser } from '../auth/currentUser'
 import type { AppointmentResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
-import { formatDateWithDay, formatTimeRange, formatRemainingDuration } from '../utils/utils'
+import {
+  formatDateWithDay,
+  formatTimeRange,
+  formatIntervalDuration,
+  formatRemainingDuration,
+  isMissedMandatoryAppointmentOrActivity,
+  parseLocalDate,
+} from '../utils/utils'
 import appointmentsRoutes from './appointments'
 import goalsRoutes from './goals'
-import progressRoutes from './progress'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
 import detailsRoutes from './details'
@@ -14,23 +21,31 @@ import detailsRoutes from './details'
 type NextAppointmentView = {
   date?: string
   timeRange?: string
+  variant: 'mandatory-appointment' | 'appointment' | 'activity'
 }
 
 type MissedAppointmentView = {
   date?: string
+  timeRange?: string
 }
 
 type OrderProgressView = {
   percentComplete: number
+  completedDuration: string
   remainingDuration: string
 }
 
 function toNextAppointmentView(appointment?: AppointmentResponse): NextAppointmentView | null {
   if (!appointment) return null
 
+  let variant: NextAppointmentView['variant'] = 'appointment'
+  if (appointment.nationalStandards) variant = 'mandatory-appointment'
+  if (appointment.unpaidWork) variant = 'activity'
+
   return {
     date: formatDateWithDay(appointment.date),
     timeRange: formatTimeRange(appointment.startTime, appointment.endTime),
+    variant,
   }
 }
 
@@ -39,6 +54,7 @@ function toMissedAppointmentView(appointment?: AppointmentResponse): MissedAppoi
 
   return {
     date: formatDateWithDay(appointment.date),
+    timeRange: formatTimeRange(appointment.startTime, appointment.endTime),
   }
 }
 
@@ -46,16 +62,18 @@ function toOrderProgressView(sentences: SentenceResponse[]): OrderProgressView |
   const sentence = sentences[0]
   if (!sentence?.startDate || !sentence?.expectedEndDate) return null
 
-  const start = new Date(sentence.startDate)
-  const end = new Date(sentence.expectedEndDate)
-  const today = new Date()
+  const start = parseLocalDate(sentence.startDate)
+  const end = parseLocalDate(sentence.expectedEndDate)
+  const today = startOfDay(new Date())
 
-  const totalDays = Math.max(Math.round((end.getTime() - start.getTime()) / 86_400_000), 1)
-  const completedDays = Math.min(Math.max(Math.round((today.getTime() - start.getTime()) / 86_400_000), 0), totalDays)
+  const totalDays = Math.max(differenceInDays(end, start) + 1, 1)
+  const completedDays = Math.min(Math.max(differenceInDays(today, start), 0), totalDays)
   const percentComplete = Math.round((completedDays / totalDays) * 100)
+  const effectiveToday = isBefore(today, end) ? today : addDays(end, 1)
 
   return {
     percentComplete,
+    completedDuration: formatIntervalDuration(start, effectiveToday),
     remainingDuration: formatRemainingDuration(sentence.expectedEndDate),
   }
 }
@@ -67,7 +85,6 @@ export default function routes(services: Services): Router {
 
   router.use('/appointments', appointmentsRoutes(services))
   router.use('/goals', goalsRoutes(services))
-  router.use('/progress', progressRoutes(services))
   router.use('/requirements', requirementsRoutes(services))
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
@@ -87,17 +104,14 @@ export default function routes(services: Services): Router {
           services.peopleOnProbationService.getSentences(crn),
         ])
 
-        const nextAppointment =
-          futureAppointments.content.find(appointment => appointment.nationalStandards === true) ?? undefined
+        const nextAppointment = futureAppointments.content[0] ?? undefined
 
-        const missedAppointment =
-          pastAppointments.content.find(
-            appointment => appointment.nationalStandards === true && appointment.attended === false,
-          ) ?? undefined
+        const missedAppointments = pastAppointments.content.filter(isMissedMandatoryAppointmentOrActivity)
 
         return res.render('pages/index', {
           nextAppointment: toNextAppointmentView(nextAppointment),
-          missedAppointment: toMissedAppointmentView(missedAppointment),
+          missedAppointment: toMissedAppointmentView(missedAppointments[0]),
+          missedAppointmentsCount: missedAppointments.length,
           orderProgress: toOrderProgressView(sentenceProgress.sentences),
         })
       }

@@ -250,8 +250,8 @@ describe('GET /goals', () => {
     })
   })
 
-  describe('achieved banner', () => {
-    it('shows the achieved date from the latest achieved step', async () => {
+  describe('achieved date per goal', () => {
+    it('shows "Marked as achieved" with the latest step date on the achieved tab', async () => {
       peopleOnProbationService.getSentencePlan.mockResolvedValue(activePlan)
 
       const res = await request(app)
@@ -259,22 +259,10 @@ describe('GET /goals', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('goals-achieved-banner')
-      expect(res.text).toContain('15 March 2026')
+      expect(res.text).toContain('Marked as achieved on 15 March 2026.')
     })
 
-    it('hides the achieved banner on the current tab', async () => {
-      peopleOnProbationService.getSentencePlan.mockResolvedValue(activePlan)
-
-      const res = await request(app)
-        .get('/goals')
-        .set('Cookie', await createAppSessionCookie('X123456'))
-        .expect(200)
-
-      expect(res.text).toMatch(/id="goals-achieved-banner"[^>]*hidden/)
-    })
-
-    it('does not render the achieved banner when there are no achieved goals', async () => {
+    it('does not show achieved date when there are no achieved goals', async () => {
       const planWithNoAchieved: SentencePlanResponse = {
         ...activePlan,
         goals: activePlan.goals.filter(g => g.goalStatus !== 'ACHIEVED'),
@@ -286,7 +274,7 @@ describe('GET /goals', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).not.toContain('goals-achieved-banner')
+      expect(res.text).not.toContain('Marked as achieved on')
     })
   })
 
@@ -300,7 +288,7 @@ describe('GET /goals', () => {
         .expect(200)
 
       expect(res.text).not.toContain('goals-last-updated')
-      expect(res.text).not.toContain('goals-achieved-banner')
+      expect(res.text).not.toContain('Marked as achieved on')
     })
 
     it('renders 0 counts in the tab navigation when there are no goals', async () => {
@@ -331,7 +319,7 @@ describe('GET /goals', () => {
       expect(res.text).toContain('Future goals (0)')
       expect(res.text).toContain('Achieved goals (0)')
       expect(res.text).not.toContain('goals-last-updated')
-      expect(res.text).not.toContain('goals-achieved-banner')
+      expect(res.text).not.toContain('Marked as achieved on')
     })
 
     it('passes non-404 API errors to the next error handler', async () => {

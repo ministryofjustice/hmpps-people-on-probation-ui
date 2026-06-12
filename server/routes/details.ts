@@ -2,7 +2,7 @@ import { Router } from 'express'
 
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
-import { formatDate, formatDateTime, formatPersonName, formatAddress } from '../utils/utils'
+import { formatDate, formatPersonName, formatAddress } from '../utils/utils'
 import type { PersonalContactResponse } from '../data/peopleOnProbationApiClient'
 
 type EmergencyContactView = {
@@ -34,7 +34,6 @@ export default function detailsRoutes(services: Services): Router {
       const personalDetails = await services.peopleOnProbationService.getPersonalDetails(crn)
 
       return res.render('pages/details', {
-        lastUpdatedAt: formatDateTime(personalDetails.lastUpdatedAt),
         personal: {
           name: formatPersonName(personalDetails.name),
           preferredName: personalDetails.preferredName,

@@ -4,12 +4,16 @@ import * as mojFrontend from '@ministryofjustice/frontend'
 govukFrontend.initAll()
 mojFrontend.initAll()
 
+document.querySelectorAll<HTMLElement>('.pop-progress__bar-area[data-percent]').forEach(el => {
+  const pct = Math.min(100, Math.max(0, Number(el.dataset.percent)))
+  if (Number.isFinite(pct)) el.style.setProperty('--pop-progress-pct', `${pct}%`)
+})
+
 const goalTabNav = document.querySelector<HTMLElement>('[data-module="pop-goal-tabs"]')
 if (goalTabNav) {
   const tabLinks = goalTabNav.querySelectorAll<HTMLAnchorElement>('[data-tab-target]')
   const panels = document.querySelectorAll<HTMLElement>('#panel-current, #panel-future, #panel-achieved')
   const lastUpdatedBanner = document.getElementById('goals-last-updated')
-  const achievedBanner = document.getElementById('goals-achieved-banner')
   const mobileHeading = document.getElementById('goals-mobile-heading')
 
   tabLinks.forEach(link => {
@@ -36,7 +40,6 @@ if (goalTabNav) {
       const targetPanel = document.getElementById(targetId)
       const panelHasGoals = !!targetPanel?.querySelector('.pop-goal-card')
       if (lastUpdatedBanner) lastUpdatedBanner.hidden = isAchieved || !panelHasGoals
-      if (achievedBanner) achievedBanner.hidden = !isAchieved
       if (mobileHeading) mobileHeading.textContent = link.textContent?.trim() ?? ''
 
       window.history.replaceState(null, '', link.href)

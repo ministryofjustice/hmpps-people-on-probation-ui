@@ -8,7 +8,7 @@ import {
   formatDateTime,
   formatDateTimeWithDay,
   formatRemainingDuration,
-  formatDuration,
+  formatIntervalDuration,
   formatUnit,
   formatAddress,
   formatMapUrl,
@@ -128,34 +128,34 @@ describe('formatRemainingDuration', () => {
 
   it.each([
     ['past date', '2026-01-01', '0 days'],
-    ['today', '2026-05-27', '0 days'],
-    ['1 day', '2026-05-28', '1 day'],
-    ['5 days', '2026-06-01', '5 days'],
-    ['exact 1 month', '2026-06-27', '1 month'],
-    ['1 month 1 day', '2026-06-28', '1 month 1 day'],
-    ['exact 12 months', '2027-05-27', '12 months'],
-    ['months with overshoot (end day < today day)', '2027-06-21', '12 months 25 days'],
-    ['exact 2 years', '2028-05-27', '24 months'],
-    ['13 months exactly', '2027-06-27', '13 months'],
+    ['today (end date = last day)', '2026-05-27', '1 day'],
+    ['1 day away', '2026-05-28', '2 days'],
+    ['5 days away', '2026-06-01', '6 days'],
+    ['exact 1 month away', '2026-06-27', '1 month 1 day'],
+    ['1 month 1 day away', '2026-06-28', '1 month 2 days'],
+    ['exact 12 months away', '2027-05-27', '1 year 1 day'],
+    ['months with overshoot (end day < today day)', '2027-06-21', '1 year 26 days'],
+    ['exact 2 years away', '2028-05-27', '2 years 1 day'],
+    ['13 months exactly', '2027-06-27', '1 year 1 month 1 day'],
   ])('%s', (_: string, endDate: string, expected: string) => {
     expect(formatRemainingDuration(endDate)).toEqual(expected)
   })
 })
 
-describe('formatDuration', () => {
+describe('formatIntervalDuration', () => {
   it.each([
-    ['zero days', 0, '0 days'],
-    ['negative days', -5, '0 days'],
-    ['1 day', 1, '1 day'],
-    ['2 days', 2, '2 days'],
-    ['29 days', 29, '29 days'],
-    ['30 days (1 month)', 30, '1 month'],
-    ['31 days', 31, '1 month 1 day'],
-    ['60 days (2 months)', 60, '2 months'],
-    ['61 days', 61, '2 months 1 day'],
-    ['1 month exactly', 30, '1 month'],
-  ])('%s', (_: string, input: number, expected: string) => {
-    expect(formatDuration(input)).toEqual(expected)
+    ['1 day', new Date('2026-05-27'), new Date('2026-05-28'), '1 day'],
+    ['2 days', new Date('2026-05-27'), new Date('2026-05-29'), '2 days'],
+    ['1 month', new Date('2026-05-27'), new Date('2026-06-27'), '1 month'],
+    ['1 month 1 day', new Date('2026-05-27'), new Date('2026-06-28'), '1 month 1 day'],
+    ['1 year', new Date('2025-06-11'), new Date('2026-06-11'), '1 year'],
+    ['1 year 1 day', new Date('2025-06-11'), new Date('2026-06-12'), '1 year 1 day'],
+    ['2 years', new Date('2025-06-11'), new Date('2027-06-11'), '2 years'],
+    ['2 years 26 days (inclusive end via addDays)', new Date('2025-06-11'), new Date('2027-07-07'), '2 years 26 days'],
+    ['2 months 30 days normalises to 3 months', new Date('2025-01-02'), new Date('2025-04-01'), '3 months'],
+    ['11 months 30 days normalises to 1 year', new Date('2025-02-01'), new Date('2026-01-31'), '1 year'],
+  ])('%s', (_: string, start: Date, end: Date, expected: string) => {
+    expect(formatIntervalDuration(start, end)).toEqual(expected)
   })
 })
 

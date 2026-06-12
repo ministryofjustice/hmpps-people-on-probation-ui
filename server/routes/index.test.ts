@@ -90,10 +90,11 @@ describe('GET /', () => {
       .expect(200)
 
     expect(response.text).toContain('Check your probation account')
-    expect(response.text).toContain('Your next mandatory appointment is on Wednesday 10 June 2026, 9am to 10am')
-    expect(response.text).toContain('You missed a mandatory appointment on Monday 1 June 2026')
-    expect(response.text).toContain('Overall order progress')
-    expect(response.text).toContain('7 days left')
+    expect(response.text).toContain('Next mandatory appointment')
+    expect(response.text).toContain('Wednesday 10 June 2026, 9am to 10am')
+    expect(response.text).toContain('Missed mandatory appointment or activity')
+    expect(response.text).toContain('Monday 1 June 2026')
+    expect(response.text).toContain('Overall order')
     expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 10)
     expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 0, 10)
     expect(peopleOnProbationService.getSentences).toHaveBeenCalledWith('X123456')
@@ -133,6 +134,32 @@ describe('GET /', () => {
       .expect('Content-Type', /html/)
       .expect(200)
 
-    expect(response.text).not.toContain('Overall order progress')
+    expect(response.text).not.toContain('Overall order')
+  })
+
+  it('should treat missed unpaid work as a mandatory activity', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [] })
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-12',
+          startTime: '09:00',
+          endTime: '12:00',
+          nationalStandards: false,
+          attended: false,
+          unpaidWork: {},
+        },
+      ],
+    })
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [] })
+
+    const response = await request(app)
+      .get('/')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect('Content-Type', /html/)
+      .expect(200)
+
+    expect(response.text).toContain('Missed mandatory appointment or activity')
+    expect(response.text).toContain('Friday 12 June 2026, 9am to 12pm')
   })
 })

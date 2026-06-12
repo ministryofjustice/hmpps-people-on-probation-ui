@@ -2,6 +2,7 @@ import type { Express } from 'express'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import { buildCalendarFilename, buildCalendarUrl, generateIcs } from './appointments'
+import type { Services } from '../services'
 
 describe('generateIcs', () => {
   it('escapes text fields for iCalendar clients', () => {
@@ -142,5 +143,131 @@ describe('GET /appointments/calendar', () => {
       .get('/appointments/calendar?date=2026-08-10&startTime=not-a-time')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(400)
+  })
+})
+
+describe('GET /appointments', () => {
+  let app: Express
+  let peopleOnProbationService: {
+    getFutureAppointments: jest.Mock
+    getPastAppointments: jest.Mock
+  }
+
+  beforeEach(() => {
+    peopleOnProbationService = {
+      getFutureAppointments: jest.fn().mockResolvedValue({ content: [] }),
+      getPastAppointments: jest.fn().mockResolvedValue({ content: [] }),
+    }
+
+    app = appWithAllRoutes({
+      services: {
+        peopleOnProbationService,
+      } as unknown as Partial<Services>,
+    })
+  })
+
+  it('renders the missed mandatory appointment alert for one missed appointment', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-10',
+          startTime: '09:00',
+          endTime: '10:00',
+          type: 'Office appointment',
+          practitioner: {
+            name: {
+              forename: 'Jane',
+              surname: 'Smith',
+            },
+          },
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Missed mandatory appointment or activity')
+    expect(response.text).toContain('Wednesday 10 June 2026, 9am to 10am.')
+    expect(response.text).toContain('‘Office appointment’ with Jane Smith.')
+    expect(response.text).toContain('your probation officer')
+  })
+
+  it('renders the missed mandatory appointments count alert for multiple missed appointments', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-10',
+          nationalStandards: true,
+          attended: false,
+        },
+        {
+          date: '2026-06-11',
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('2 missed mandatory appointments or activities')
+    expect(response.text).toContain('your probation officer')
+  })
+
+  it('counts missed mandatory appointments and missed unpaid work together', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-10',
+          nationalStandards: true,
+          attended: false,
+        },
+        {
+          date: '2026-06-11',
+          nationalStandards: false,
+          attended: false,
+          unpaidWork: {},
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('2 missed mandatory appointments or activities')
+  })
+
+  it('treats missed unpaid work as a mandatory activity', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-12',
+          startTime: '09:00',
+          endTime: '12:00',
+          description: 'Community service hours',
+          nationalStandards: false,
+          attended: false,
+          unpaidWork: {},
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Missed mandatory appointment or activity')
+    expect(response.text).toContain('‘Community service hours’')
   })
 })
