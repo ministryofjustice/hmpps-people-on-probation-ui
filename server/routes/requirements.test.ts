@@ -8,9 +8,22 @@ let app: Express
 let peopleOnProbationService: { getSentences: jest.Mock }
 
 // Fake only the Date clock; leave async timer primitives real so supertest works
-const fakeDate = (dateStr: string) =>
+const fakeDate = (dateStr: string) => {
+  const opts = {
+    now: new Date(dateStr),
+    doNotFake: [
+      'nextTick',
+      'setImmediate',
+      'clearImmediate',
+      'setTimeout',
+      'clearTimeout',
+      'setInterval',
+      'clearInterval',
+    ],
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  jest.useFakeTimers({ now: new Date(dateStr), doNotFake: ['nextTick', 'setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] } as any)
+  return jest.useFakeTimers(opts as any)
+}
 
 beforeEach(() => {
   peopleOnProbationService = { getSentences: jest.fn() }
@@ -36,7 +49,6 @@ const sentenceWithDates = (startDate: string, expectedEndDate: string): Sentence
     },
   ],
 })
-
 
 describe('GET /requirements', () => {
   describe('overall order completedDuration clamping', () => {

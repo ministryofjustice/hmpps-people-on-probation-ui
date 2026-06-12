@@ -50,7 +50,6 @@ function hasInvalidQueryValue(value: unknown): boolean {
   return value !== undefined && typeof value !== 'string'
 }
 
-
 export function buildCalendarUrl(appointment: AppointmentResponse): string | undefined {
   if (!appointment.date) return undefined
   const params = new URLSearchParams({ date: appointment.date })
