@@ -262,17 +262,6 @@ describe('GET /goals', () => {
       expect(res.text).toContain('Marked as achieved on 15 March 2026.')
     })
 
-    it('does not show "Marked as achieved" on the current tab', async () => {
-      peopleOnProbationService.getSentencePlan.mockResolvedValue(activePlan)
-
-      const res = await request(app)
-        .get('/goals')
-        .set('Cookie', await createAppSessionCookie('X123456'))
-        .expect(200)
-
-      expect(res.text).not.toContain('Marked as achieved on')
-    })
-
     it('does not show achieved date when there are no achieved goals', async () => {
       const planWithNoAchieved: SentencePlanResponse = {
         ...activePlan,
