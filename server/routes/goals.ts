@@ -52,7 +52,13 @@ function toGoalView(goal: GoalResponse): GoalView {
   const completedSteps = goal.steps.filter(s => s.status === 'COMPLETED').length
   const achievedDate =
     goal.goalStatus === 'ACHIEVED'
-      ? formatDate(goal.steps.map(s => s.statusDate).filter(Boolean).sort().at(-1))
+      ? formatDate(
+          goal.steps
+            .map(s => s.statusDate)
+            .filter(Boolean)
+            .sort()
+            .at(-1),
+        )
       : undefined
   return {
     title: goal.goalTitle,

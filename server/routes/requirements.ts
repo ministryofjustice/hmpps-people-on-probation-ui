@@ -1,8 +1,8 @@
 import { Router } from 'express'
 
+import { startOfDay, addDays, differenceInDays } from 'date-fns'
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
-import { startOfDay, addDays, differenceInDays } from 'date-fns'
 import { formatDate, formatRemainingDuration, formatIntervalDuration, formatUnit, parseLocalDate } from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
 
@@ -65,15 +65,37 @@ function toRequirementView(requirement: RequirementResponse): RequirementView | 
     const percentComplete = Math.round((completed / requirement.required) * 100)
     const unitLabel = formatUnit(requirement.unit, remaining)
     const completedLabel = formatUnit(requirement.unit, completed)
-    return { label, required: requirement.required, completed, remaining, unitLabel, percentComplete, completedDuration: `${completed} ${completedLabel}` }
+    return {
+      label,
+      required: requirement.required,
+      completed,
+      remaining,
+      unitLabel,
+      percentComplete,
+      completedDuration: `${completed} ${completedLabel}`,
+    }
   }
 
   const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
   const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
   if (startDate && endDate) {
-    const { percentComplete, completedDuration, totalLength, remainingDuration, startDate: fmtStart, endDate: fmtEnd } =
-      calculateDateProgress(startDate, endDate)
-    return { label, percentComplete, completedDuration, totalLength, remainingDuration, startDate: fmtStart, endDate: fmtEnd }
+    const {
+      percentComplete,
+      completedDuration,
+      totalLength,
+      remainingDuration,
+      startDate: fmtStart,
+      endDate: fmtEnd,
+    } = calculateDateProgress(startDate, endDate)
+    return {
+      label,
+      percentComplete,
+      completedDuration,
+      totalLength,
+      remainingDuration,
+      startDate: fmtStart,
+      endDate: fmtEnd,
+    }
   }
 
   return null
@@ -94,10 +116,8 @@ export default function requirementsRoutes(services: Services): Router {
 
       let overallOrder: OverallOrderView | null = null
       if (sentence?.startDate && sentence?.expectedEndDate) {
-        const { percentComplete, completedDuration, totalLength, remainingDuration, startDate, endDate } = calculateDateProgress(
-          sentence.startDate,
-          sentence.expectedEndDate,
-        )
+        const { percentComplete, completedDuration, totalLength, remainingDuration, startDate, endDate } =
+          calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
         overallOrder = {
           // TODO Remove dummy charge when the API returns the charge field
           charge: sentence?.charge ?? 'Dummy charge',

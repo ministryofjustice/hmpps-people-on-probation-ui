@@ -1,13 +1,4 @@
-import {
-  format,
-  parse,
-  isValid,
-  parseISO,
-  startOfDay,
-  isBefore,
-  addDays,
-  intervalToDuration,
-} from 'date-fns'
+import { format, parse, isValid, parseISO, startOfDay, isBefore, addDays, intervalToDuration } from 'date-fns'
 import type { AddressResponse, PersonNameResponse } from '../data/peopleOnProbationApiClient'
 
 const properCase = (word: string): string =>
@@ -74,8 +65,14 @@ export const parseLocalDate = (dateStr: string): Date => parse(dateStr, 'yyyy-MM
 
 export const formatIntervalDuration = (start: Date, end: Date): string => {
   let { years = 0, months = 0, days = 0 } = intervalToDuration({ start: startOfDay(start), end: startOfDay(end) })
-  if (days >= 30) { months += 1; days = 0 }
-  if (months >= 12) { years += 1; months = 0 }
+  if (days >= 30) {
+    months += 1
+    days = 0
+  }
+  if (months >= 12) {
+    years += 1
+    months = 0
+  }
   const parts: string[] = []
   if (years > 0) parts.push(pluralise(years, 'year'))
   if (months > 0) parts.push(pluralise(months, 'month'))
