@@ -108,7 +108,10 @@ export default {
   },
   localAuth,
   popChatbot: {
-    apiUrl: get('POP_CHATBOT_API_URL', '', requiredInProduction) as string,
+    // Both vars are optional so the chatbot can be switched off in any env
+    // (including production) without a redeploy — leave POP_CHATBOT_API_URL
+    // or POP_CHATBOT_API_KEY unset and `chatbotEnabled` becomes false.
+    apiUrl: get('POP_CHATBOT_API_URL', '') as string,
     apiKey: process.env.POP_CHATBOT_API_KEY,
   },
   ingressUrl: get('INGRESS_URL', 'http://localhost:3000', requiredInProduction),

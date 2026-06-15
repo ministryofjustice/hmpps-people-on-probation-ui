@@ -17,7 +17,7 @@ init({
     ],
     privacyMessage: `**About this chatbot**
 
-This is Fred, a chatbot designed to help people on probation understand their sentence, conditions, and obligations. Fred uses information from your probation record — such as your name, order type, conditions, appointments, and probation officer details — to give you answers specific to your situation. In today's session, this information is fictional (not real data).
+This is Fred, a chatbot designed to help people on probation understand their sentence, conditions, and obligations. Fred uses information from your probation record — such as your name, order type, conditions, appointments, and probation officer details — to give you answers specific to your situation.
 
 **How it works**
 

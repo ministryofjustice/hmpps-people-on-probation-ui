@@ -192,7 +192,11 @@ export default function chatbotRoutes(services: Services): Router {
 
       if (!upstream.ok) {
         const text = await upstream.text().catch(() => '')
-        send({ type: 'error', text: `HTTP ${upstream.status}: ${text || upstream.statusText}` })
+        logger.warn(
+          { status: upstream.status, statusText: upstream.statusText, body: text.slice(0, 1000) },
+          'Chatbot upstream returned a non-2xx response',
+        )
+        send({ type: 'error', text: 'Chatbot service unavailable' })
         res.end()
         return
       }
