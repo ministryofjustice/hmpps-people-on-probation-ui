@@ -2,6 +2,7 @@ import express, { Express } from 'express'
 import request from 'supertest'
 import chatbotRoutes from './chatbot'
 import type { Services } from '../services'
+import type { AuthenticatedUserSession } from '../auth/sessionStore'
 import config from '../config'
 import logger from '../../logger'
 
@@ -11,11 +12,12 @@ jest.mock('../../logger', () => ({
   info: jest.fn(),
 }))
 
-type TestUser = { userId: string; registeredUserDetails?: { personReference?: string } } | undefined
-
-const defaultUser: TestUser = {
+const defaultUser: AuthenticatedUserSession = {
+  id: 'session-1',
   userId: 'user-1',
-  registeredUserDetails: { personReference: 'X123456' },
+  registeredUserDetails: { personReference: 'X123456' } as AuthenticatedUserSession['registeredUserDetails'],
+  authenticatedAt: 0,
+  expiresAt: Number.MAX_SAFE_INTEGER,
 }
 
 const minimalPersonalDetails = {
@@ -24,7 +26,7 @@ const minimalPersonalDetails = {
   dateOfBirth: '1990-01-01',
 }
 
-function buildApp(opts: { user?: TestUser; services?: Partial<Services> } = {}): Express {
+function buildApp(opts: { user?: AuthenticatedUserSession; services?: Partial<Services> } = {}): Express {
   const app = express()
   app.use(express.json())
   app.use((req, res, next) => {
