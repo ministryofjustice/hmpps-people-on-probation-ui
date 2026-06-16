@@ -17,6 +17,7 @@ import goalsRoutes from './goals'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
 import detailsRoutes from './details'
+import expectationsRoutes from './expectations'
 
 type NextAppointmentView = {
   date?: string
@@ -88,6 +89,7 @@ export default function routes(services: Services): Router {
   router.use('/requirements', requirementsRoutes(services))
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
+  router.use('/expectations', expectationsRoutes(services))
 
   router.get('/', async (req, res, next) => {
     try {
