@@ -35,8 +35,15 @@ import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
 import AuditService from '../services/auditService'
 import type { RegisteredUserResponse } from '../data/peopleOnProbationApiClient'
 
-const toError = (err: unknown): Error =>
-  err instanceof Error ? err : new Error(typeof err === 'string' ? err : JSON.stringify(err))
+const toError = (err: unknown): Error => {
+  if (err instanceof Error) return err
+  if (typeof err === 'string') return new Error(err)
+  try {
+    return new Error(JSON.stringify(err))
+  } catch {
+    return new Error(String(err))
+  }
+}
 
 function normaliseToken(token?: string | null): string | null {
   return typeof token === 'string' && token.trim() ? token.trim() : null
