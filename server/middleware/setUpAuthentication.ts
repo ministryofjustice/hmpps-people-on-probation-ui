@@ -35,6 +35,16 @@ import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
 import AuditService from '../services/auditService'
 import type { RegisteredUserResponse } from '../data/peopleOnProbationApiClient'
 
+const toError = (err: unknown): Error => {
+  if (err instanceof Error) return err
+  if (typeof err === 'string') return new Error(err)
+  try {
+    return new Error(JSON.stringify(err))
+  } catch {
+    return new Error(String(err))
+  }
+}
+
 function normaliseToken(token?: string | null): string | null {
   return typeof token === 'string' && token.trim() ? token.trim() : null
 }
@@ -98,7 +108,7 @@ async function logAuthenticationAttempt(
 
     await auditService.logUserSignInAttempt(eventDetails)
   } catch (err) {
-    logger.warn({ err }, 'Failed to send authentication attempt audit event')
+    logger.warn({ err: toError(err) }, 'Failed to send authentication attempt audit event')
   }
 }
 
@@ -133,7 +143,7 @@ async function logAuthenticationFailure(
 
     await auditService.logUserSignInFailure(eventDetails)
   } catch (auditErr) {
-    logger.warn({ err: auditErr }, 'Failed to send authentication failure audit event')
+    logger.warn({ err: toError(auditErr) }, 'Failed to send authentication failure audit event')
   }
 }
 
@@ -165,7 +175,7 @@ async function logSuccessfulAuthentication(
 
     await auditService.logUserSignedIn(eventDetails)
   } catch (err) {
-    logger.warn({ err }, 'Failed to send authentication audit event')
+    logger.warn({ err: toError(err) }, 'Failed to send authentication audit event')
   }
 }
 

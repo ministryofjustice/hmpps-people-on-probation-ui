@@ -37,7 +37,7 @@
   &__marker {
     position: absolute;
     top: 0;
-    left: var(--pop-progress-pct, 0%);
+    left: max(15px, var(--pop-progress-pct, 0%));
     transform: translateX(-50%);
     line-height: 0;
   }
@@ -46,7 +46,7 @@
     @include govuk-font($size: 16);
     position: absolute;
     top: 36px;
-    left: var(--pop-progress-pct, 0%);
+    left: clamp(4.5rem, var(--pop-progress-pct, 0%), calc(100% - 4.5rem));
     transform: translateX(-50%);
     margin: 0;
     white-space: nowrap;
