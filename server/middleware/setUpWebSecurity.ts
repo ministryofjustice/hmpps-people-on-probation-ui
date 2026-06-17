@@ -24,7 +24,11 @@ export default function setUpWebSecurity(): Router {
           // <link href="http://example.com/" rel="stylesheet" nonce="{{ cspNonce }}">
           // This ensures only scripts we trust are loaded, and not anything injected into the
           // page by an attacker.
-          scriptSrc: ["'self'", 'embed.smartsurvey.io', (_req: Request, res: Response) => `'nonce-${res.locals.cspNonce}'`],
+          scriptSrc: [
+            "'self'",
+            'embed.smartsurvey.io',
+            (_req: Request, res: Response) => `'nonce-${res.locals.cspNonce}'`,
+          ],
           // 'unsafe-inline' for SmartSurvey popup which injects inline styles dynamically.
           // No style nonce is used in templates so this does not weaken our script nonce policy.
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
