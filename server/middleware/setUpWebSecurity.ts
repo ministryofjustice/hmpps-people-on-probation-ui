@@ -24,14 +24,19 @@ export default function setUpWebSecurity(): Router {
           // <link href="http://example.com/" rel="stylesheet" nonce="{{ cspNonce }}">
           // This ensures only scripts we trust are loaded, and not anything injected into the
           // page by an attacker.
-          scriptSrc: ["'self'", (_req: Request, res: Response) => `'nonce-${res.locals.cspNonce}'`],
-          styleSrc: ["'self'", (_req: Request, res: Response) => `'nonce-${res.locals.cspNonce}'`],
-          fontSrc: ["'self'"],
+          scriptSrc: ["'self'", 'embed.smartsurvey.io', (_req: Request, res: Response) => `'nonce-${res.locals.cspNonce}'`],
+          // 'unsafe-inline' for SmartSurvey popup which injects inline styles dynamically.
+          // No style nonce is used in templates so this does not weaken our script nonce policy.
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          imgSrc: ["'self'", 'data:', 'embed.smartsurvey.io'],
+          connectSrc: ["'self'", 'https://www.smartsurvey.co.uk'],
+          frameSrc: ['https://www.smartsurvey.co.uk'],
           formAction: [`'self' ${config.oneLogin.issuerUrl}`],
           ...(config.production ? {} : { upgradeInsecureRequests: null }),
         },
       },
-      crossOriginEmbedderPolicy: true,
+      crossOriginEmbedderPolicy: false,
     }),
   )
   return router

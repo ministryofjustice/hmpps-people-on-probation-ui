@@ -38,6 +38,10 @@ export default function createApp(services: Services): express.Application {
 
   app.use(routes(services))
 
+  app.get('/cookies', (_req, res) => {
+    res.render('pages/cookies')
+  })
+
   app.get('/autherror', (_req, res) => {
     res.status(403)
     res.render('pages/auth-error')
