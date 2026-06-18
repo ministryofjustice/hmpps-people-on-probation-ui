@@ -86,7 +86,7 @@ All variables are configured in `.env` (copy from `.env.example`). The key ones 
 | `REDIS_ENABLED` | Enable Redis for session storage | `false` |
 | `REDIS_HOST` | Redis host | `localhost` |
 | `AUDIT_ENABLED` | Enable sending HMPPS audit events | `false` |
-| `FEEDBACK_BANNER_ENABLED` | Show the feedback phase banner | `false` |
+| `FEEDBACK_BANNER_ENABLED` | Show the feedback phase banner and inject the SmartSurvey popup script | `false` |
 | `AUDIT_SQS_REGION` | AWS region for the HMPPS audit SQS queue | `eu-west-2` |
 | `AUDIT_SQS_QUEUE_URL` | HMPPS audit SQS queue URL | `http://localhost:4566/000000000000/mainQueue` |
 | `AUDIT_SERVICE_NAME` | Service name included in HMPPS audit messages | `hmpps-probation-accounts` |

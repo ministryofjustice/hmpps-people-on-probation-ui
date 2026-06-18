@@ -42,6 +42,10 @@ export default function createApp(services: Services): express.Application {
     res.render('pages/cookies')
   })
 
+  app.get('/privacy', (_req, res) => {
+    res.render('pages/privacy')
+  })
+
   app.get('/autherror', (_req, res) => {
     res.status(403)
     res.render('pages/auth-error')
