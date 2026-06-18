@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block beforeContent %}
-  {% if user %}
+  {% if user and feedbackBanner.enabled %}
     {{ govukPhaseBanner({
       tag: {
         text: "Prototype",
@@ -28,6 +28,9 @@
 {% block bodyStart %}{% endblock %}
 
 {% block bodyEnd %}
+  {% if user and feedbackBanner.enabled %}
+    <script id="ss-popup-1822134" nonce="{{ cspNonce }}">(function (d, w){var s,ss;ss=d.createElement("script");ss.type="text/javascript";ss.async=true;ss.type="module";ss.src="https://embed.smartsurvey.io/index.js?popupCode=IHBFUW";s=d.getElementsByTagName("script")[0];s.parentNode.insertBefore(ss, s);})(document, window);</script>
+  {% endif %}
   {% if user and sessionTimeoutWarning %}
     <div
       class="pop-timeout-warning"

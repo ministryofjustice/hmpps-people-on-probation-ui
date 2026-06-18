@@ -14,6 +14,7 @@ generic-service:
     ONE_LOGIN_REDIRECT_URI: "https://probation-account.hmpps.service.justice.gov.uk/sign-in/callback"
     ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: "https://probation-account.hmpps.service.justice.gov.uk"
     AUDIT_ENABLED: "true"
+    FEEDBACK_BANNER_ENABLED: "true"
     POP_CHATBOT_API_URL: "https://probationchatbot-production.up.railway.app/chatbot/chat-embed"
 
 generic-prometheus-alerts:

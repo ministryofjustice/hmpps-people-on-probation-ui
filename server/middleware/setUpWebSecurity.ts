@@ -6,6 +6,8 @@ import config from '../config'
 export default function setUpWebSecurity(): Router {
   const router = express.Router()
 
+  const { feedbackBanner } = config
+
   // Secure code best practice - see:
   // 1. https://expressjs.com/en/advanced/best-practice-security.html,
   // 2. https://www.npmjs.com/package/helmet
@@ -24,14 +26,25 @@ export default function setUpWebSecurity(): Router {
           // <link href="http://example.com/" rel="stylesheet" nonce="{{ cspNonce }}">
           // This ensures only scripts we trust are loaded, and not anything injected into the
           // page by an attacker.
-          scriptSrc: ["'self'", (_req: Request, res: Response) => `'nonce-${res.locals.cspNonce}'`],
-          styleSrc: ["'self'", (_req: Request, res: Response) => `'nonce-${res.locals.cspNonce}'`],
-          fontSrc: ["'self'"],
+          scriptSrc: [
+            "'self'",
+            ...(feedbackBanner.enabled ? ['https://embed.smartsurvey.io'] : []),
+            (_req: Request, res: Response) => `'nonce-${res.locals.cspNonce}'`,
+          ],
+          // 'unsafe-inline' is only needed for SmartSurvey popup which injects inline styles dynamically.
+          styleSrc: ["'self'", ...(feedbackBanner.enabled ? ["'unsafe-inline'"] : []), 'https://fonts.googleapis.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          imgSrc: ["'self'", 'data:', ...(feedbackBanner.enabled ? ['https://embed.smartsurvey.io'] : [])],
+          connectSrc: ["'self'", ...(feedbackBanner.enabled ? ['https://www.smartsurvey.co.uk'] : [])],
+          ...(feedbackBanner.enabled ? { frameSrc: ['https://www.smartsurvey.co.uk'] } : {}),
           formAction: [`'self' ${config.oneLogin.issuerUrl}`],
           ...(config.production ? {} : { upgradeInsecureRequests: null }),
         },
       },
-      crossOriginEmbedderPolicy: true,
+      // COEP must be disabled when SmartSurvey is enabled because SmartSurvey resources
+      // don't send Cross-Origin-Resource-Policy headers. When the banner is off, the
+      // stricter helmet default (require-corp) is restored.
+      crossOriginEmbedderPolicy: feedbackBanner.enabled ? false : undefined,
     }),
   )
   return router

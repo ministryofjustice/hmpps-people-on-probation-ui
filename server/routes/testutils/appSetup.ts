@@ -34,6 +34,22 @@ function appSetup(services: Services, production: boolean): Express {
   app.use(express.json())
   app.use(express.urlencoded({ extended: true }))
   app.use(routes(services))
+
+  app.get('/cookies', (_req, res) => res.render('pages/cookies'))
+  app.get('/privacy', (_req, res) => res.render('pages/privacy'))
+  app.get('/autherror', (_req, res) => {
+    res.status(403)
+    res.render('pages/auth-error')
+  })
+  app.get('/invite-expired', (_req, res) => {
+    res.status(410)
+    res.render('pages/invite-expired')
+  })
+  app.get('/sign-in-error', (_req, res) => {
+    res.status(500)
+    res.render('pages/sign-in-error')
+  })
+
   app.use((req, res, next) => next(new NotFound()))
   app.use(errorHandler(production))
 
