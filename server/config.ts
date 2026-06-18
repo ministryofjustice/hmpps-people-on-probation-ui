@@ -113,4 +113,7 @@ export default {
   },
   ingressUrl: get('INGRESS_URL', 'http://localhost:3000', requiredInProduction),
   environmentName: get('ENVIRONMENT_NAME', ''),
+  feedbackBanner: {
+    enabled: get('FEEDBACK_BANNER_ENABLED', 'false') === 'true',
+  },
 }
