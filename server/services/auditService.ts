@@ -33,12 +33,20 @@ export interface PageViewEventDetails {
 
 export default class AuditService {
   async logAuditEvent(event: AuditEvent) {
-    await hmppsAuditService.sendAuditMessage({
-      ...event,
-      service: config.sqs.audit.serviceName,
-      details: event.details ? JSON.stringify(event.details) : undefined,
-      logErrors: false,
-    })
+    try {
+      await hmppsAuditService.sendAuditMessage({
+        ...event,
+        service: config.sqs.audit.serviceName,
+        details: event.details ? JSON.stringify(event.details) : undefined,
+        logErrors: false,
+      })
+    } catch (cause) {
+      const message =
+        cause instanceof Error && cause.message
+          ? cause.message
+          : JSON.stringify(cause, Object.getOwnPropertyNames(cause))
+      throw new Error(`Audit SQS send failed for action '${event.action}': ${message}`, { cause })
+    }
   }
 
   async logPageView(page: Page, eventDetails: PageViewEventDetails) {
