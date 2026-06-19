@@ -218,6 +218,11 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
         clearTimers()
         showWarning()
       }
+    } else if (!warningIsShowing) {
+      // The warning timer may have been throttled while the tab was hidden.
+      // Reschedule it with the correct remaining delay based on wall-clock time.
+      if (warningTimer) window.clearTimeout(warningTimer)
+      warningTimer = window.setTimeout(showWarning, warningShowsAt - now)
     }
   })
 
