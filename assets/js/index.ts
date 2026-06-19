@@ -122,7 +122,7 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
 
   let warningTimer: number | undefined
   let countdownTimer: number | undefined
-  let remainingSeconds = countdownSecondsValue
+  let sessionExpiresAt = 0
   let lastFocusedElement: HTMLElement | null = null
 
   const formatRemainingTime = (seconds: number) => {
@@ -140,11 +140,6 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
 
   const redirectToTimeoutPage = () => {
     window.location.assign(timeoutUrl)
-  }
-
-  const startWarningTimer = () => {
-    clearTimers()
-    warningTimer = window.setTimeout(showWarning, warningAfterSecondsValue * 1000)
   }
 
   const getFocusableElements = () => Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'))
@@ -176,22 +171,55 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
 
   function showWarning() {
     lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    remainingSeconds = countdownSecondsValue
-    countdown!.textContent = formatRemainingTime(remainingSeconds)
+    const remaining = Math.max(0, Math.ceil((sessionExpiresAt - Date.now()) / 1000))
+    countdown!.textContent = formatRemainingTime(remaining)
     timeoutWarning.removeAttribute('hidden')
     dialog!.focus()
     document.addEventListener('keydown', trapFocus)
 
     countdownTimer = window.setInterval(() => {
-      remainingSeconds -= 1
-      countdown!.textContent = formatRemainingTime(Math.max(remainingSeconds, 0))
+      const secs = Math.max(0, Math.ceil((sessionExpiresAt - Date.now()) / 1000))
+      countdown!.textContent = formatRemainingTime(secs)
 
-      if (remainingSeconds <= 0) {
+      if (secs <= 0) {
         clearTimers()
         redirectToTimeoutPage()
       }
     }, 1000)
   }
+
+  const startWarningTimer = () => {
+    clearTimers()
+    sessionExpiresAt = Date.now() + (warningAfterSecondsValue + countdownSecondsValue) * 1000
+    warningTimer = window.setTimeout(showWarning, warningAfterSecondsValue * 1000)
+  }
+
+  // When returning to the tab after being away, browsers may have frozen the timers.
+  // Re-check time against the absolute expiry to catch up correctly.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return
+
+    const now = Date.now()
+
+    if (now >= sessionExpiresAt) {
+      clearTimers()
+      redirectToTimeoutPage()
+      return
+    }
+
+    const warningShowsAt = sessionExpiresAt - countdownSecondsValue * 1000
+    const warningIsShowing = !timeoutWarning.hasAttribute('hidden')
+
+    if (now >= warningShowsAt) {
+      if (warningIsShowing) {
+        // Interval may have been throttled — update countdown immediately
+        countdown!.textContent = formatRemainingTime(Math.ceil((sessionExpiresAt - now) / 1000))
+      } else {
+        clearTimers()
+        showWarning()
+      }
+    }
+  })
 
   staySignedInButton.addEventListener('click', async () => {
     staySignedInButton.disabled = true
