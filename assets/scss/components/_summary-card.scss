@@ -2,6 +2,11 @@
   border: 1px solid $govuk-border-colour;
   margin-bottom: govuk-spacing(6);
 
+  @include govuk-media-query($until: tablet) {
+    margin-top: govuk-spacing(6) !important;
+    margin-bottom: govuk-spacing(6) !important;
+  }
+
   &__header {
     background-color: govuk-colour('light-grey');
     padding: govuk-spacing(4);
@@ -58,6 +63,7 @@
   &__key {
     @include govuk-font($size: 19, $weight: bold);
     flex: 1 0 0;
+    min-width: 0;
     padding: govuk-spacing(2) govuk-spacing(4) govuk-spacing(2) 0;
     margin: 0;
   }
@@ -65,9 +71,17 @@
   &__value {
     @include govuk-font($size: 19);
     flex: 1 0 0;
+    min-width: 0;
     padding: govuk-spacing(2) 0;
     margin: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
+}
+
+.pop-requirements__section-heading {
+  margin-top: govuk-spacing(6);
+  margin-bottom: govuk-spacing(6);
 }
 
 // Black tag variant for Mandatory appointments

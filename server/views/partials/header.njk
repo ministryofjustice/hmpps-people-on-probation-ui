@@ -7,19 +7,38 @@
   {{ govukServiceNavigation({
     serviceName: "Check your probation account",
     serviceUrl: "/",
-    collapseNavigationOnMobile: false,
+    collapseNavigationOnMobile: true,
     navigation: [
+      {
+        href: "/",
+        text: "Home",
+        active: currentPage === "home"
+      },
+      {
+        href: "/appointments",
+        text: "Appointments and activities",
+        active: currentPage === "appointments"
+      },
+      {
+        href: "/goals",
+        text: "Goals",
+        active: currentPage === "goals"
+      },
+      {
+        href: "/requirements",
+        text: "Order requirements",
+        active: currentPage === "requirements"
+      },
       {
         href: "/sign-out",
         text: "Sign out",
-        active: true
+        active: false
       }
     ]
   }) }}
 {% else %}
   {{ govukServiceNavigation({
-    serviceName: "Manage your probation",
-    serviceUrl: "/",
-    collapseNavigationOnMobile: false
+    serviceName: "Check your probation account",
+    serviceUrl: "/"
   }) }}
 {% endif %}

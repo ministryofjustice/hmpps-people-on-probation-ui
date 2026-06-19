@@ -85,6 +85,11 @@ All variables are configured in `.env` (copy from `.env.example`). The key ones 
 | `SESSION_SECRET` | Secret used to sign session cookies | — |
 | `REDIS_ENABLED` | Enable Redis for session storage | `false` |
 | `REDIS_HOST` | Redis host | `localhost` |
+| `AUDIT_ENABLED` | Enable sending HMPPS audit events | `false` |
+| `FEEDBACK_BANNER_ENABLED` | Show the feedback phase banner and inject the SmartSurvey popup script | `false` |
+| `AUDIT_SQS_REGION` | AWS region for the HMPPS audit SQS queue | `eu-west-2` |
+| `AUDIT_SQS_QUEUE_URL` | HMPPS audit SQS queue URL | `http://localhost:4566/000000000000/mainQueue` |
+| `AUDIT_SERVICE_NAME` | Service name included in HMPPS audit messages | `hmpps-probation-accounts` |
 
 ### Local authentication bypass
 
@@ -98,6 +103,23 @@ LOCAL_AUTH_DISPLAY_NAME=Local User
 ```
 
 Then visit [http://localhost:3000/local/sign-in](http://localhost:3000/local/sign-in) to create a session directly, bypassing the One Login flow. The app still calls the People on Probation API using `LOCAL_AUTH_ONE_LOGIN_SUBJECT` to look up the registered user.
+
+### HMPPS audit events
+
+The app uses [`@ministryofjustice/hmpps-audit-client`](https://www.npmjs.com/package/@ministryofjustice/hmpps-audit-client) to send audit messages to the HMPPS audit SQS queue when `AUDIT_ENABLED=true`.
+
+Authentication audit events are emitted once GOV.UK One Login has identified the user, so audit messages always include a meaningful `who` value.
+
+| Action | When it is sent | Subject |
+|---|---|---|
+| `USER_REGISTRATION_ATTEMPTED` | One Login has identified a user on an invite registration journey | One Login subject |
+| `USER_REGISTERED` | Registration completed successfully and an app session was created | CRN |
+| `USER_REGISTRATION_FAILED` | One Login identified the user, but completing registration failed | One Login subject |
+| `USER_SIGN_IN_ATTEMPTED` | One Login has identified a returning user on a sign-in journey | One Login subject |
+| `USER_SIGNED_IN` | Sign-in completed successfully and an app session was created | CRN |
+| `USER_SIGN_IN_FAILED` | One Login identified the user, but looking up the registered user failed | One Login subject |
+
+Pre-identity failures, such as a missing One Login transaction cookie or state mismatch, are logged by the app but are not sent as audit events because the service cannot reliably identify `who` performed the action.
 
 ## Application pages
 

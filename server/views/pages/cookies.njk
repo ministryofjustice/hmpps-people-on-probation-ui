@@ -1,0 +1,62 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% set pageTitle = "Cookies policy" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+
+      <h1 class="govuk-heading-l">Cookies policy for Check your probation account</h1>
+
+      <p class="govuk-body">Last reviewed: 16 June 2026</p>
+
+      <p class="govuk-body">The Check your probation account service stores small pieces of data (known as 'cookies') on your computer.</p>
+
+      <p class="govuk-body">Cookies are used to:</p>
+
+      <ul class="govuk-list govuk-list--bullet">
+        <li>operate the service</li>
+        <li>keep you logged in</li>
+        <li>collect information about how you use your probation account. This is so we can update and improve the service in future.</li>
+      </ul>
+
+      <p class="govuk-body">Third-party cookies are not used to identify you personally.</p>
+
+      <h2 class="govuk-heading-m">Session cookies</h2>
+
+      <p class="govuk-body">The service may store a cookie when you log in. These are classed as essential cookies. This means they are needed to provide this service, where they are used to transmit, carry out or facilitate the transmission of communications over a network.</p>
+
+      <p class="govuk-body">The service uses the following cookies:</p>
+
+      {{ govukTable({
+        captionClasses: "govuk-table__caption--s",
+        firstCellIsHeader: false,
+        head: [
+          { text: "Type of cookie" },
+          { text: "What it is used for" },
+          { text: "Expires" }
+        ],
+        rows: [
+          [
+            { text: "hmpps-people-on-probation-ui.app-session" },
+            { text: "This is used to manage your authentication and keep you securely signed in. It is essential for the service to work." },
+            { text: "When you sign out or after " + sessionExpiryMinutes + " minutes of inactivity" }
+          ],
+          [
+            { text: "hmpps-people-on-probation-ui.session" },
+            { text: "This is used to protect forms on the service from cross-site request forgery (CSRF) attacks. It is a security cookie that helps keep your data safe while using the service." },
+            { text: "When you sign out or after " + sessionExpiryMinutes + " minutes of inactivity" }
+          ]
+        ]
+      }) }}
+
+      <h2 class="govuk-heading-m">Analytics cookies</h2>
+
+      <p class="govuk-body">Probation account does not use any analytics, tracking or marketing cookies.</p>
+
+      <p class="govuk-body">For more information about how your data is used, check the <a class="govuk-link" href="/privacy">privacy policy</a>.</p>
+
+    </div>
+  </div>
+{% endblock %}

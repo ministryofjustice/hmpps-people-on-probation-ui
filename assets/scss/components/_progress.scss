@@ -1,56 +1,91 @@
 .pop-progress {
-  &__bar-row {
+  &__row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: govuk-spacing(3);
-  }
-
-  &__bar-wrapper {
-    flex: 1;
-    height: 15px;
-    background-color: #d9d9d9;
   }
 
   &__title {
     @include govuk-font($size: 19, $weight: bold);
     margin-bottom: govuk-spacing(2);
   }
+  
+  &__bar-area {
+    position: relative;
+    flex: 1;
+    height: 55px;
+  }
 
-  &__bar {
-    display: block;
-    width: 100%;
-    height: 100%;
-    appearance: none;
-    border: 0;
-    background-color: transparent;
+  &__track {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 8px;
+    height: 15px;
+    background-color: #d9d9d9;
+  }
 
-    &::-webkit-progress-bar {
-      background-color: transparent;
-    }
+  &__fill {
+    position: absolute;
+    left: 0;
+    top: 8px;
+    height: 15px;
+    width: var(--pop-progress-pct, 0%);
+    background-color: govuk-colour('blue');
+  }
 
-    &::-webkit-progress-value {
-      background-color: govuk-colour('black');
-    }
+  &__marker {
+    position: absolute;
+    top: 0;
+    left: max(15px, var(--pop-progress-pct, 0%));
+    transform: translateX(-50%);
+    line-height: 0;
+  }
 
-    &::-moz-progress-bar {
-      background-color: govuk-colour('black');
-    }
-
-    &--blue {
-      &::-webkit-progress-value {
-        background-color: govuk-colour('blue');
-      }
-
-      &::-moz-progress-bar {
-        background-color: govuk-colour('blue');
-      }
-    }
+  &__completed {
+    @include govuk-font($size: 16);
+    position: absolute;
+    top: 36px;
+    left: clamp(4.5rem, var(--pop-progress-pct, 0%), calc(100% - 4.5rem));
+    transform: translateX(-50%);
+    margin: 0;
+    white-space: nowrap;
   }
 
   &__remaining {
+    @include govuk-font($size: 16);
     flex-shrink: 0;
-    white-space: nowrap;
-    margin-bottom: 0;
+    margin: 0;
+    padding-top: 5px;
     text-align: right;
+    white-space: nowrap;
+  }
+
+  @include govuk-media-query($until: tablet) {
+    &__row {
+      display: block;
+    }
+
+    &__bar-area {
+      width: 100%;
+      height: 65px;
+    }
+
+    &__completed {
+      left: 0;
+      right: 0;
+      top: 44px;
+      transform: none;
+      text-align: center;
+      white-space: normal;
+      width: auto;
+    }
+
+    &__remaining {
+      display: block;
+      text-align: center;
+      white-space: normal;
+      padding-top: govuk-spacing(2);
+    }
   }
 }

@@ -1,0 +1,77 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% set pageTitle = "Agreement between you and the Probation Service" %}
+{% set currentPage = "expectations" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Home", href: "/" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-xl">Agreement between you and the Probation Service</h1>
+
+  <nav class="moj-sub-navigation govuk-!-margin-bottom-6" aria-label="Expectation tabs">
+    <ul class="moj-sub-navigation__list">
+      <li class="moj-sub-navigation__item">
+        <a class="moj-sub-navigation__link{% if tab === 'probation-service' %} moj-sub-navigation__link--active{% endif %}"
+           href="/expectations?tab=probation-service"
+           {% if tab === 'probation-service' %}aria-current="page"{% endif %}>
+          What to expect from the Probation Service
+        </a>
+      </li>
+      <li class="moj-sub-navigation__item">
+        <a class="moj-sub-navigation__link{% if tab === 'you' %} moj-sub-navigation__link--active{% endif %}"
+           href="/expectations?tab=you"
+           {% if tab === 'you' %}aria-current="page"{% endif %}>
+          Expectations of you on probation
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <div id="panel-probation-service" {% if tab !== 'probation-service' %}hidden{% endif %}>
+
+    <p class="govuk-body">This agreement explains what to expect from Probation and what we expect from you.</p>
+    <p class="govuk-body">You should also make sure you understand what your Court Order or Licence says.</p>
+
+    <p class="govuk-body">The Probation Service will:</p>
+
+    <ul class="govuk-list govuk-list--bullet govuk-list--spaced">
+      <li>Treat you fairly and with respect. We will listen to your concerns and circumstances.</li>
+      <li>Work with you to make a Sentence Plan. This will set goals to help you to avoid further offending, to make or to keep positive changes in your life. It will show who you will work with and when. We will review it with you as things change.</li>
+      <li>Work together to reduce risk and re-offending. We will respond to your needs.</li>
+      <li>Keep accurate records about you to help us make decisions. These will be kept safely.</li>
+      <li>We will only share your information without prior discussion if there is a legal obligation, such as keeping you or others safe or preventing crime.</li>
+      <li>Be on time for your appointments. If we are late, we will tell you why.</li>
+      <li>Take action if you do not follow your sentence. Missing appointments without a good reason may mean going back to Court or (if you are on licence) recall to prison.</li>
+    </ul>
+
+    <p class="govuk-body">We will tell you if you need to attend appointments with other agencies, or if you can stop attending face-to-face appointments after you have completed a part of your sentence.</p>
+
+  </div>
+
+  <div id="panel-you" {% if tab !== 'you' %}hidden{% endif %}>
+
+    <p class="govuk-body">This agreement explains what to expect from Probation and what we expect from you.</p>
+    <p class="govuk-body">You should also make sure you understand what your Court Order or Licence says.</p>
+
+    <p class="govuk-body">What we expect from you:</p>
+
+    <ul class="govuk-list govuk-list--bullet govuk-list--spaced">
+      <li>Work with us to avoid further offending. Engage with your sentence plan and discuss areas of your life which can help you to avoid further offending.</li>
+      <li>When contacting probation staff and attending appointments treat staff and others fairly and with respect. This includes: no threats, violence or intimidation; not take or attempt to make photos or recordings; not coming under the influence of alcohol or drugs.</li>
+      <li>Tell us straight away if your contact details change so we can always contact you.</li>
+      <li>Ask before changing address. Wait for approval before moving.</li>
+      <li>If you become homeless, keep in touch as instructed.</li>
+      <li>Allow staff to visit your home to support the delivery of your sentence and/or for public protection reasons. You can discuss any concerns you may have about this with us.</li>
+      <li>Allow Probation staff to contact you by telephone for important updates.</li>
+      <li>Be on time for appointments. Notify us as far in advance as possible if you know you will be unable to attend. Provide evidence of why you cannot attend before an appointment or, if you are unable to, within 5 working days of the absence.</li>
+      <li>If you are unable to provide medical evidence for a health-related absence a self-certificate will cover a period of 7 days; no more than two of these will be accepted in any 12-month period. We may ask for your consent to discuss with your GP.</li>
+      <li>For an absence due to employment, written proof will be expected (within 5 working days). You may need to attend late appointments if your work hours require it.</li>
+    </ul>
+
+  </div>
+
+{% endblock %}

@@ -38,6 +38,10 @@ export default class PeopleOnProbationService {
   getCurrentRegisteredUser(request: CurrentRegisteredUserRequest) {
     return this.peopleOnProbationApiClient.getCurrentRegisteredUser(request)
   }
+
+  getSentencePlan(crn: string) {
+    return this.peopleOnProbationApiClient.getSentencePlan(crn)
+  }
 }
 
 let peopleOnProbationService: PeopleOnProbationService | null = null

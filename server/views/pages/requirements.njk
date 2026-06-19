@@ -1,86 +1,126 @@
 {% extends "../partials/layout.njk" %}
-{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "../macros/showDetails.njk" import showDetails %}
-{% set pageTitle = "Requirements" %}
-{% set currentPage = "requirements" %}
+{% from "partials/progress-bar.njk" import progressBar %}
 
-{% block breadcrumb %}
-  {{ govukBackLink({ text: "Home", href: "/" }) }}
-{% endblock %}
+{% set pageTitle = "Order requirements" %}
+{% set currentPage = "requirements" %}
 
 {% block content %}
 
-  <h1 class="govuk-heading-l">Requirements</h1>
+  <h1 class="govuk-heading-xl">Order requirements</h1>
 
-  {% if lastUpdatedAt %}
-    <p class="govuk-body govuk-secondary-text-colour">Last updated on {{ lastUpdatedAt }}</p>
-  {% endif %}
+  <p class="govuk-body">
+    Make sure you follow the requirements included in your order. If you don’t, you could breach your probation, and go back to prison. 
+  </p>
+  <p class="govuk-body">
+    You may also want to know about <a class="govuk-link govuk-link--no-visited-state" href="/expectations">expectations of you and the probation service</a>.
+  </p>
 
-  {% include "../partials/mini-hub.njk" %}
+  {% if overallOrder %}
+    <h2 class="govuk-heading-l">Overall order</h2>
 
-  <div class="govuk-!-margin-top-6">
+    <div class="pop-progress__row govuk-!-margin-bottom-4">
+      {{ progressBar({
+        percentComplete: overallOrder.percentComplete,
+        completedDuration: overallOrder.completedDuration,
+        remainingDuration: overallOrder.remainingDuration
+      }) }}
+    </div>
 
-    <p class="govuk-body">
-      Make sure you follow the requirements from your order. If you don't, you could breach your probation, and go back to prison.
-    </p>
-    <p class="govuk-body">
-      You may also want to know about your <a class="govuk-link govuk-link--no-visited-state" href="/expectations">expectations while on probation</a>.
-    </p>
-
-    <div class="pop-summary-card govuk-!-margin-bottom-6">
+    <div class="pop-summary-card govuk-!-margin-bottom-9">
       <div class="pop-summary-card__header">
         <span class="pop-summary-card__type">Order details</span>
       </div>
       <dl class="pop-summary-card__details">
-        <div class="pop-summary-card__row">
-          <dt class="pop-summary-card__key">Charge</dt>
-          <dd class="pop-summary-card__value">
-            {% if orderDetails.charge %}
-              {{ showDetails({ id: "charge-detail", text: orderDetails.charge }) }}
-            {% endif %}
-          </dd>
-        </div>
-        {% if orderDetails.type %}
+        {% if overallOrder.charge %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Charge</dt>
+            <dd class="pop-summary-card__value">
+              {{ showDetails({ id: "charge-detail", text: overallOrder.charge }) }}
+            </dd>
+          </div>
+        {% endif %}
+        {% if overallOrder.type %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">Order type</dt>
-            <dd class="pop-summary-card__value">{{ orderDetails.type }}</dd>
+            <dd class="pop-summary-card__value">{{ overallOrder.type }}</dd>
           </div>
         {% endif %}
-        {% if orderDetails.startDate %}
+        {% if overallOrder.startDate %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">Start date</dt>
-            <dd class="pop-summary-card__value">{{ orderDetails.startDate }}</dd>
+            <dd class="pop-summary-card__value">{{ overallOrder.startDate }}</dd>
           </div>
         {% endif %}
-        {% if orderDetails.endDate %}
+        {% if overallOrder.endDate %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">End date</dt>
-            <dd class="pop-summary-card__value">{{ orderDetails.endDate }}</dd>
+            <dd class="pop-summary-card__value">{{ overallOrder.endDate }}</dd>
+          </div>
+        {% endif %}
+        {% if overallOrder.totalLength %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Total length of time</dt>
+            <dd class="pop-summary-card__value">{{ overallOrder.totalLength }}</dd>
           </div>
         {% endif %}
       </dl>
     </div>
+  {% endif %}
 
-    {% if requirements.length %}
-      <div class="pop-summary-card">
+  {% if requirements.length %}
+    <h2 class="govuk-heading-m pop-requirements__section-heading">What is included in your order requirements</h2>
+
+    {% for requirement in requirements %}
+      <div class="govuk-!-margin-bottom-2">
+        <h3 class="govuk-heading-s">{{ requirement.label }}</h3>
+        <p class="pop-progress__title">{{ requirement.label }} progress</p>
+        <div class="pop-progress__row govuk-!-margin-bottom-4">
+          {{ progressBar({
+            percentComplete: requirement.percentComplete,
+            completedDuration: requirement.completedDuration,
+            remainingDuration: (requirement.remaining ~ " " ~ requirement.unitLabel) if requirement.remaining is defined else requirement.remainingDuration
+          }) }}
+        </div>
+      </div>
+
+      <div class="pop-summary-card govuk-!-margin-bottom-6">
         <div class="pop-summary-card__header">
-          <span class="pop-summary-card__type">Requirements</span>
-          <div class="pop-summary-card__actions">
-            <a class="govuk-link govuk-link--no-visited-state" href="/progress">View progress</a>
-          </div>
+          <span class="pop-summary-card__type">{{ requirement.label }} details</span>
         </div>
         <dl class="pop-summary-card__details">
-          {% for requirement in requirements %}
+          {% if requirement.required %}
             <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">{{ requirement.type }}</dt>
-              <dd class="pop-summary-card__value">{{ requirement.value }}</dd>
+              <dt class="pop-summary-card__key">Total {{ requirement.unitLabel }} on order</dt>
+              <dd class="pop-summary-card__value">{{ requirement.required }} {{ requirement.unitLabel }}</dd>
             </div>
-          {% endfor %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">{{ requirement.unitLabel | capitalize }} completed</dt>
+              <dd class="pop-summary-card__value">{{ requirement.completed }} {{ requirement.unitLabel }}</dd>
+            </div>
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">{{ requirement.unitLabel | capitalize }} remaining</dt>
+              <dd class="pop-summary-card__value">{{ requirement.remaining }} {{ requirement.unitLabel }}</dd>
+            </div>
+          {% elif requirement.startDate %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Start date and time</dt>
+              <dd class="pop-summary-card__value">{{ requirement.startDate }}</dd>
+            </div>
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">End date and time</dt>
+              <dd class="pop-summary-card__value">{{ requirement.endDate }}</dd>
+            </div>
+            {% if requirement.totalLength %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Total length of time</dt>
+                <dd class="pop-summary-card__value">{{ requirement.totalLength }}</dd>
+              </div>
+            {% endif %}
+          {% endif %}
         </dl>
       </div>
-    {% endif %}
-
-  </div>
+    {% endfor %}
+  {% endif %}
 
 {% endblock %}
-

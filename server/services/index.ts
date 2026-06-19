@@ -1,13 +1,14 @@
 import { dataAccess } from '../data'
 import AuditService from './auditService'
 import { getPeopleOnProbationService } from './peopleOnProbationService'
+import config from '../config'
 
 export const services = () => {
-  const { applicationInfo, hmppsAuditClient } = dataAccess()
+  const { applicationInfo } = dataAccess()
 
   return {
     applicationInfo,
-    auditService: new AuditService(hmppsAuditClient),
+    auditService: config.sqs.audit.enabled ? new AuditService() : undefined,
     peopleOnProbationService: getPeopleOnProbationService(),
   }
 }

@@ -1,6 +1,14 @@
 .govuk-main-wrapper {
   min-height: 600px;
-  padding-top: govuk-spacing(3);
+  padding-top: govuk-spacing(6);
+
+  @include govuk-media-query($until: tablet) {
+    padding-top: govuk-spacing(4);
+  }
+}
+
+.govuk-heading-xl {
+  margin-bottom: 35px;
 }
 
 // Restore standard link colour inside error alerts (moj-alert--error forces red on all links)
@@ -29,6 +37,10 @@
 // Back link: 60px from phase banner above (GOV.UK default margin-bottom 30px is kept)
 .govuk-back-link {
   margin-top: govuk-spacing(9);
+
+  @include govuk-media-query($until: tablet) {
+    margin-top: 24px;
+  }
 }
 
 // Show details toggle

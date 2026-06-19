@@ -35,3 +35,10 @@
     flex: 1;
   }
 }
+
+@include govuk-media-query($until: tablet) {
+  .pop-card-row [class*="govuk-grid-column"] {
+    margin-top: govuk-spacing(6);
+    margin-bottom: govuk-spacing(6);
+  }
+}

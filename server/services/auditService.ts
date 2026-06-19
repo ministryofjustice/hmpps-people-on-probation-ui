@@ -1,7 +1,26 @@
-import HmppsAuditClient, { AuditEvent } from '../data/hmppsAuditClient'
+import { auditService as hmppsAuditService } from '@ministryofjustice/hmpps-audit-client'
+import config from '../config'
 
 export enum Page {
   EXAMPLE_PAGE = 'EXAMPLE_PAGE',
+}
+
+export enum AuditAction {
+  USER_REGISTERED = 'USER_REGISTERED',
+  USER_SIGNED_IN = 'USER_SIGNED_IN',
+  USER_REGISTRATION_ATTEMPTED = 'USER_REGISTRATION_ATTEMPTED',
+  USER_REGISTRATION_FAILED = 'USER_REGISTRATION_FAILED',
+  USER_SIGN_IN_ATTEMPTED = 'USER_SIGN_IN_ATTEMPTED',
+  USER_SIGN_IN_FAILED = 'USER_SIGN_IN_FAILED',
+}
+
+export interface AuditEvent {
+  action: string
+  who: string
+  subjectId?: string
+  subjectType?: string
+  correlationId?: string
+  details?: object
 }
 
 export interface PageViewEventDetails {
@@ -13,17 +32,72 @@ export interface PageViewEventDetails {
 }
 
 export default class AuditService {
-  constructor(private readonly hmppsAuditClient: HmppsAuditClient) {}
-
   async logAuditEvent(event: AuditEvent) {
-    await this.hmppsAuditClient.sendMessage(event)
+    try {
+      await hmppsAuditService.sendAuditMessage({
+        ...event,
+        service: config.sqs.audit.serviceName,
+        details: event.details ? JSON.stringify(event.details) : undefined,
+        logErrors: false,
+      })
+    } catch (cause) {
+      const message =
+        cause instanceof Error && cause.message
+          ? cause.message
+          : JSON.stringify(cause, Object.getOwnPropertyNames(cause))
+      throw new Error(`Audit SQS send failed for action '${event.action}': ${message}`, { cause })
+    }
   }
 
   async logPageView(page: Page, eventDetails: PageViewEventDetails) {
     const event: AuditEvent = {
       ...eventDetails,
-      what: `PAGE_VIEW_${page}`,
+      action: `PAGE_VIEW_${page}`,
     }
-    await this.hmppsAuditClient.sendMessage(event)
+    await this.logAuditEvent(event)
+  }
+
+  async logUserRegistered(eventDetails: Omit<AuditEvent, 'action' | 'subjectType'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.USER_REGISTERED,
+      subjectType: 'CRN',
+    })
+  }
+
+  async logUserSignedIn(eventDetails: Omit<AuditEvent, 'action' | 'subjectType'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.USER_SIGNED_IN,
+      subjectType: 'CRN',
+    })
+  }
+
+  async logUserRegistrationAttempt(eventDetails: Omit<AuditEvent, 'action'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.USER_REGISTRATION_ATTEMPTED,
+    })
+  }
+
+  async logUserRegistrationFailure(eventDetails: Omit<AuditEvent, 'action'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.USER_REGISTRATION_FAILED,
+    })
+  }
+
+  async logUserSignInAttempt(eventDetails: Omit<AuditEvent, 'action'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.USER_SIGN_IN_ATTEMPTED,
+    })
+  }
+
+  async logUserSignInFailure(eventDetails: Omit<AuditEvent, 'action'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.USER_SIGN_IN_FAILED,
+    })
   }
 }

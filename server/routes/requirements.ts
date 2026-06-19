@@ -1,27 +1,105 @@
 import { Router } from 'express'
 
+import { startOfDay, addDays, differenceInDays, isBefore } from 'date-fns'
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
-import { formatDate, formatDateTime, formatUnit } from '../utils/utils'
+import { formatDate, formatRemainingDuration, formatIntervalDuration, formatUnit, parseLocalDate } from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
 
-type OrderDetailsView = {
+type DateProgressResult = {
+  percentComplete: number
+  completedDuration: string
+  totalLength: string
+  remainingDuration: string
+  startDate: string
+  endDate: string
+}
+
+function calculateDateProgress(startDateStr: string, endDateStr: string): DateProgressResult {
+  const start = parseLocalDate(startDateStr)
+  const end = parseLocalDate(endDateStr)
+  const today = startOfDay(new Date())
+  const totalDays = Math.max(differenceInDays(end, start) + 1, 1)
+  const completedDays = Math.min(Math.max(differenceInDays(today, start), 0), totalDays)
+  const effectiveToday = isBefore(today, end) ? today : addDays(end, 1)
+  return {
+    percentComplete: Math.round((completedDays / totalDays) * 100),
+    completedDuration: formatIntervalDuration(start, effectiveToday),
+    totalLength: formatIntervalDuration(start, addDays(end, 1)),
+    remainingDuration: formatRemainingDuration(endDateStr),
+    startDate: formatDate(startDateStr) ?? startDateStr,
+    endDate: formatDate(endDateStr) ?? endDateStr,
+  }
+}
+
+type OverallOrderView = {
   charge?: string
   type?: string
   startDate?: string
   endDate?: string
+  totalLength?: string
+  completedDuration: string
+  remainingDuration: string
+  percentComplete: number
 }
 
-type RequirementRowView = {
-  type: string
-  value: string
+type RequirementView = {
+  label: string
+  percentComplete: number
+  completedDuration?: string
+  required?: number
+  completed?: number
+  remaining?: number
+  unitLabel?: string
+  startDate?: string
+  endDate?: string
+  totalLength?: string
+  remainingDuration?: string
 }
 
-function toRequirementRowView(req: RequirementResponse): RequirementRowView {
-  const type = req.type || req.description || 'Requirement'
-  const hasAmount = req.required && req.required > 0 && req.unit
-  const value = hasAmount ? `${req.required} ${formatUnit(req.unit, req.required)}` : req.description || ''
-  return { type, value }
+function toRequirementView(requirement: RequirementResponse): RequirementView | null {
+  const label = requirement.type || requirement.description || 'Requirement'
+
+  if (requirement.required && requirement.required > 0) {
+    const completed = Math.min(requirement.completed ?? 0, requirement.required)
+    const remaining = Math.max(requirement.required - completed, 0)
+    const percentComplete = Math.round((completed / requirement.required) * 100)
+    const unitLabel = formatUnit(requirement.unit, remaining)
+    const completedLabel = formatUnit(requirement.unit, completed)
+    return {
+      label,
+      required: requirement.required,
+      completed,
+      remaining,
+      unitLabel,
+      percentComplete,
+      completedDuration: `${completed} ${completedLabel}`,
+    }
+  }
+
+  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
+  const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
+  if (startDate && endDate) {
+    const {
+      percentComplete,
+      completedDuration,
+      totalLength,
+      remainingDuration,
+      startDate: fmtStart,
+      endDate: fmtEnd,
+    } = calculateDateProgress(startDate, endDate)
+    return {
+      label,
+      percentComplete,
+      completedDuration,
+      totalLength,
+      remainingDuration,
+      startDate: fmtStart,
+      endDate: fmtEnd,
+    }
+  }
+
+  return null
 }
 
 export default function requirementsRoutes(services: Services): Router {
@@ -37,20 +115,30 @@ export default function requirementsRoutes(services: Services): Router {
       const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
       const sentence = sentenceProgress.sentences[0]
 
-      const orderDetails: OrderDetailsView = {
-        // TODO Remove dummy charge when the API returns the charge field
-        charge: sentence?.charge ?? 'Dummy charge',
-        type: sentence?.type,
-        startDate: formatDate(sentence?.startDate),
-        endDate: formatDate(sentence?.expectedEndDate),
+      let overallOrder: OverallOrderView | null = null
+      if (sentence?.startDate && sentence?.expectedEndDate) {
+        const { percentComplete, completedDuration, totalLength, remainingDuration, startDate, endDate } =
+          calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
+        overallOrder = {
+          // TODO Remove dummy charge when the API returns the charge field
+          charge: sentence?.charge ?? 'Dummy charge',
+          type: sentence?.type,
+          startDate,
+          endDate,
+          totalLength,
+          completedDuration,
+          remainingDuration,
+          percentComplete,
+        }
       }
 
-      const requirements = (sentence?.requirements ?? []).map(toRequirementRowView)
+      const requirements = (sentence?.requirements ?? [])
+        .map(toRequirementView)
+        .filter((r): r is RequirementView => r !== null)
 
       return res.render('pages/requirements', {
-        orderDetails,
+        overallOrder,
         requirements,
-        lastUpdatedAt: formatDateTime(sentence?.lastUpdatedAt),
       })
     } catch (error) {
       return next(error)
