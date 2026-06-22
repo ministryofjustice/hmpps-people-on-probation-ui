@@ -79,7 +79,6 @@ export interface OffenceResponse {
 
 export interface SentenceResponse {
   type?: string
-  charge?: string
   startDate?: string
   expectedEndDate?: string
   requirements: RequirementResponse[]
