@@ -7,7 +7,7 @@ import {
   formatTimeRange,
   formatAddress,
   formatMapUrl,
-  formatPersonName,
+  formatPractitionerName,
   formatDateTime,
   isMissedMandatoryAppointmentOrActivity,
 } from '../utils/utils'
@@ -152,7 +152,7 @@ export function generateIcs(params: {
 }
 
 function toAppointmentCardView(appointment: AppointmentResponse): AppointmentCardView {
-  const address = formatAddress(appointment.location)
+  const address = appointment.unpaidWork ? [] : formatAddress(appointment.location)
   const pickUpAddress = appointment.unpaidWork ? formatAddress(appointment.unpaidWork.pickUpLocation) : undefined
   const workAddress = appointment.unpaidWork ? formatAddress(appointment.unpaidWork.project?.address) : undefined
   return {
@@ -164,7 +164,7 @@ function toAppointmentCardView(appointment: AppointmentResponse): AppointmentCar
     address,
     mapUrl: formatMapUrl(address),
     calendarUrl: buildCalendarUrl(appointment),
-    practitionerName: formatPersonName(appointment.practitioner?.name),
+    practitionerName: formatPractitionerName(appointment.practitioner?.name),
     attended: appointment.attended,
     outcome: appointment.outcome,
     pickUpAddress,
@@ -224,7 +224,7 @@ export default function appointmentsRoutes(services: Services): Router {
             timeRange: formatTimeRange(missedAppointments[0].startTime, missedAppointments[0].endTime),
             description: missedAppointments[0].description,
             type: missedAppointments[0].type,
-            practitionerName: formatPersonName(missedAppointments[0].practitioner?.name),
+            practitionerName: formatPractitionerName(missedAppointments[0].practitioner?.name),
           }
         : null
 

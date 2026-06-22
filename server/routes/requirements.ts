@@ -120,8 +120,7 @@ export default function requirementsRoutes(services: Services): Router {
         const { percentComplete, completedDuration, totalLength, remainingDuration, startDate, endDate } =
           calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
         overallOrder = {
-          // TODO Remove dummy charge when the API returns the charge field
-          charge: sentence?.charge ?? 'Dummy charge',
+          charge: sentence.mainOffence?.description,
           type: sentence?.type,
           startDate,
           endDate,

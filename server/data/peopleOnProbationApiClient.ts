@@ -72,6 +72,11 @@ export interface LicenceConditionResponse {
   expectedEndDate?: string
 }
 
+export interface OffenceResponse {
+  code?: string
+  description?: string
+}
+
 export interface SentenceResponse {
   type?: string
   charge?: string
@@ -79,6 +84,8 @@ export interface SentenceResponse {
   expectedEndDate?: string
   requirements: RequirementResponse[]
   licenceConditions: LicenceConditionResponse[]
+  mainOffence?: OffenceResponse
+  additionalOffences?: OffenceResponse[]
   lastUpdatedAt?: string
 }
 
