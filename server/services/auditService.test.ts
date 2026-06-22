@@ -38,7 +38,7 @@ describe('Audit service', () => {
         correlationId: 'request123',
         service: 'hmpps-probation-accounts',
         details: JSON.stringify({ extraDetails: 'example' }),
-        logErrors: false,
+        logErrors: true,
       })
     })
   })
@@ -61,7 +61,7 @@ describe('Audit service', () => {
         correlationId: 'request123',
         service: 'hmpps-probation-accounts',
         details: JSON.stringify({ extraDetails: 'example' }),
-        logErrors: false,
+        logErrors: true,
       })
     })
   })
@@ -82,7 +82,7 @@ describe('Audit service', () => {
         correlationId: 'request123',
         service: 'hmpps-probation-accounts',
         details: undefined,
-        logErrors: false,
+        logErrors: true,
       })
     })
   })
@@ -103,7 +103,7 @@ describe('Audit service', () => {
         correlationId: 'request123',
         service: 'hmpps-probation-accounts',
         details: undefined,
-        logErrors: false,
+        logErrors: true,
       })
     })
   })
@@ -126,7 +126,7 @@ describe('Audit service', () => {
         correlationId: 'request123',
         service: 'hmpps-probation-accounts',
         details: JSON.stringify({ attemptedAt: '2026-06-07T10:00:00.000Z' }),
-        logErrors: false,
+        logErrors: true,
       })
     })
   })
@@ -152,7 +152,7 @@ describe('Audit service', () => {
           failedAt: '2026-06-07T10:00:00.000Z',
           reason: 'registration_invite_validation_failed',
         }),
-        logErrors: false,
+        logErrors: true,
       })
     })
   })
@@ -175,7 +175,7 @@ describe('Audit service', () => {
         correlationId: 'request123',
         service: 'hmpps-probation-accounts',
         details: JSON.stringify({ attemptedAt: '2026-06-07T10:00:00.000Z' }),
-        logErrors: false,
+        logErrors: true,
       })
     })
   })
@@ -201,7 +201,7 @@ describe('Audit service', () => {
           failedAt: '2026-06-07T10:00:00.000Z',
           reason: 'registered_user_details_failed',
         }),
-        logErrors: false,
+        logErrors: true,
       })
     })
   })
