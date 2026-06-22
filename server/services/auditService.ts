@@ -38,7 +38,7 @@ export default class AuditService {
         ...event,
         service: config.sqs.audit.serviceName,
         details: event.details ? JSON.stringify(event.details) : undefined,
-        logErrors: false,
+        logErrors: true,
       })
     } catch (cause) {
       const message =

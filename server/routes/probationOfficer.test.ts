@@ -91,6 +91,25 @@ describe('GET /probation-officer', () => {
     expect(response.text).not.toContain('Sarah Jones')
   })
 
+  it('should render without officer details when the practitioner is unallocated', async () => {
+    peopleOnProbationService.getPersonalDetails.mockResolvedValue({
+      name: { forename: 'John', surname: 'Smith' },
+      emergencyContacts: [],
+      practitioner: {
+        name: { forename: 'Unallocated', surname: '' },
+      },
+    })
+
+    const response = await request(app)
+      .get('/probation-officer')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('No probation officer details are available at this time.')
+    expect(response.text).not.toContain('Unallocated')
+    expect(response.text).not.toContain('<dt class="pop-summary-card__key">Name</dt>')
+  })
+
   it('should render without office address when the practitioner has no team address', async () => {
     peopleOnProbationService.getPersonalDetails.mockResolvedValue({
       name: { forename: 'John', surname: 'Smith' },

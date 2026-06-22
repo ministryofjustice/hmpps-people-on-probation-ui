@@ -197,6 +197,63 @@ describe('GET /appointments', () => {
     expect(response.text).toContain('your probation officer')
   })
 
+  it('does not render unallocated practitioner names in missed appointment alerts', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-10',
+          startTime: '09:00',
+          endTime: '10:00',
+          type: 'Office appointment',
+          practitioner: {
+            name: {
+              forename: 'Unallocated',
+              surname: '',
+            },
+          },
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('‘Office appointment’.')
+    expect(response.text).not.toContain('with Unallocated')
+    expect(response.text).not.toContain('Unallocated')
+  })
+
+  it('does not render the key contact row for unallocated practitioners', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-10',
+          startTime: '09:00',
+          endTime: '10:00',
+          type: 'Office appointment',
+          practitioner: {
+            name: {
+              forename: 'Unallocated',
+              surname: '',
+            },
+          },
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Key contact')
+    expect(response.text).not.toContain('Unallocated')
+  })
+
   it('renders the missed mandatory appointments count alert for multiple missed appointments', async () => {
     peopleOnProbationService.getPastAppointments.mockResolvedValue({
       content: [
@@ -269,5 +326,48 @@ describe('GET /appointments', () => {
 
     expect(response.text).toContain('Missed mandatory appointment or activity')
     expect(response.text).toContain('‘Community service hours’')
+  })
+
+  it('does not render the top location row for unpaid work appointments', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-12',
+          startTime: '09:00',
+          endTime: '12:00',
+          description: 'Community service hours',
+          location: {
+            buildingName: 'Probation Office',
+            street: 'Office Street',
+            town: 'Leeds',
+          },
+          unpaidWork: {
+            pickUpLocation: {
+              buildingName: 'Pickup Point',
+              street: 'Pickup Street',
+              town: 'Leeds',
+            },
+            project: {
+              address: {
+                buildingName: 'Work Site',
+                street: 'Work Street',
+                town: 'Leeds',
+              },
+            },
+          },
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('<dt class="pop-summary-card__key">Location</dt>')
+    expect(response.text).toContain('Pick up and drop off address')
+    expect(response.text).toContain('Pickup Point')
+    expect(response.text).toContain('Work address')
+    expect(response.text).toContain('Work Site')
   })
 })
