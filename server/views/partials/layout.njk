@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block beforeContent %}
-  {% if user and feedbackBanner.enabled %}
+  {% if user and feedbackBanner.enabled and currentPage !== "feedback" %}
     {{ govukPhaseBanner({
       tag: {
         text: "Prototype",
