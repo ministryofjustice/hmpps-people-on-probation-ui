@@ -30,6 +30,8 @@ describe('GET /feedback', () => {
     expect(response.text).not.toContain('height="800"')
     expect(response.text).not.toContain('Prototype')
     expect(response.text).not.toContain('This is a new service')
+    expect(response.text).not.toContain('ss-popup-1822134')
+    expect(response.text).not.toContain('embed.smartsurvey.io')
   })
 
   it('should redirect unauthenticated users to the sign-in page with returnTo', async () => {
