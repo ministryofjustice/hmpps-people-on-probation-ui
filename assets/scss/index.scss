@@ -12,5 +12,7 @@ $govuk-page-width: $moj-page-width;
 @import './components/summary-card';
 @import './components/timeout-warning';
 @import './components/goal-card';
+@import './components/show-details';
+@import './components/feedback';
 @import './overrides/header';
 @import './overrides/local';
