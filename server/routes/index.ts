@@ -95,10 +95,7 @@ export default function routes(services: Services): Router {
     const daysSinceLastSignIn = lastSignedInAt ? differenceInDays(new Date(), new Date(lastSignedInAt)) : null
     const shouldShowInterstitial = !lastSignedInAt || (daysSinceLastSignIn ?? 0) >= 30
 
-    logger.info(
-      { daysSinceLastSignIn, shouldShowInterstitial, returnTo },
-      '[welcome] interstitial decision',
-    )
+    logger.info({ daysSinceLastSignIn, shouldShowInterstitial, returnTo }, '[welcome] interstitial decision')
 
     if (!shouldShowInterstitial) {
       logger.info({ returnTo }, '[welcome] skipping interstitial, redirecting')
