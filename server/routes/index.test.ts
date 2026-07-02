@@ -190,3 +190,39 @@ describe('GET /', () => {
     expect(response.text).not.toContain('9am to 12pm')
   })
 })
+
+describe('GET /welcome', () => {
+  it('shows the interstitial for a first-time user with no previous login', async () => {
+    const response = await request(app)
+      .get('/welcome?returnTo=/')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Welcome to your probation account')
+  })
+
+  it('shows the interstitial when last login was more than 30 days ago', async () => {
+    const thirtyOneDaysAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString()
+
+    const response = await request(app)
+      .get('/welcome?returnTo=/')
+      .set('Cookie', await createAppSessionCookie('X123456', thirtyOneDaysAgo))
+      .expect(200)
+
+    expect(response.text).toContain('Welcome to your probation account')
+  })
+
+  it('redirects to returnTo when last login was within the last 30 days', async () => {
+    const twentyDaysAgo = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString()
+
+    await request(app)
+      .get('/welcome?returnTo=/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456', twentyDaysAgo))
+      .expect('Location', '/appointments')
+      .expect(302)
+  })
+
+  it('redirects unauthenticated users to sign in', async () => {
+    await request(app).get('/welcome').expect(302)
+  })
+})

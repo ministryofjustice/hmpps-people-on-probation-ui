@@ -8,6 +8,7 @@ export default function setUpWebSecurity(): Router {
 
   const { feedbackBanner } = config
   const isFeedbackPage = (req: Request) => req.path === '/feedback'
+  const isWelcomePage = (req: Request) => req.path === '/welcome'
 
   // Secure code best practice - see:
   // 1. https://expressjs.com/en/advanced/best-practice-security.html,
@@ -37,7 +38,7 @@ export default function setUpWebSecurity(): Router {
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
           imgSrc: ["'self'", 'data:', ...(feedbackBanner.enabled ? ['https://embed.smartsurvey.io'] : [])],
           connectSrc: ["'self'", 'https://www.smartsurvey.co.uk'],
-          frameSrc: ['https://www.smartsurvey.co.uk'],
+          frameSrc: ['https://www.smartsurvey.co.uk', 'https://www.veed.io'],
           formAction: [`'self' ${config.oneLogin.issuerUrl}`],
           ...(config.production ? {} : { upgradeInsecureRequests: null }),
         },
@@ -47,7 +48,7 @@ export default function setUpWebSecurity(): Router {
     }),
   )
   router.use((req: Request, res: Response, next: NextFunction) => {
-    if (!feedbackBanner.enabled && !isFeedbackPage(req)) {
+    if (!feedbackBanner.enabled && !isFeedbackPage(req) && !isWelcomePage(req)) {
       res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
     }
     next()

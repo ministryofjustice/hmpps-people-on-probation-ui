@@ -254,7 +254,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       await saveAuthenticatedUserSession(session)
       setAppSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
 
-      return res.redirect(normaliseReturnTo(returnTo))
+      return res.redirect(`/welcome?returnTo=${encodeURIComponent(normaliseReturnTo(returnTo))}`)
     } catch (err) {
       return next(err)
     }
@@ -369,7 +369,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
 
       await logSuccessfulAuthentication(auditService, req, transaction, oneLoginUser, registeredUserDetails)
 
-      return res.redirect(transaction.returnTo || '/')
+      return res.redirect(`/welcome?returnTo=${encodeURIComponent(transaction.returnTo || '/')}`)
     } catch (err) {
       return next(err)
     }
