@@ -91,11 +91,15 @@ export default function routes(services: Services): Router {
   router.get('/welcome', requireAuthentication, (req, res) => {
     const lastSignedInAt = res.locals.user?.registeredUserDetails?.lastSignedInAt
     const returnTo = normaliseReturnTo(typeof req.query.returnTo === 'string' ? req.query.returnTo : '/')
+    const firstVisit = req.query.firstVisit === 'true'
 
     const daysSinceLastSignIn = lastSignedInAt ? differenceInDays(new Date(), new Date(lastSignedInAt)) : null
-    const shouldShowInterstitial = !lastSignedInAt || (daysSinceLastSignIn ?? 0) >= 30
+    const shouldShowInterstitial = firstVisit || !lastSignedInAt || (daysSinceLastSignIn ?? 0) >= 30
 
-    logger.info({ daysSinceLastSignIn, shouldShowInterstitial, returnTo }, '[welcome] interstitial decision')
+    logger.info(
+      { lastSignedInAt, daysSinceLastSignIn, firstVisit, shouldShowInterstitial, returnTo },
+      '[welcome] interstitial decision',
+    )
 
     if (!shouldShowInterstitial) {
       logger.info({ returnTo }, '[welcome] skipping interstitial, redirecting')
