@@ -1,9 +1,11 @@
 import { Router } from 'express'
 import { startOfDay, differenceInDays, isBefore, addDays } from 'date-fns'
 
+import logger from '../../logger'
 import config from '../config'
 import type { Services } from '../services'
-import { loadCurrentUser } from '../auth/currentUser'
+import { loadCurrentUser, requireAuthentication } from '../auth/currentUser'
+import normaliseReturnTo from '../auth/returnTo'
 import type { AppointmentResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import {
   formatDateWithDay,
@@ -85,6 +87,24 @@ export default function routes(services: Services): Router {
   const router = Router()
 
   router.use(loadCurrentUser)
+
+  router.get('/welcome', requireAuthentication, (req, res) => {
+    const lastSignedInAt = res.locals.user?.registeredUserDetails?.lastSignedInAt
+    const returnTo = normaliseReturnTo(typeof req.query.returnTo === 'string' ? req.query.returnTo : '/')
+
+    const daysSinceLastSignIn = lastSignedInAt ? differenceInDays(new Date(), new Date(lastSignedInAt)) : null
+    const shouldShowInterstitial = !lastSignedInAt || (daysSinceLastSignIn ?? 0) >= 30
+
+    logger.info({ daysSinceLastSignIn, shouldShowInterstitial, returnTo }, '[welcome] interstitial decision')
+
+    if (!shouldShowInterstitial) {
+      logger.info({ returnTo }, '[welcome] skipping interstitial, redirecting')
+      return res.redirect(returnTo)
+    }
+
+    logger.info('[welcome] rendering welcome page')
+    return res.render('pages/welcome', { returnTo })
+  })
 
   router.use('/appointments', appointmentsRoutes(services))
   router.use('/goals', goalsRoutes(services))
