@@ -1,5 +1,6 @@
 import { Router } from 'express'
 
+import config from '../config'
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
 import {
@@ -17,7 +18,6 @@ type AppointmentCardView = {
   date?: string
   timeRange?: string
   type?: string
-  description?: string
   nationalStandards?: boolean
   address: string[]
   mapUrl?: string | null
@@ -34,7 +34,6 @@ type AppointmentCardView = {
 type MissedAlertView = {
   date?: string
   timeRange?: string
-  description?: string
   type?: string
   practitionerName?: string
 }
@@ -50,14 +49,33 @@ function hasInvalidQueryValue(value: unknown): boolean {
   return value !== undefined && typeof value !== 'string'
 }
 
+const HIDDEN_PROJECT_CODES = ['N07TTA2']
+
+export function shouldShowAppointment(appointment: AppointmentResponse): boolean {
+  return !appointment.unpaidWork?.project?.code || !HIDDEN_PROJECT_CODES.includes(appointment.unpaidWork.project.code)
+}
+
+function formatAppointmentType(type?: string): string | undefined {
+  return type?.replace(/\s*\(NS\)\s*$/i, '').trim()
+}
+
+function resolveAppointmentType(appointment: AppointmentResponse): string | undefined {
+  if (appointment.unpaidWork) return 'Community Payback'
+  return formatAppointmentType(appointment.type)
+}
+
+function formatOutcome(outcome?: string): string | undefined {
+  return outcome?.replace(/\bPOP Request\b/gi, 'Your Request')
+}
+
 export function buildCalendarUrl(appointment: AppointmentResponse): string | undefined {
   if (!appointment.date) return undefined
   const params = new URLSearchParams({ date: appointment.date })
-  if (appointment.startTime) {
+  if (!appointment.unpaidWork && appointment.startTime) {
     params.set('startTime', appointment.startTime)
     if (appointment.endTime) params.set('endTime', appointment.endTime)
   }
-  const title = appointment.type ?? appointment.description
+  const title = resolveAppointmentType(appointment)
   if (title) params.set('title', title)
   const location = formatAddress(appointment.location).join(', ')
   if (location) params.set('location', location)
@@ -157,16 +175,15 @@ function toAppointmentCardView(appointment: AppointmentResponse): AppointmentCar
   const workAddress = appointment.unpaidWork ? formatAddress(appointment.unpaidWork.project?.address) : undefined
   return {
     date: formatDateWithDay(appointment.date),
-    timeRange: formatTimeRange(appointment.startTime, appointment.endTime),
-    type: appointment.type,
-    description: appointment.description,
+    timeRange: appointment.unpaidWork ? undefined : formatTimeRange(appointment.startTime, appointment.endTime),
+    type: resolveAppointmentType(appointment),
     nationalStandards: appointment.nationalStandards,
     address,
     mapUrl: formatMapUrl(address),
     calendarUrl: buildCalendarUrl(appointment),
     practitionerName: formatPractitionerName(appointment.practitioner?.name),
     attended: appointment.attended,
-    outcome: appointment.outcome,
+    outcome: formatOutcome(appointment.outcome),
     pickUpAddress,
     pickUpMapUrl: pickUpAddress ? formatMapUrl(pickUpAddress) : null,
     workAddress,
@@ -216,20 +233,24 @@ export default function appointmentsRoutes(services: Services): Router {
         services.peopleOnProbationService.getPastAppointments(crn, 0, 10),
       ])
 
-      const missedAppointments = pastAppointments.content.filter(isMissedMandatoryAppointmentOrActivity)
+      const futureAppointmentsToShow = futureAppointments.content.filter(shouldShowAppointment)
+      const pastAppointmentsToShow = pastAppointments.content.filter(shouldShowAppointment)
+      const missedAppointments = pastAppointmentsToShow.filter(isMissedMandatoryAppointmentOrActivity)
+      const missedAlertEnabled = config.features.missedAppointmentAlert
 
-      const missedAlert: MissedAlertView | null = missedAppointments[0]
+      const firstMissedAppointment = missedAlertEnabled ? missedAppointments[0] : undefined
+      const missedAlert: MissedAlertView | null = firstMissedAppointment
         ? {
-            date: formatDateWithDay(missedAppointments[0].date),
-            timeRange: formatTimeRange(missedAppointments[0].startTime, missedAppointments[0].endTime),
-            description: missedAppointments[0].description,
-            type: missedAppointments[0].type,
-            practitionerName: formatPractitionerName(missedAppointments[0].practitioner?.name),
+            date: formatDateWithDay(firstMissedAppointment.date),
+            timeRange: firstMissedAppointment.unpaidWork
+              ? undefined
+              : formatTimeRange(firstMissedAppointment.startTime, firstMissedAppointment.endTime),
+            type: resolveAppointmentType(firstMissedAppointment),
+            practitionerName: formatPractitionerName(firstMissedAppointment.practitioner?.name),
           }
         : null
 
-      const allAppointments = [...futureAppointments.content, ...pastAppointments.content]
-      const mostRecentUpdate = allAppointments
+      const mostRecentUpdate = [...futureAppointmentsToShow, ...pastAppointmentsToShow]
         .map(a => a.lastUpdatedAt)
         .filter(Boolean)
         .sort()
@@ -237,10 +258,10 @@ export default function appointmentsRoutes(services: Services): Router {
 
       return res.render('pages/appointments', {
         missedAlert,
-        missedAppointmentsCount: missedAppointments.length,
+        missedAppointmentsCount: missedAlertEnabled ? missedAppointments.length : 0,
         lastUpdatedAt: formatDateTime(mostRecentUpdate),
-        futureAppointments: futureAppointments.content.map(toAppointmentCardView),
-        pastAppointments: pastAppointments.content.map(toAppointmentCardView),
+        futureAppointments: futureAppointmentsToShow.map(toAppointmentCardView),
+        pastAppointments: pastAppointmentsToShow.map(toAppointmentCardView),
       })
     } catch (error) {
       return next(error)

@@ -4,6 +4,7 @@ import { addDays, format } from 'date-fns'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import { appSessionCookieName } from '../auth/cookies'
 import type { Services } from '../services'
+import config from '../config'
 
 let app: Express
 let peopleOnProbationService: {
@@ -13,6 +14,8 @@ let peopleOnProbationService: {
 }
 
 beforeEach(() => {
+  config.features.missedAppointmentAlert = true
+
   peopleOnProbationService = {
     getFutureAppointments: jest.fn(),
     getPastAppointments: jest.fn(),
@@ -27,6 +30,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  config.features.missedAppointmentAlert = false
   jest.useRealTimers()
   jest.resetAllMocks()
 })
@@ -100,6 +104,28 @@ describe('GET /', () => {
     expect(peopleOnProbationService.getSentences).toHaveBeenCalledWith('X123456')
   })
 
+  it('should not render the missed appointment alert when the feature flag is disabled', async () => {
+    config.features.missedAppointmentAlert = false
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [] })
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-01',
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [] })
+
+    const response = await request(app)
+      .get('/')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Missed mandatory appointment or activity')
+  })
+
   it('should redirect authenticated users without a person reference to auth error', async () => {
     await request(app)
       .get('/')
@@ -160,6 +186,7 @@ describe('GET /', () => {
       .expect(200)
 
     expect(response.text).toContain('Missed mandatory appointment or activity')
-    expect(response.text).toContain('Friday 12 June 2026, 9am to 12pm')
+    expect(response.text).toContain('Friday 12 June 2026')
+    expect(response.text).not.toContain('9am to 12pm')
   })
 })

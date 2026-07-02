@@ -3,6 +3,7 @@ import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import { buildCalendarFilename, buildCalendarUrl, generateIcs } from './appointments'
 import type { Services } from '../services'
+import config from '../config'
 
 describe('generateIcs', () => {
   it('escapes text fields for iCalendar clients', () => {
@@ -154,6 +155,8 @@ describe('GET /appointments', () => {
   }
 
   beforeEach(() => {
+    config.features.missedAppointmentAlert = true
+
     peopleOnProbationService = {
       getFutureAppointments: jest.fn().mockResolvedValue({ content: [] }),
       getPastAppointments: jest.fn().mockResolvedValue({ content: [] }),
@@ -164,6 +167,31 @@ describe('GET /appointments', () => {
         peopleOnProbationService,
       } as unknown as Partial<Services>,
     })
+  })
+
+  afterEach(() => {
+    config.features.missedAppointmentAlert = false
+  })
+
+  it('does not render the missed appointment alert when the feature flag is disabled', async () => {
+    config.features.missedAppointmentAlert = false
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-10',
+          type: 'Office appointment',
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Missed mandatory appointment or activity')
   })
 
   it('renders the missed mandatory appointment alert for one missed appointment', async () => {
@@ -311,7 +339,7 @@ describe('GET /appointments', () => {
           date: '2026-06-12',
           startTime: '09:00',
           endTime: '12:00',
-          description: 'Community service hours',
+          type: 'Community service hours',
           nationalStandards: false,
           attended: false,
           unpaidWork: {},
@@ -325,7 +353,7 @@ describe('GET /appointments', () => {
       .expect(200)
 
     expect(response.text).toContain('Missed mandatory appointment or activity')
-    expect(response.text).toContain('‘Community service hours’')
+    expect(response.text).toContain('‘Community Payback’')
   })
 
   it('does not render the top location row for unpaid work appointments', async () => {
@@ -335,7 +363,7 @@ describe('GET /appointments', () => {
           date: '2026-06-12',
           startTime: '09:00',
           endTime: '12:00',
-          description: 'Community service hours',
+          type: 'Community service hours',
           location: {
             buildingName: 'Probation Office',
             street: 'Office Street',
@@ -369,5 +397,97 @@ describe('GET /appointments', () => {
     expect(response.text).toContain('Pickup Point')
     expect(response.text).toContain('Work address')
     expect(response.text).toContain('Work Site')
+  })
+
+  it('does not show time for unpaid work appointments', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-20',
+          startTime: '09:00',
+          endTime: '12:00',
+          type: 'Community Payback',
+          unpaidWork: { project: { code: 'OTHER' } },
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('9am to 12pm')
+  })
+
+  it('replaces POP Request with Your Request in appointment outcome', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-01',
+          type: 'Office visit',
+          outcome: 'Rescheduled - POP Request',
+          attended: true,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Rescheduled - Your Request')
+    expect(response.text).not.toContain('POP Request')
+  })
+
+  it('hides future appointments with the hidden project code N07TTA2', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-20',
+          type: 'Community Payback',
+          unpaidWork: { project: { code: 'N07TTA2' } },
+        },
+        {
+          date: '2026-06-21',
+          type: 'Office visit',
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Community Payback')
+    expect(response.text).toContain('Office visit')
+  })
+
+  it('hides past appointments with the hidden project code N07TTA2', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-01',
+          type: 'Community Payback',
+          unpaidWork: { project: { code: 'N07TTA2' } },
+          attended: true,
+        },
+        {
+          date: '2026-06-02',
+          type: 'Office visit',
+          attended: true,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Community Payback')
+    expect(response.text).toContain('Office visit')
   })
 })

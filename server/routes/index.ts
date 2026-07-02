@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { startOfDay, differenceInDays, isBefore, addDays } from 'date-fns'
 
+import config from '../config'
 import type { Services } from '../services'
 import { loadCurrentUser } from '../auth/currentUser'
 import type { AppointmentResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
@@ -12,7 +13,7 @@ import {
   isMissedMandatoryAppointmentOrActivity,
   parseLocalDate,
 } from '../utils/utils'
-import appointmentsRoutes from './appointments'
+import appointmentsRoutes, { shouldShowAppointment } from './appointments'
 import goalsRoutes from './goals'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
@@ -46,7 +47,7 @@ function toNextAppointmentView(appointment?: AppointmentResponse): NextAppointme
 
   return {
     date: formatDateWithDay(appointment.date),
-    timeRange: formatTimeRange(appointment.startTime, appointment.endTime),
+    timeRange: appointment.unpaidWork ? undefined : formatTimeRange(appointment.startTime, appointment.endTime),
     variant,
   }
 }
@@ -56,7 +57,7 @@ function toMissedAppointmentView(appointment?: AppointmentResponse): MissedAppoi
 
   return {
     date: formatDateWithDay(appointment.date),
-    timeRange: formatTimeRange(appointment.startTime, appointment.endTime),
+    timeRange: appointment.unpaidWork ? undefined : formatTimeRange(appointment.startTime, appointment.endTime),
   }
 }
 
@@ -108,14 +109,17 @@ export default function routes(services: Services): Router {
           services.peopleOnProbationService.getSentences(crn),
         ])
 
-        const nextAppointment = futureAppointments.content[0] ?? undefined
+        const nextAppointment = futureAppointments.content.find(shouldShowAppointment)
 
-        const missedAppointments = pastAppointments.content.filter(isMissedMandatoryAppointmentOrActivity)
+        const missedAppointments = pastAppointments.content
+          .filter(shouldShowAppointment)
+          .filter(isMissedMandatoryAppointmentOrActivity)
+        const missedAlertEnabled = config.features.missedAppointmentAlert
 
         return res.render('pages/index', {
           nextAppointment: toNextAppointmentView(nextAppointment),
-          missedAppointment: toMissedAppointmentView(missedAppointments[0]),
-          missedAppointmentsCount: missedAppointments.length,
+          missedAppointment: missedAlertEnabled ? toMissedAppointmentView(missedAppointments[0]) : null,
+          missedAppointmentsCount: missedAlertEnabled ? missedAppointments.length : 0,
           orderProgress: toOrderProgressView(sentenceProgress.sentences),
         })
       }

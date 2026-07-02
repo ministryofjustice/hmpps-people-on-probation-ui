@@ -118,7 +118,13 @@ describe('GET /requirements', () => {
         sentences: [
           {
             type: 'ORA Community Order',
-            requirements: [{ type: 'Supervision', expectedStartDate: '2024-01-01', expectedEndDate: '2026-01-01' }],
+            requirements: [
+              {
+                mainCategory: { code: 'SUP', description: 'Supervision' },
+                expectedStartDate: '2024-01-01',
+                expectedEndDate: '2026-01-01',
+              },
+            ],
             licenceConditions: [],
           },
         ],
@@ -146,7 +152,7 @@ describe('GET /requirements', () => {
             expectedEndDate: '2026-01-01',
             requirements: [
               {
-                type: 'Unpaid Work',
+                mainCategory: { code: 'UPW', description: 'Unpaid Work' },
                 required: 100,
                 completed: 40,
                 unit: 'HOURS',
@@ -165,6 +171,39 @@ describe('GET /requirements', () => {
       expect(res.text).toContain('100')
       expect(res.text).toContain('40')
       expect(res.text).toContain('60')
+    })
+  })
+
+  describe('RAR requirements (mainCategory.code = F)', () => {
+    it('shows Maximum days label, hides remaining row and progress bar', async () => {
+      fakeDate('2025-06-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            requirements: [
+              {
+                mainCategory: { code: 'F', description: 'Rehabilitation Activity Requirement (RAR)' },
+                required: 20,
+                completed: 8,
+                unit: 'DAYS',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Maximum days on order')
+      expect(res.text).toContain('20')
+      expect(res.text).toContain('8')
+      expect(res.text).not.toContain('Days remaining')
+      expect(res.text).not.toContain('pop-progress__row')
     })
   })
 })
