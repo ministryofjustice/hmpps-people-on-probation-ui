@@ -242,7 +242,9 @@ export default function appointmentsRoutes(services: Services): Router {
       const missedAlert: MissedAlertView | null = firstMissedAppointment
         ? {
             date: formatDateWithDay(firstMissedAppointment.date),
-            timeRange: firstMissedAppointment.unpaidWork ? undefined : formatTimeRange(firstMissedAppointment.startTime, firstMissedAppointment.endTime),
+            timeRange: firstMissedAppointment.unpaidWork
+              ? undefined
+              : formatTimeRange(firstMissedAppointment.startTime, firstMissedAppointment.endTime),
             type: resolveAppointmentType(firstMissedAppointment),
             practitionerName: formatPractitionerName(firstMissedAppointment.practitioner?.name),
           }

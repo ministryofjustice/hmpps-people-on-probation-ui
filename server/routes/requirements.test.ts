@@ -118,7 +118,13 @@ describe('GET /requirements', () => {
         sentences: [
           {
             type: 'ORA Community Order',
-            requirements: [{ mainCategory: { code: 'SUP', description: 'Supervision' }, expectedStartDate: '2024-01-01', expectedEndDate: '2026-01-01' }],
+            requirements: [
+              {
+                mainCategory: { code: 'SUP', description: 'Supervision' },
+                expectedStartDate: '2024-01-01',
+                expectedEndDate: '2026-01-01',
+              },
+            ],
             licenceConditions: [],
           },
         ],
