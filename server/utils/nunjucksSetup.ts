@@ -15,6 +15,7 @@ export default function nunjucksSetup(app: express.Express): void {
   app.locals.environmentName = config.environmentName
   app.locals.environmentNameColour = config.environmentName === 'PRE-PRODUCTION' ? 'govuk-tag--green' : ''
   app.locals.feedbackBanner = config.feedbackBanner
+  app.locals.features = config.features
   app.locals.sessionExpiryMinutes = config.session.expiryMinutes
   let assetManifest: Record<string, string> = {}
 

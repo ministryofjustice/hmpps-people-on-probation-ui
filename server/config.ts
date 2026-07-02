@@ -116,4 +116,7 @@ export default {
   feedbackBanner: {
     enabled: get('FEEDBACK_BANNER_ENABLED', 'false') === 'true',
   },
+  features: {
+    missedAppointmentAlert: get('FEATURE_MISSED_APPOINTMENT_ALERT', 'false') === 'true',
+  },
 }

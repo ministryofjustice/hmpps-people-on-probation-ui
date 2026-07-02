@@ -25,7 +25,7 @@
       {% set missedAlertHtml %}
         <p class="govuk-body">
           {{ missedAlert.date }}{% if missedAlert.timeRange %}, {{ missedAlert.timeRange }}{% endif %}.<br>
-          ‘{{ missedAlert.description or missedAlert.type }}’{% if missedAlert.practitionerName %} with {{ missedAlert.practitionerName }}{% endif %}.
+          ‘{{ missedAlert.type }}’{% if missedAlert.practitionerName %} with {{ missedAlert.practitionerName }}{% endif %}.
         </p>
         <p class="govuk-body govuk-!-margin-bottom-0">
           Contact <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">your probation officer</a> as soon as possible to explain why you missed this appointment or activity.
@@ -67,7 +67,7 @@
         <div class="pop-summary-card">
           <div class="pop-summary-card__header">
             <span class="pop-summary-card__type">
-              {{ appointment.type or appointment.description }}
+              {{ appointment.type }}
             </span>
             <div class="pop-summary-card__actions">
               {% if appointment.address.length %}
@@ -85,7 +85,7 @@
 
           <dl class="pop-summary-card__details">
             <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">Date and time</dt>
+              <dt class="pop-summary-card__key">Date</dt>
               <dd class="pop-summary-card__value">{{ appointment.date or "" }}</dd>
             </div>
             {% if appointment.timeRange %}
@@ -144,7 +144,7 @@
         <div class="pop-summary-card">
           <div class="pop-summary-card__header">
             <span class="pop-summary-card__type">
-              {{ appointment.type or appointment.description }}
+              {{ appointment.type }}
             </span>
             {% if appointment.nationalStandards %}
               {{ govukTag({ text: "Mandatory", classes: "govuk-tag--black" }) }}
@@ -198,16 +198,10 @@
                 <dd class="pop-summary-card__value">{{ appointment.practitionerName }}</dd>
               </div>
             {% endif %}
-            {% if appointment.attended !== undefined %}
+            {% if appointment.outcome %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Status</dt>
-                <dd class="pop-summary-card__value">
-                  {% if appointment.attended === true %}
-                    {{ govukTag({ text: "Attended", classes: "govuk-tag--green" }) }}
-                  {% elif appointment.attended === false %}
-                    {{ govukTag({ text: "Missed", classes: "govuk-tag--red" }) }}
-                  {% endif %}
-                </dd>
+                <dd class="pop-summary-card__value">{{ appointment.outcome }}</dd>
               </div>
             {% endif %}
           </dl>

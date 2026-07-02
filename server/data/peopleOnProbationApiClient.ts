@@ -51,9 +51,14 @@ export interface PersonalDetailsResponse {
   lastUpdatedAt?: string
 }
 
+export interface CategoryResponse {
+  code: string
+  description: string
+}
+
 export interface RequirementResponse {
-  type?: string
-  description?: string
+  mainCategory?: CategoryResponse
+  subCategory?: CategoryResponse
   required?: number
   completed?: number
   unit?: string
@@ -66,8 +71,8 @@ export interface RequirementResponse {
 }
 
 export interface LicenceConditionResponse {
-  type?: string
-  description?: string
+  mainCategory?: CategoryResponse
+  subCategory?: CategoryResponse
   startDate?: string
   expectedEndDate?: string
 }
@@ -112,7 +117,7 @@ export interface AppointmentResponse {
   startTime?: string
   endTime?: string
   type?: string
-  description?: string
+  typeCode?: string
   outcome?: string
   nationalStandards?: boolean
   lastUpdatedAt?: string

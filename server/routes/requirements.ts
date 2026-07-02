@@ -45,6 +45,7 @@ type OverallOrderView = {
 
 type RequirementView = {
   label: string
+  isRAR: boolean
   percentComplete: number
   completedDuration?: string
   required?: number
@@ -58,7 +59,8 @@ type RequirementView = {
 }
 
 function toRequirementView(requirement: RequirementResponse): RequirementView | null {
-  const label = requirement.type || requirement.description || 'Requirement'
+  const label = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
+  const isRAR = requirement.mainCategory?.code === 'F'
 
   if (requirement.required && requirement.required > 0) {
     const completed = Math.min(requirement.completed ?? 0, requirement.required)
@@ -68,6 +70,7 @@ function toRequirementView(requirement: RequirementResponse): RequirementView | 
     const completedLabel = formatUnit(requirement.unit, completed)
     return {
       label,
+      isRAR,
       required: requirement.required,
       completed,
       remaining,
@@ -90,6 +93,7 @@ function toRequirementView(requirement: RequirementResponse): RequirementView | 
     } = calculateDateProgress(startDate, endDate)
     return {
       label,
+      isRAR,
       percentComplete,
       completedDuration,
       totalLength,
