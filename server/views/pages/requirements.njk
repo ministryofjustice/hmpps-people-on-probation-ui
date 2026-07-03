@@ -2,7 +2,7 @@
 {% from "../macros/showDetails.njk" import showDetails %}
 {% from "partials/progress-bar.njk" import progressBar %}
 
-{% set pageTitle = "Order requirements" %}
+{% set pageTitle = "Order requirements – Check your probation account – GOV.UK" %}
 {% set currentPage = "requirements" %}
 
 {% block content %}
@@ -13,7 +13,7 @@
     Make sure you follow the requirements included in your order. If you don’t, you could breach your probation, and could go back to court.
   </p>
   <p class="govuk-body">
-    You may also want to know about <a class="govuk-link govuk-link--no-visited-state" href="/expectations">expectations of you and the probation service</a>.
+    See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/expectations">probation agreement</a>.
   </p>
 
   {% if overallOrder %}
@@ -69,13 +69,13 @@
   {% endif %}
 
   {% if requirements.length %}
-    <h2 class="govuk-heading-m pop-requirements__section-heading">What is included in your order requirements</h2>
+    <h3 class="govuk-heading-m pop-requirements__section-heading">What is included in your order requirements</h3>
 
     {% for requirement in requirements %}
       <div class="govuk-!-margin-bottom-2">
-        <h3 class="govuk-heading-s">{{ requirement.label }}</h3>
+        <h4 class="govuk-heading-s">{{ requirement.label }}</h4>
         {% if not requirement.isRAR %}
-          <p class="pop-progress__title">{{ requirement.label }} progress</p>
+          <h4 class="pop-progress__title">{{ requirement.label }} progress</h4>
           <div class="pop-progress__row govuk-!-margin-bottom-4">
             {{ progressBar({
               percentComplete: requirement.percentComplete,

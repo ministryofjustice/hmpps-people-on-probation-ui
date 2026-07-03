@@ -1,7 +1,7 @@
 {% extends "../partials/layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 
-{% set pageTitle = "Agreement between you and the Probation Service" %}
+{% set pageTitle = "Probation agreement – Check your probation account – GOV.UK" %}
 {% set currentPage = "expectations" %}
 
 {% block breadcrumb %}
@@ -10,10 +10,19 @@
 
 {% block content %}
 
-  <h1 class="govuk-heading-xl">Agreement between you and the Probation Service</h1>
+  <h1 class="govuk-heading-xl">Probation agreement</h1>
+
+  <p class="govuk-body">This is a summary of the agreement you signed at the start of your probation.</p>
 
   <nav class="moj-sub-navigation govuk-!-margin-bottom-6" aria-label="Expectation tabs">
     <ul class="moj-sub-navigation__list">
+      <li class="moj-sub-navigation__item">
+        <a class="moj-sub-navigation__link{% if tab !== 'probation-service' %} moj-sub-navigation__link--active{% endif %}"
+           href="/expectations?tab=you"
+           {% if tab !== 'probation-service' %}aria-current="page"{% endif %}>
+          What we expect from you
+        </a>
+      </li>
       <li class="moj-sub-navigation__item">
         <a class="moj-sub-navigation__link{% if tab === 'probation-service' %} moj-sub-navigation__link--active{% endif %}"
            href="/expectations?tab=probation-service"
@@ -21,56 +30,74 @@
           What to expect from the Probation Service
         </a>
       </li>
-      <li class="moj-sub-navigation__item">
-        <a class="moj-sub-navigation__link{% if tab === 'you' %} moj-sub-navigation__link--active{% endif %}"
-           href="/expectations?tab=you"
-           {% if tab === 'you' %}aria-current="page"{% endif %}>
-          Expectations of you on probation
-        </a>
-      </li>
     </ul>
   </nav>
 
-  <div id="panel-probation-service" {% if tab !== 'probation-service' %}hidden{% endif %}>
+  <div id="panel-you" {% if tab === 'probation-service' %}hidden{% endif %}>
 
-    <p class="govuk-body">This agreement explains what to expect from Probation and what we expect from you.</p>
-    <p class="govuk-body">You should also make sure you understand what your Court Order or Licence says.</p>
+    <h2 class="govuk-heading-l">What we expect from you while on probation</h2>
 
-    <p class="govuk-body">The Probation Service will:</p>
+    <h3 class="govuk-heading-m">Requirements</h3>
+    <p class="govuk-body">Take some time to understand <a class="govuk-link govuk-link--no-visited-state" href="/requirements">your order requirements</a>. If you do not follow your requirements, you could breach your probation and go back to court.</p>
 
+    <h3 class="govuk-heading-m">Behaviour</h3>
     <ul class="govuk-list govuk-list--bullet govuk-list--spaced">
-      <li>Treat you fairly and with respect. We will listen to your concerns and circumstances.</li>
-      <li>Work with you to make a Sentence Plan. This will set goals to help you to avoid further offending, to make or to keep positive changes in your life. It will show who you will work with and when. We will review it with you as things change.</li>
-      <li>Work together to reduce risk and re-offending. We will respond to your needs.</li>
-      <li>Keep accurate records about you to help us make decisions. These will be kept safely.</li>
-      <li>We will only share your information without prior discussion if there is a legal obligation, such as keeping you or others safe or preventing crime.</li>
-      <li>Be on time for your appointments. If we are late, we will tell you why.</li>
-      <li>Take action if you do not follow your sentence. Missing appointments without a good reason may mean going back to Court or (if you are on licence) recall to prison.</li>
+      <li>Be respectful to your probation officer, staff, and other people on probation</li>
+      <li>Do not use threats, violence, or intimidation towards staff or others</li>
+      <li>Do not take photos, videos, or recordings during appointments or in probation settings</li>
+      <li>Do not attend appointments under the influence of alcohol or illegal drugs</li>
+      <li>If you need support to help you make positive changes, or to avoid committing crimes, talk with your probation officer. For example, reach out if you're struggling with alcohol use.</li>
     </ul>
 
-    <p class="govuk-body">We will tell you if you need to attend appointments with other agencies, or if you can stop attending face-to-face appointments after you have completed a part of your sentence.</p>
+    <h3 class="govuk-heading-m">Contact details</h3>
+    <ul class="govuk-list govuk-list--bullet govuk-list--spaced">
+      <li>If your contact details change, tell your probation officer as soon as possible. We always need to be able to contact you.</li>
+      <li>If you want to move address, ask your probation officer for permission before moving</li>
+      <li>If you become homeless, or have no fixed address, tell your probation officer. And check in with them regularly.</li>
+      <li>Allow probation staff to visit you in your home when needed. If you have concerns about this, speak to your probation officer.</li>
+      <li>We may contact you to share important updates about your probation</li>
+    </ul>
+
+    <h3 class="govuk-heading-m">Appointments</h3>
+    <ul class="govuk-list govuk-list--bullet govuk-list--spaced">
+      <li>Be on time for appointments</li>
+      <li>If you cannot attend an appointment, let your probation officer know as soon as possible. You'll need to provide evidence to explain why you cannot attend.</li>
+      <li>If you miss a mandatory appointment, you need to provide evidence to explain why you could not attend. You must do this within 5 days of the missed appointment.</li>
+      <li>If you miss an appointment because of your health, you will need to provide medical evidence – for example, a doctor's note. You can use a maximum of 2 self-certificates within a 12-month period. A self-certificate applies for 7 calendar days. We may also ask if we can discuss evidence with your GP.</li>
+      <li>If you miss an appointment because you were working, you will need to provide written proof that you were working during the time of the appointment. Do this within 5 working days of missing the appointment. If you cannot attend appointments in the day, we might be able to arrange appointments later.</li>
+      <li>If you miss appointments without a good reason, we may take further action. This could mean you have to go back to court.</li>
+    </ul>
+
+    <h3 class="govuk-heading-m">Understanding your conditions</h3>
+    <p class="govuk-body">If you need help understanding your requirements, expectations, or sentence plan, ask your probation officer.</p>
 
   </div>
 
-  <div id="panel-you" {% if tab !== 'you' %}hidden{% endif %}>
+  <div id="panel-probation-service" {% if tab !== 'probation-service' %}hidden{% endif %}>
 
-    <p class="govuk-body">This agreement explains what to expect from Probation and what we expect from you.</p>
-    <p class="govuk-body">You should also make sure you understand what your Court Order or Licence says.</p>
+    <h2 class="govuk-heading-l">What to expect from the Probation Service</h2>
 
-    <p class="govuk-body">What we expect from you:</p>
-
+    <h3 class="govuk-heading-m">Behaviour</h3>
+    <p class="govuk-body">The Probation Service will:</p>
     <ul class="govuk-list govuk-list--bullet govuk-list--spaced">
-      <li>Work with us to avoid further offending. Engage with your sentence plan and discuss areas of your life which can help you to avoid further offending.</li>
-      <li>When contacting probation staff and attending appointments treat staff and others fairly and with respect. This includes: no threats, violence or intimidation; not take or attempt to make photos or recordings; not coming under the influence of alcohol or drugs.</li>
-      <li>Tell us straight away if your contact details change so we can always contact you.</li>
-      <li>Ask before changing address. Wait for approval before moving.</li>
-      <li>If you become homeless, keep in touch as instructed.</li>
-      <li>Allow staff to visit your home to support the delivery of your sentence and/or for public protection reasons. You can discuss any concerns you may have about this with us.</li>
-      <li>Allow Probation staff to contact you by telephone for important updates.</li>
-      <li>Be on time for appointments. Notify us as far in advance as possible if you know you will be unable to attend. Provide evidence of why you cannot attend before an appointment or, if you are unable to, within 5 working days of the absence.</li>
-      <li>If you are unable to provide medical evidence for a health-related absence a self-certificate will cover a period of 7 days; no more than two of these will be accepted in any 12-month period. We may ask for your consent to discuss with your GP.</li>
-      <li>For an absence due to employment, written proof will be expected (within 5 working days). You may need to attend late appointments if your work hours require it.</li>
+      <li>treat you fairly and with respect</li>
+      <li>listen to your concerns, circumstances and needs</li>
+      <li>make sure your records are accurate and kept safe</li>
+      <li>be on time for your appointments. If we are late, we will tell you why</li>
+      <li>usually ask you before sharing your information. However, in some situations we may need to share your information without asking first. For example, to prevent crime, or to keep you or others safe.</li>
     </ul>
+
+    <h3 class="govuk-heading-m">Progress</h3>
+    <p class="govuk-body">The Probation Service will:</p>
+    <ul class="govuk-list govuk-list--bullet govuk-list--spaced">
+      <li>tell you when you have appointments with the Probation Service or other agencies</li>
+      <li>tell you if you can stop attending appointments in-person after you have completed a part of your sentence</li>
+      <li>tell you where you can get support. For example, if you're struggling with alcohol or drug use</li>
+      <li>work with you on an ongoing 'sentence plan'. This will include goals to help you stay on a positive path</li>
+      <li>help you avoid committing crime</li>
+    </ul>
+
+    <p class="govuk-body">If you do not follow your sentence, we will have to take action. This could lead to your case returning to court.</p>
 
   </div>
 

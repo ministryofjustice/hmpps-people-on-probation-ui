@@ -19,11 +19,11 @@ export default class PeopleOnProbationService {
     return this.peopleOnProbationApiClient.getSentences(crn)
   }
 
-  getFutureAppointments(crn: string, page = 0, size = 10) {
+  getFutureAppointments(crn: string, page = 0, size = 50) {
     return this.peopleOnProbationApiClient.getFutureAppointments(crn, page, size)
   }
 
-  getPastAppointments(crn: string, page = 0, size = 10) {
+  getPastAppointments(crn: string, page = 0, size = 50) {
     return this.peopleOnProbationApiClient.getPastAppointments(crn, page, size)
   }
 

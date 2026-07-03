@@ -16,7 +16,7 @@
   {% if user and feedbackBanner.enabled and currentPage !== "feedback" %}
     {{ govukPhaseBanner({
       tag: {
-        text: "Prototype",
+        text: "Beta",
         classes: "govuk-tag--blue"
       },
       html: 'This is a new service – your <a class="govuk-link" href="/feedback">feedback</a> will help us to improve it.'
@@ -49,7 +49,7 @@
         aria-describedby="pop-timeout-warning-description"
         tabindex="-1"
       >
-        <h2 class="govuk-heading-m" id="pop-timeout-warning-title">Your session will time out</h2>
+        <h2 class="govuk-heading-m" id="pop-timeout-warning-title">You're about to be signed out</h2>
         <p class="govuk-body" id="pop-timeout-warning-description">
           For your security, we will sign you out in
           <span class="pop-timeout-warning__countdown" aria-live="polite" aria-atomic="true">5 minutes</span>.

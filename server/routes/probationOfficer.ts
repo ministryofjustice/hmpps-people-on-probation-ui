@@ -19,7 +19,7 @@ export default function probationOfficerRoutes(services: Services): Router {
       const officer = practitioner
         ? {
             name: formatPractitionerName(practitioner.name),
-            phoneNumber: practitioner.telephoneNumber,
+            phoneNumber: practitioner.team?.telephoneNumber,
             officeAddress: formatAddress(practitioner.team?.officeAddresses?.[0]),
           }
         : null

@@ -46,8 +46,8 @@ describe('GET /probation-officer', () => {
       emergencyContacts: [],
       practitioner: {
         name: { forename: 'Sarah', surname: 'Jones' },
-        telephoneNumber: '01234567890',
         team: {
+          telephoneNumber: '01234567890',
           officeAddresses: [
             {
               houseNumber: '10',
@@ -116,8 +116,7 @@ describe('GET /probation-officer', () => {
       emergencyContacts: [],
       practitioner: {
         name: { forename: 'Sarah', surname: 'Jones' },
-        telephoneNumber: '01234567890',
-        team: { officeAddresses: [] },
+        team: { telephoneNumber: '01234567890', officeAddresses: [] },
       },
     })
 

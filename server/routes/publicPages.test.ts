@@ -12,7 +12,7 @@ describe('GET /cookies', () => {
   it('should render the cookies page without authentication', async () => {
     const response = await request(app).get('/cookies').expect('Content-Type', /html/).expect(200)
 
-    expect(response.text).toContain('Cookies policy')
+    expect(response.text).toContain('Cookies')
     expect(response.text).toContain('hmpps-people-on-probation-ui.app-session')
     expect(response.text).toContain('hmpps-people-on-probation-ui.session')
   })
@@ -28,7 +28,7 @@ describe('GET /privacy', () => {
   it('should render the privacy page without authentication', async () => {
     const response = await request(app).get('/privacy').expect('Content-Type', /html/).expect(200)
 
-    expect(response.text).toContain('Privacy Notice')
+    expect(response.text).toContain('Privacy notice')
     expect(response.text).toContain('Probation Service')
   })
 
@@ -39,6 +39,25 @@ describe('GET /privacy', () => {
     expect(response.text).toContain('Types of personal data we process')
     expect(response.text).toContain('Complaints')
     expect(response.text).toContain('Information Commissioner')
+  })
+})
+
+describe('GET /accessibility', () => {
+  it('should render the accessibility statement page without authentication', async () => {
+    const response = await request(app).get('/accessibility').expect('Content-Type', /html/).expect(200)
+
+    expect(response.text).toContain('Accessibility statement for Check your probation account')
+    expect(response.text).toContain('HM Prison and Probation Service')
+  })
+
+  it('should contain key accessibility statement sections', async () => {
+    const response = await request(app).get('/accessibility').expect(200)
+
+    expect(response.text).toContain('How accessible this website is')
+    expect(response.text).toContain('Feedback and contact information')
+    expect(response.text).toContain('Enforcement procedure')
+    expect(response.text).toContain('Preparation of this accessibility statement')
+    expect(response.text).toContain('probationaccounts@justice.gov.uk')
   })
 })
 

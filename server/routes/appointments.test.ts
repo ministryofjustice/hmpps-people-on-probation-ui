@@ -90,6 +90,23 @@ describe('buildCalendarUrl', () => {
       '/appointments/calendar?date=2026-08-10&startTime=14%3A00&endTime=14%3A30&title=Office+Appointment',
     )
   })
+
+  it('builds a date-only calendar URL for unpaid work appointments', () => {
+    const calendarUrl = buildCalendarUrl({
+      date: '2026-08-10',
+      startTime: '14:00',
+      endTime: '14:30',
+      location: {
+        buildingName: 'Probation Office',
+        street: 'Office Street',
+        town: 'Leeds',
+      },
+      unpaidWork: {},
+    })
+
+    expect(calendarUrl).toBe('/appointments/calendar?date=2026-08-10&title=Community+Payback')
+    expect(calendarUrl).not.toContain('location')
+  })
 })
 
 describe('GET /appointments/calendar', () => {
@@ -356,7 +373,7 @@ describe('GET /appointments', () => {
     expect(response.text).toContain('‘Community Payback’')
   })
 
-  it('does not render the top location row for unpaid work appointments', async () => {
+  it('only renders the date row for unpaid work appointments', async () => {
     peopleOnProbationService.getFutureAppointments.mockResolvedValue({
       content: [
         {
@@ -383,6 +400,12 @@ describe('GET /appointments', () => {
               },
             },
           },
+          practitioner: {
+            name: {
+              forename: 'Jane',
+              surname: 'Doe',
+            },
+          },
         },
       ],
     })
@@ -392,11 +415,20 @@ describe('GET /appointments', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
+    expect(response.text).toContain('Friday 12 June 2026')
+    expect(response.text).toContain('Add to calendar')
+    expect(response.text).toContain('/appointments/calendar?date=2026-06-12&amp;title=Community+Payback')
+    expect(response.text).not.toContain('startTime')
+    expect(response.text).not.toContain('endTime')
+    expect(response.text).not.toContain('location=')
     expect(response.text).not.toContain('<dt class="pop-summary-card__key">Location</dt>')
-    expect(response.text).toContain('Pick up and drop off address')
-    expect(response.text).toContain('Pickup Point')
-    expect(response.text).toContain('Work address')
-    expect(response.text).toContain('Work Site')
+    expect(response.text).not.toContain('<dt class="pop-summary-card__key">Time</dt>')
+    expect(response.text).not.toContain('Pick up and drop off address')
+    expect(response.text).not.toContain('Pickup Point')
+    expect(response.text).not.toContain('Work address')
+    expect(response.text).not.toContain('Work Site')
+    expect(response.text).not.toContain('Key contact')
+    expect(response.text).not.toContain('Jane Doe')
   })
 
   it('does not show time for unpaid work appointments', async () => {

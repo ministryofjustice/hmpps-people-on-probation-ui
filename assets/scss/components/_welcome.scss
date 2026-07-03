@@ -1,0 +1,10 @@
+.pop-welcome {
+  display: flex;
+  flex-direction: column;
+  min-height: 60vh;
+
+  .pop-welcome__action {
+    margin-top: auto;
+    padding-top: govuk-spacing(6);
+  }
+}

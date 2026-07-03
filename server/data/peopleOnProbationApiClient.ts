@@ -21,14 +21,13 @@ export interface AddressResponse {
 }
 
 export interface TeamResponse {
+  telephoneNumber?: string
   officeAddresses: AddressResponse[]
 }
 
 export interface ManagerResponse {
   name: PersonNameResponse
-  telephoneNumber?: string
   team?: TeamResponse
-  lastUpdatedAt?: string
 }
 
 export interface PersonalContactResponse {
@@ -215,14 +214,14 @@ export default class PeopleOnProbationApiClient extends RestClient {
     return this.get<SentenceProgressResponse>({ path: `/v1/person/${crn}/sentences` }, asSystem())
   }
 
-  getFutureAppointments(crn: string, page = 0, size = 10) {
+  getFutureAppointments(crn: string, page = 0, size = 50) {
     return this.get<PagedAppointmentsResponse>(
       { path: `/v1/person/${crn}/future-appointments`, query: { page, size } },
       asSystem(),
     )
   }
 
-  getPastAppointments(crn: string, page = 0, size = 10) {
+  getPastAppointments(crn: string, page = 0, size = 50) {
     return this.get<PagedAppointmentsResponse>(
       { path: `/v1/person/${crn}/past-appointments`, query: { page, size } },
       asSystem(),
