@@ -198,7 +198,7 @@
                 <dd class="pop-summary-card__value">{{ appointment.practitionerName }}</dd>
               </div>
             {% endif %}
-            {% if not appointment.isUnpaidWork and appointment.outcome %}
+            {% if appointment.outcome %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Status</dt>
                 <dd class="pop-summary-card__value">{{ appointment.outcome }}</dd>

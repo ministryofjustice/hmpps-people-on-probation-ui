@@ -473,6 +473,26 @@ describe('GET /appointments', () => {
     expect(response.text).not.toContain('POP Request')
   })
 
+  it('shows outcome status for past unpaid work appointments', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-01',
+          outcome: 'Attended',
+          unpaidWork: { project: { code: 'PROJ1', description: 'Community work' } },
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Attended')
+    expect(response.text).toContain('Status')
+  })
+
   it('hides future appointments with the hidden project code N07TTA2', async () => {
     peopleOnProbationService.getFutureAppointments.mockResolvedValue({
       content: [
