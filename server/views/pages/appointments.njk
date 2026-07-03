@@ -4,7 +4,7 @@
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "moj/components/alert/macro.njk" import mojAlert %}
 
-{% set pageTitle = "Appointments and activities" %}
+{% set pageTitle = "Appointments and activities – Check your probation account – GOV.UK" %}
 {% set currentPage = "appointments" %}
 
 {% block content %}
@@ -88,13 +88,13 @@
               <dt class="pop-summary-card__key">Date</dt>
               <dd class="pop-summary-card__value">{{ appointment.date or "" }}</dd>
             </div>
-            {% if appointment.timeRange %}
+            {% if not appointment.isUnpaidWork and appointment.timeRange %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Time</dt>
                 <dd class="pop-summary-card__value">{{ appointment.timeRange }}</dd>
               </div>
             {% endif %}
-            {% if appointment.address.length %}
+            {% if not appointment.isUnpaidWork and appointment.address.length %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Location</dt>
                 <dd class="pop-summary-card__value">
@@ -102,7 +102,7 @@
                 </dd>
               </div>
             {% endif %}
-            {% if appointment.pickUpAddress and appointment.pickUpAddress.length %}
+            {% if not appointment.isUnpaidWork and appointment.pickUpAddress and appointment.pickUpAddress.length %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Pick up and drop off address</dt>
                 <dd class="pop-summary-card__value">
@@ -113,7 +113,7 @@
                 </dd>
               </div>
             {% endif %}
-            {% if appointment.workAddress and appointment.workAddress.length %}
+            {% if not appointment.isUnpaidWork and appointment.workAddress and appointment.workAddress.length %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Work address</dt>
                 <dd class="pop-summary-card__value">
@@ -124,7 +124,7 @@
                 </dd>
               </div>
             {% endif %}
-            {% if appointment.practitionerName %}
+            {% if not appointment.isUnpaidWork and appointment.practitionerName %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Key contact</dt>
                 <dd class="pop-summary-card__value">{{ appointment.practitionerName }}</dd>
@@ -156,13 +156,13 @@
               <dt class="pop-summary-card__key">Date</dt>
               <dd class="pop-summary-card__value">{{ appointment.date or "" }}</dd>
             </div>
-            {% if appointment.timeRange %}
+            {% if not appointment.isUnpaidWork and appointment.timeRange %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Time</dt>
                 <dd class="pop-summary-card__value">{{ appointment.timeRange }}</dd>
               </div>
             {% endif %}
-            {% if appointment.address.length %}
+            {% if not appointment.isUnpaidWork and appointment.address.length %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Location</dt>
                 <dd class="pop-summary-card__value">
@@ -170,7 +170,7 @@
                 </dd>
               </div>
             {% endif %}
-            {% if appointment.pickUpAddress and appointment.pickUpAddress.length %}
+            {% if not appointment.isUnpaidWork and appointment.pickUpAddress and appointment.pickUpAddress.length %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Pick up and drop off address</dt>
                 <dd class="pop-summary-card__value">
@@ -181,7 +181,7 @@
                 </dd>
               </div>
             {% endif %}
-            {% if appointment.workAddress and appointment.workAddress.length %}
+            {% if not appointment.isUnpaidWork and appointment.workAddress and appointment.workAddress.length %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Work address</dt>
                 <dd class="pop-summary-card__value">
@@ -192,13 +192,13 @@
                 </dd>
               </div>
             {% endif %}
-            {% if appointment.practitionerName %}
+            {% if not appointment.isUnpaidWork and appointment.practitionerName %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Key contact</dt>
                 <dd class="pop-summary-card__value">{{ appointment.practitionerName }}</dd>
               </div>
             {% endif %}
-            {% if appointment.outcome %}
+            {% if not appointment.isUnpaidWork and appointment.outcome %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Status</dt>
                 <dd class="pop-summary-card__value">{{ appointment.outcome }}</dd>

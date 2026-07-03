@@ -153,7 +153,7 @@ describe('GET /goals', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('Find accommodation')
+      expect(res.text).toContain('<h2 class="pop-goal-card__title">Find accommodation</h2>')
     })
 
     it('renders future (FUTURE) goal title on the future tab', async () => {

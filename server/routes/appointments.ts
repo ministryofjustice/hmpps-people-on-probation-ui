@@ -18,6 +18,7 @@ type AppointmentCardView = {
   date?: string
   timeRange?: string
   type?: string
+  isUnpaidWork: boolean
   nationalStandards?: boolean
   address: string[]
   mapUrl?: string | null
@@ -77,7 +78,7 @@ export function buildCalendarUrl(appointment: AppointmentResponse): string | und
   }
   const title = resolveAppointmentType(appointment)
   if (title) params.set('title', title)
-  const location = formatAddress(appointment.location).join(', ')
+  const location = appointment.unpaidWork ? '' : formatAddress(appointment.location).join(', ')
   if (location) params.set('location', location)
   return `/appointments/calendar?${params.toString()}`
 }
@@ -177,6 +178,7 @@ function toAppointmentCardView(appointment: AppointmentResponse): AppointmentCar
     date: formatDateWithDay(appointment.date),
     timeRange: appointment.unpaidWork ? undefined : formatTimeRange(appointment.startTime, appointment.endTime),
     type: resolveAppointmentType(appointment),
+    isUnpaidWork: Boolean(appointment.unpaidWork),
     nationalStandards: appointment.nationalStandards,
     address,
     mapUrl: formatMapUrl(address),
@@ -229,8 +231,8 @@ export default function appointmentsRoutes(services: Services): Router {
       if (!crn) return res.redirect('/autherror')
 
       const [futureAppointments, pastAppointments] = await Promise.all([
-        services.peopleOnProbationService.getFutureAppointments(crn, 0, 10),
-        services.peopleOnProbationService.getPastAppointments(crn, 0, 10),
+        services.peopleOnProbationService.getFutureAppointments(crn, 0, 50),
+        services.peopleOnProbationService.getPastAppointments(crn, 0, 50),
       ])
 
       const futureAppointmentsToShow = futureAppointments.content.filter(shouldShowAppointment)

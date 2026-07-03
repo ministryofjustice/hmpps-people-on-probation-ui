@@ -8,7 +8,7 @@ export default function expectationsRoutes(_services: Services): Router {
   router.use(requireAuthentication)
 
   router.get('/', (req, res) => {
-    const tab = req.query.tab === 'you' ? 'you' : 'probation-service'
+    const tab = req.query.tab === 'probation-service' ? 'probation-service' : 'you'
     res.render('pages/expectations', { tab })
   })
 

@@ -99,8 +99,8 @@ describe('GET /', () => {
     expect(response.text).toContain('Missed mandatory appointment or activity')
     expect(response.text).toContain('Monday 1 June 2026')
     expect(response.text).toContain('Overall order')
-    expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 10)
-    expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 0, 10)
+    expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 50)
+    expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 0, 50)
     expect(peopleOnProbationService.getSentences).toHaveBeenCalledWith('X123456')
   })
 

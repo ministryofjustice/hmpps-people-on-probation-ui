@@ -37,6 +37,7 @@ function appSetup(services: Services, production: boolean): Express {
 
   app.get('/cookies', (_req, res) => res.render('pages/cookies'))
   app.get('/privacy', (_req, res) => res.render('pages/privacy'))
+  app.get('/accessibility', (_req, res) => res.render('pages/accessibility'))
   app.get('/autherror', (_req, res) => {
     res.status(403)
     res.render('pages/auth-error')

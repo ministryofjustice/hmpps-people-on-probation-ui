@@ -42,6 +42,25 @@ describe('GET /privacy', () => {
   })
 })
 
+describe('GET /accessibility', () => {
+  it('should render the accessibility statement page without authentication', async () => {
+    const response = await request(app).get('/accessibility').expect('Content-Type', /html/).expect(200)
+
+    expect(response.text).toContain('Accessibility statement for Check your probation account')
+    expect(response.text).toContain('HM Prison and Probation Service')
+  })
+
+  it('should contain key accessibility statement sections', async () => {
+    const response = await request(app).get('/accessibility').expect(200)
+
+    expect(response.text).toContain('How accessible this website is')
+    expect(response.text).toContain('Feedback and contact information')
+    expect(response.text).toContain('Enforcement procedure')
+    expect(response.text).toContain('Preparation of this accessibility statement')
+    expect(response.text).toContain('probationaccounts@justice.gov.uk')
+  })
+})
+
 describe('GET /autherror', () => {
   it('should render the auth error page with 403 without authentication', async () => {
     const response = await request(app).get('/autherror').expect('Content-Type', /html/).expect(403)
