@@ -12,7 +12,7 @@ describe('GET /cookies', () => {
   it('should render the cookies page without authentication', async () => {
     const response = await request(app).get('/cookies').expect('Content-Type', /html/).expect(200)
 
-    expect(response.text).toContain('Cookies policy')
+    expect(response.text).toContain('Cookies')
     expect(response.text).toContain('hmpps-people-on-probation-ui.app-session')
     expect(response.text).toContain('hmpps-people-on-probation-ui.session')
   })
@@ -28,7 +28,7 @@ describe('GET /privacy', () => {
   it('should render the privacy page without authentication', async () => {
     const response = await request(app).get('/privacy').expect('Content-Type', /html/).expect(200)
 
-    expect(response.text).toContain('Privacy Notice')
+    expect(response.text).toContain('Privacy notice')
     expect(response.text).toContain('Probation Service')
   })
 
