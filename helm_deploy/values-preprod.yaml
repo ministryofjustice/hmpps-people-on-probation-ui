@@ -18,7 +18,13 @@ generic-service:
     ENVIRONMENT_NAME: PRE-PRODUCTION
     AUDIT_ENABLED: "true"
     FEEDBACK_BANNER_ENABLED: "true"
-    POP_CHATBOT_API_URL: "https://probationchatbot-production.up.railway.app/chatbot/chat-embed"
+    # The old Railway URL was retired 2026-07. The chatbot backend is
+    # currently only deployed to `probationchatbot-dev` on MoJ Cloud
+    # Platform — there's no preprod-specific chatbot namespace yet. Left
+    # empty so the chatbot is cleanly disabled in preprod (route returns
+    # a well-formed "not configured" error frame) until a proper preprod
+    # chatbot instance exists.
+    POP_CHATBOT_API_URL: ""
 
 generic-prometheus-alerts:
   alertSeverity: hmpps-people-on-probation-nonprod

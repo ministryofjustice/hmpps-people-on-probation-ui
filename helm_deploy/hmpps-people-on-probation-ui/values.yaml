@@ -65,6 +65,7 @@ generic-service:
       ONE_LOGIN_PUBLIC_KEY_BASE64: 'ONE_LOGIN_PUBLIC_KEY_BASE64'
     hmpps-people-on-probation-ui-chatbot:
       POP_CHATBOT_API_KEY: 'POP_CHATBOT_API_KEY'
+      POP_CHATBOT_USER_TOKEN_SECRET: 'POP_CHATBOT_USER_TOKEN_SECRET'
     sqs-hmpps-audit-secret:
       AUDIT_SQS_QUEUE_URL: 'sqs_queue_url'
 

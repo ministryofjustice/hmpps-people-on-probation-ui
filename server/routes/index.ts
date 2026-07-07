@@ -20,6 +20,7 @@ import goalsRoutes from './goals'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
 import detailsRoutes from './details'
+import chatbotRoutes from './chatbot'
 import expectationsRoutes from './expectations'
 import feedbackRoutes from './feedback'
 
@@ -115,6 +116,7 @@ export default function routes(services: Services): Router {
   router.use('/requirements', requirementsRoutes(services))
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
+  router.use('/api/chatbot', chatbotRoutes(services))
   router.use('/expectations', expectationsRoutes(services))
   router.use('/feedback', feedbackRoutes(services))
 
