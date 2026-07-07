@@ -1,11 +1,67 @@
 import { Router, Request, Response } from 'express'
+import jwt from 'jsonwebtoken'
 import config from '../config'
 import logger from '../../logger'
 import type { Services } from '../services'
 
 const UPSTREAM_TIMEOUT_MS = 30_000
+const POP_USER_TOKEN_TTL_SECONDS = 5 * 60
 
 type UserContext = Record<string, unknown>
+
+/**
+ * Flattens the rich UserContext into the shape the chatbot's EmbedUserContext
+ * pydantic model accepts (name, preferred_name, order_type, supervision_type,
+ * probation_practitioner_name, probation_practitioner_phone,
+ * next_appointment_date/time/location, requirements[], licence_conditions[]).
+ * Unknown/missing fields are omitted so the model's `extra="forbid"` validation
+ * on the chatbot side accepts the payload.
+ */
+function flattenForEmbedContext(rich: UserContext): Record<string, unknown> {
+  const personalDetails = (rich.personalDetails ?? {}) as Record<string, unknown>
+  const orderDetails = (rich.orderDetails ?? {}) as Record<string, unknown>
+  const practitioner = (rich.probationPractitioner ?? {}) as Record<string, unknown>
+  const appointments = ((rich.appointments as Record<string, unknown>)?.upcoming ?? []) as Array<Record<string, unknown>>
+  const nextAppt = appointments[0] ?? {}
+  const requirements = (orderDetails.requirements as Array<Record<string, unknown>> | undefined) ?? []
+
+  const flat: Record<string, unknown> = {
+    name: personalDetails.name,
+    preferred_name: personalDetails.preferredName,
+    order_type: orderDetails.orderType,
+    probation_practitioner_name: practitioner.name,
+    probation_practitioner_phone: practitioner.phone,
+    next_appointment_date: nextAppt.date,
+    next_appointment_time: nextAppt.time,
+    next_appointment_location: nextAppt.location,
+    requirements: requirements
+      .map(r => r.requirement as string | undefined)
+      .filter((r): r is string => typeof r === 'string' && r.length > 0)
+      .slice(0, 20),
+  }
+
+  // Drop keys with undefined / null / empty values so the chatbot's model
+  // treats them as truly absent rather than being sent as null.
+  return Object.fromEntries(
+    Object.entries(flat).filter(([, v]) => v !== undefined && v !== null && v !== ''),
+  )
+}
+
+/**
+ * Mints an HS256-signed JWT carrying the flattened embed context, matching the
+ * shape the chatbot backend's _verify_pop_user_token expects (claims: `ctx`,
+ * `exp`, optional `sub`). Returns undefined when no signing secret is
+ * configured — the proxy then falls back to sending user_context in the body.
+ */
+function mintPopUserToken(rich: UserContext, userId: string, secret: string | undefined): string | undefined {
+  if (!secret) return undefined
+  const ctx = flattenForEmbedContext(rich)
+  return jwt.sign(
+    { sub: userId, ctx },
+    secret,
+    { algorithm: 'HS256', expiresIn: POP_USER_TOKEN_TTL_SECONDS },
+  )
+}
 
 /**
  * Builds the chatbot's user_context payload from the authenticated user's
@@ -174,6 +230,17 @@ export default function chatbotRoutes(services: Services): Router {
     }
     const upstreamBody = { message, conversation_id: conversationId, user_context: userContext }
 
+    // When POP_CHATBOT_USER_TOKEN_SECRET is set, sign a short-lived JWT
+    // carrying the flattened embed context. The chatbot backend requires
+    // this whenever its POP_USER_TOKEN_SECRET is set, so a leaked API
+    // key alone can't be used to fabricate a user identity. When the
+    // secret isn't set, the token header is omitted and the chatbot
+    // falls back to trusting the body user_context — matches today's
+    // behaviour.
+    const popUserToken = userContext
+      ? mintPopUserToken(userContext, user.userId, config.popChatbot.userTokenSecret)
+      : undefined
+
     // Abort the upstream call if it hangs, or if the client disconnects.
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
@@ -185,14 +252,19 @@ export default function chatbotRoutes(services: Services): Router {
     // so we forward the response body straight through with no wrapping.
     // Deployment config (POP_CHATBOT_API_URL in the values files) is
     // expected to point directly at the streaming endpoint.
+    const upstreamHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-API-Key': apiKey,
+      Accept: 'text/event-stream',
+    }
+    if (popUserToken) {
+      upstreamHeaders['X-POP-User-Token'] = popUserToken
+    }
+
     try {
       const upstream = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
-          Accept: 'text/event-stream',
-        },
+        headers: upstreamHeaders,
         body: JSON.stringify(upstreamBody),
         signal: controller.signal,
       })

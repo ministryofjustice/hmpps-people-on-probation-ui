@@ -113,6 +113,14 @@ export default {
     // or POP_CHATBOT_API_KEY unset and `chatbotEnabled` becomes false.
     apiUrl: get('POP_CHATBOT_API_URL', '') as string,
     apiKey: process.env.POP_CHATBOT_API_KEY,
+    // Optional HS256-signing secret shared with the chatbot backend. When set,
+    // this route mints a short-lived JWT carrying the flattened user context
+    // and passes it via the X-POP-User-Token header. The chatbot then
+    // requires and verifies that JWT, so a leaked API key alone can't be
+    // used to fabricate a user identity. Leave unset in envs where the
+    // chatbot backend hasn't got the corresponding POP_USER_TOKEN_SECRET set
+    // yet — the proxy will fall back to sending user_context in the body.
+    userTokenSecret: process.env.POP_CHATBOT_USER_TOKEN_SECRET,
   },
   ingressUrl: get('INGRESS_URL', 'http://localhost:3000', requiredInProduction),
   environmentName: get('ENVIRONMENT_NAME', ''),
