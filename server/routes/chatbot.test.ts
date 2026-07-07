@@ -172,9 +172,7 @@ describe('POST /api/chatbot/chat', () => {
   it('calls upstream with X-API-Key header and user_context built server-side', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      body: mockUpstreamStreamBody([
-        'data: {"type":"done","conversation_id":"c-2"}\n\n',
-      ]),
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-2"}\n\n']),
     } as unknown as Response)
 
     const app = buildApp()

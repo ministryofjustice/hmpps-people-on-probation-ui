@@ -21,7 +21,9 @@ function flattenForEmbedContext(rich: UserContext): Record<string, unknown> {
   const personalDetails = (rich.personalDetails ?? {}) as Record<string, unknown>
   const orderDetails = (rich.orderDetails ?? {}) as Record<string, unknown>
   const practitioner = (rich.probationPractitioner ?? {}) as Record<string, unknown>
-  const appointments = ((rich.appointments as Record<string, unknown>)?.upcoming ?? []) as Array<Record<string, unknown>>
+  const appointments = ((rich.appointments as Record<string, unknown>)?.upcoming ?? []) as Array<
+    Record<string, unknown>
+  >
   const nextAppt = appointments[0] ?? {}
   const requirements = (orderDetails.requirements as Array<Record<string, unknown>> | undefined) ?? []
 
@@ -42,9 +44,7 @@ function flattenForEmbedContext(rich: UserContext): Record<string, unknown> {
 
   // Drop keys with undefined / null / empty values so the chatbot's model
   // treats them as truly absent rather than being sent as null.
-  return Object.fromEntries(
-    Object.entries(flat).filter(([, v]) => v !== undefined && v !== null && v !== ''),
-  )
+  return Object.fromEntries(Object.entries(flat).filter(([, v]) => v !== undefined && v !== null && v !== ''))
 }
 
 /**
@@ -56,11 +56,7 @@ function flattenForEmbedContext(rich: UserContext): Record<string, unknown> {
 function mintPopUserToken(rich: UserContext, userId: string, secret: string | undefined): string | undefined {
   if (!secret) return undefined
   const ctx = flattenForEmbedContext(rich)
-  return jwt.sign(
-    { sub: userId, ctx },
-    secret,
-    { algorithm: 'HS256', expiresIn: POP_USER_TOKEN_TTL_SECONDS },
-  )
+  return jwt.sign({ sub: userId, ctx }, secret, { algorithm: 'HS256', expiresIn: POP_USER_TOKEN_TTL_SECONDS })
 }
 
 /**
@@ -288,10 +284,13 @@ export default function chatbotRoutes(services: Services): Router {
 
       // Pipe the SSE frames from the backend straight through to the widget.
       // Reading in chunks (rather than awaiting the whole body) preserves
-      // token-by-token streaming end-to-end.
+      // token-by-token streaming end-to-end. Awaiting sequentially inside
+      // the loop is exactly the right pattern here — we can't read chunk
+      // N+1 before chunk N — so disable the no-await-in-loop rule locally.
       const reader = upstream.body.getReader()
       try {
         for (;;) {
+          // eslint-disable-next-line no-await-in-loop
           const { done, value } = await reader.read()
           if (done) break
           if (value) res.write(value)
