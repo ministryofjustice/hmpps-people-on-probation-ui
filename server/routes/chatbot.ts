@@ -183,15 +183,10 @@ export default function chatbotRoutes(services: Services): Router {
     // /chatbot/chat-embed-stream already emits properly-formatted
     // `data: {...}\n\n` SSE frames matching this route's own SSE contract,
     // so we forward the response body straight through with no wrapping.
-    // If the deployment config's POP_CHATBOT_API_URL still points at the
-    // old non-streaming endpoint, swap the path suffix here so this route
-    // doesn't require a synchronised deployment-config change.
-    const upstreamUrl = apiUrl.endsWith('/chat-embed')
-      ? `${apiUrl}-stream`
-      : apiUrl
-
+    // Deployment config (POP_CHATBOT_API_URL in the values files) is
+    // expected to point directly at the streaming endpoint.
     try {
-      const upstream = await fetch(upstreamUrl, {
+      const upstream = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

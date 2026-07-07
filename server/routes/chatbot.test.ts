@@ -195,24 +195,6 @@ describe('POST /api/chatbot/chat', () => {
     expect(body.user_context.metadata.crn).toBe('X123456')
   })
 
-  it('appends -stream to a legacy /chat-embed apiUrl so the streaming endpoint is hit', async () => {
-    config.popChatbot.apiUrl = 'https://upstream.test/chatbot/chat-embed'
-    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
-      ok: true,
-      body: mockUpstreamStreamBody([
-        'data: {"type":"done"}\n\n',
-      ]),
-    } as unknown as Response)
-
-    const app = buildApp()
-
-    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
-
-    expect(fetchSpy).toHaveBeenCalledWith(
-      'https://upstream.test/chatbot/chat-embed-stream',
-      expect.any(Object),
-    )
-  })
 })
 
 function mockUpstreamStreamBody(frames: string[]): ReadableStream<Uint8Array> {

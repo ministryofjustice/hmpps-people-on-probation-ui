@@ -18,7 +18,10 @@ generic-service:
     ENVIRONMENT_NAME: DEV
     AUDIT_ENABLED: "true"
     FEEDBACK_BANNER_ENABLED: "true"
-    POP_CHATBOT_API_URL: "https://probationchatbot-production.up.railway.app/chatbot/chat-embed"
+    # Points at the streaming endpoint on the MoJ Cloud Platform chatbot
+    # (via its Next.js proxy which forwards SSE frames through unchanged).
+    # The old Railway URL was retired 2026-07.
+    POP_CHATBOT_API_URL: "https://probationchatbot-dev.apps.live.cloud-platform.service.justice.gov.uk/api/proxy/chatbot/chat-embed-stream"
 
 generic-prometheus-alerts:
   alertSeverity: hmpps-people-on-probation-nonprod
