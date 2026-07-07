@@ -1,7 +1,7 @@
 {% extends "../partials/layout.njk" %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 
-{% set pageTitle = "Goals" %}
+{% set pageTitle = "Goals – Check your probation account – GOV.UK" %}
 {% set currentPage = "goals" %}
 
 {% macro goalsList(goals, tab) %}
@@ -11,7 +11,7 @@
       <div class="pop-goal-card govuk-!-margin-bottom-6">
 
         <div class="pop-goal-card__header">
-          <p class="pop-goal-card__title">{{ goal.title }}</p>
+          <h2 class="pop-goal-card__title">{{ goal.title }}</h2>
         </div>
 
         {% if goal.achievedDate or goal.targetDate or goal.totalSteps > 0 %}

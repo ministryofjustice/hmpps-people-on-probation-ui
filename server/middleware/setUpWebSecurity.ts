@@ -7,6 +7,8 @@ export default function setUpWebSecurity(): Router {
   const router = express.Router()
 
   const { feedbackBanner } = config
+  const isFeedbackPage = (req: Request) => req.path === '/feedback'
+  const isWelcomePage = (req: Request) => req.path === '/welcome'
 
   // Secure code best practice - see:
   // 1. https://expressjs.com/en/advanced/best-practice-security.html,
@@ -35,17 +37,21 @@ export default function setUpWebSecurity(): Router {
           styleSrc: ["'self'", ...(feedbackBanner.enabled ? ["'unsafe-inline'"] : []), 'https://fonts.googleapis.com'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
           imgSrc: ["'self'", 'data:', ...(feedbackBanner.enabled ? ['https://embed.smartsurvey.io'] : [])],
-          connectSrc: ["'self'", ...(feedbackBanner.enabled ? ['https://www.smartsurvey.co.uk'] : [])],
-          ...(feedbackBanner.enabled ? { frameSrc: ['https://www.smartsurvey.co.uk'] } : {}),
+          connectSrc: ["'self'", 'https://www.smartsurvey.co.uk'],
+          frameSrc: ['https://www.smartsurvey.co.uk', 'https://www.veed.io'],
           formAction: [`'self' ${config.oneLogin.issuerUrl}`],
           ...(config.production ? {} : { upgradeInsecureRequests: null }),
         },
       },
-      // COEP must be disabled when SmartSurvey is enabled because SmartSurvey resources
-      // don't send Cross-Origin-Resource-Policy headers. When the banner is off, the
-      // stricter helmet default (require-corp) is restored.
-      crossOriginEmbedderPolicy: feedbackBanner.enabled ? false : undefined,
+      // COEP is applied below so it can be relaxed only where SmartSurvey is embedded.
+      crossOriginEmbedderPolicy: false,
     }),
   )
+  router.use((req: Request, res: Response, next: NextFunction) => {
+    if (!feedbackBanner.enabled && !isFeedbackPage(req) && !isWelcomePage(req)) {
+      res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
+    }
+    next()
+  })
   return router
 }

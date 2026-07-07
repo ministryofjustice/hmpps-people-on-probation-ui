@@ -14,10 +14,10 @@
 {% endblock %}
 
 {% block beforeContent %}
-  {% if user and feedbackBanner.enabled %}
+  {% if user and feedbackBanner.enabled and currentPage !== "feedback" %}
     {{ govukPhaseBanner({
       tag: {
-        text: "Prototype",
+        text: "Beta",
         classes: "govuk-tag--blue"
       },
       html: 'This is a new service – your <a class="govuk-link" href="/feedback">feedback</a> will help us to improve it.'
@@ -29,7 +29,7 @@
 {% block bodyStart %}{% endblock %}
 
 {% block bodyEnd %}
-  {% if user and feedbackBanner.enabled %}
+  {% if user and feedbackBanner.enabled and currentPage !== "feedback" %}
     <script id="ss-popup-1822134" nonce="{{ cspNonce }}">(function (d, w){var s,ss;ss=d.createElement("script");ss.type="text/javascript";ss.async=true;ss.type="module";ss.src="https://embed.smartsurvey.io/index.js?popupCode=IHBFUW";s=d.getElementsByTagName("script")[0];s.parentNode.insertBefore(ss, s);})(document, window);</script>
   {% endif %}
   {% if user and sessionTimeoutWarning %}
@@ -50,7 +50,7 @@
         aria-describedby="pop-timeout-warning-description"
         tabindex="-1"
       >
-        <h2 class="govuk-heading-m" id="pop-timeout-warning-title">Your session will time out</h2>
+        <h2 class="govuk-heading-m" id="pop-timeout-warning-title">You're about to be signed out</h2>
         <p class="govuk-body" id="pop-timeout-warning-description">
           For your security, we will sign you out in
           <span class="pop-timeout-warning__countdown" aria-live="polite" aria-atomic="true">5 minutes</span>.

@@ -4,6 +4,7 @@ import { addDays, format } from 'date-fns'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import { appSessionCookieName } from '../auth/cookies'
 import type { Services } from '../services'
+import config from '../config'
 
 let app: Express
 let peopleOnProbationService: {
@@ -13,6 +14,8 @@ let peopleOnProbationService: {
 }
 
 beforeEach(() => {
+  config.features.missedAppointmentAlert = true
+
   peopleOnProbationService = {
     getFutureAppointments: jest.fn(),
     getPastAppointments: jest.fn(),
@@ -27,6 +30,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  config.features.missedAppointmentAlert = false
   jest.useRealTimers()
   jest.resetAllMocks()
 })
@@ -95,9 +99,31 @@ describe('GET /', () => {
     expect(response.text).toContain('Missed mandatory appointment or activity')
     expect(response.text).toContain('Monday 1 June 2026')
     expect(response.text).toContain('Overall order')
-    expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 10)
-    expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 0, 10)
+    expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 50)
+    expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 0, 50)
     expect(peopleOnProbationService.getSentences).toHaveBeenCalledWith('X123456')
+  })
+
+  it('should not render the missed appointment alert when the feature flag is disabled', async () => {
+    config.features.missedAppointmentAlert = false
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [] })
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-01',
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [] })
+
+    const response = await request(app)
+      .get('/')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Missed mandatory appointment or activity')
   })
 
   it('should redirect authenticated users without a person reference to auth error', async () => {
@@ -160,6 +186,43 @@ describe('GET /', () => {
       .expect(200)
 
     expect(response.text).toContain('Missed mandatory appointment or activity')
-    expect(response.text).toContain('Friday 12 June 2026, 9am to 12pm')
+    expect(response.text).toContain('Friday 12 June 2026')
+    expect(response.text).not.toContain('9am to 12pm')
+  })
+})
+
+describe('GET /welcome', () => {
+  it('shows the interstitial for a first-time user with no previous login', async () => {
+    const response = await request(app)
+      .get('/welcome?returnTo=/')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Welcome to your probation account')
+  })
+
+  it('shows the interstitial when last login was more than 30 days ago', async () => {
+    const thirtyOneDaysAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString()
+
+    const response = await request(app)
+      .get('/welcome?returnTo=/')
+      .set('Cookie', await createAppSessionCookie('X123456', thirtyOneDaysAgo))
+      .expect(200)
+
+    expect(response.text).toContain('Welcome to your probation account')
+  })
+
+  it('redirects to returnTo when last login was within the last 30 days', async () => {
+    const twentyDaysAgo = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString()
+
+    await request(app)
+      .get('/welcome?returnTo=/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456', twentyDaysAgo))
+      .expect('Location', '/appointments')
+      .expect(302)
+  })
+
+  it('redirects unauthenticated users to sign in', async () => {
+    await request(app).get('/welcome').expect(302)
   })
 })

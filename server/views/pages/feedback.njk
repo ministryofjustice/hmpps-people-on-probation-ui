@@ -1,7 +1,8 @@
 {% extends "../partials/layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 
-{% set pageTitle = "Feedback" %}
+{% set pageTitle = "Feedback – Check your probation account – GOV.UK" %}
+{% set currentPage = "feedback" %}
 
 {% block breadcrumb %}
   {{ govukBackLink({ text: "Home", href: "/" }) }}
@@ -9,14 +10,14 @@
 
 {% block content %}
 
-  <h1 class="govuk-heading-l">Give feedback</h1>
+  <h1 class="govuk-heading-l">Give feedback about probation accounts</h1>
 
   <p class="govuk-body">Help us improve this service by sharing your feedback.</p>
 
   <iframe
+    id="pop-feedback-frame"
+    class="pop-feedback-frame"
     src="https://www.smartsurvey.co.uk/t/78DZPT/"
-    width="100%"
-    height="800"
     frameborder="0"
     title="Feedback survey"
     allowfullscreen

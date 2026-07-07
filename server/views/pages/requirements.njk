@@ -2,7 +2,7 @@
 {% from "../macros/showDetails.njk" import showDetails %}
 {% from "partials/progress-bar.njk" import progressBar %}
 
-{% set pageTitle = "Order requirements" %}
+{% set pageTitle = "Order requirements – Check your probation account – GOV.UK" %}
 {% set currentPage = "requirements" %}
 
 {% block content %}
@@ -10,10 +10,10 @@
   <h1 class="govuk-heading-xl">Order requirements</h1>
 
   <p class="govuk-body">
-    Make sure you follow the requirements included in your order. If you don’t, you could breach your probation, and go back to prison. 
+    Make sure you follow the requirements included in your order. If you don’t, you could breach your probation, and could go back to court.
   </p>
   <p class="govuk-body">
-    You may also want to know about <a class="govuk-link govuk-link--no-visited-state" href="/expectations">expectations of you and the probation service</a>.
+    See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/expectations">probation agreement</a>.
   </p>
 
   {% if overallOrder %}
@@ -69,19 +69,21 @@
   {% endif %}
 
   {% if requirements.length %}
-    <h2 class="govuk-heading-m pop-requirements__section-heading">What is included in your order requirements</h2>
+    <h3 class="govuk-heading-m pop-requirements__section-heading">What is included in your order requirements</h3>
 
     {% for requirement in requirements %}
       <div class="govuk-!-margin-bottom-2">
-        <h3 class="govuk-heading-s">{{ requirement.label }}</h3>
-        <p class="pop-progress__title">{{ requirement.label }} progress</p>
-        <div class="pop-progress__row govuk-!-margin-bottom-4">
-          {{ progressBar({
-            percentComplete: requirement.percentComplete,
-            completedDuration: requirement.completedDuration,
-            remainingDuration: (requirement.remaining ~ " " ~ requirement.unitLabel) if requirement.remaining is defined else requirement.remainingDuration
-          }) }}
-        </div>
+        <h4 class="govuk-heading-s">{{ requirement.label }}</h4>
+        {% if not requirement.isRAR %}
+          <h4 class="pop-progress__title">{{ requirement.label }} progress</h4>
+          <div class="pop-progress__row govuk-!-margin-bottom-4">
+            {{ progressBar({
+              percentComplete: requirement.percentComplete,
+              completedDuration: requirement.completedDuration,
+              remainingDuration: (requirement.remaining ~ " " ~ requirement.unitLabel) if requirement.remaining is defined else requirement.remainingDuration
+            }) }}
+          </div>
+        {% endif %}
       </div>
 
       <div class="pop-summary-card govuk-!-margin-bottom-6">
@@ -91,17 +93,19 @@
         <dl class="pop-summary-card__details">
           {% if requirement.required %}
             <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">Total {{ requirement.unitLabel }} on order</dt>
+              <dt class="pop-summary-card__key">{{ "Maximum" if requirement.isRAR else "Total" }} {{ requirement.unitLabel }} on order</dt>
               <dd class="pop-summary-card__value">{{ requirement.required }} {{ requirement.unitLabel }}</dd>
             </div>
             <div class="pop-summary-card__row">
               <dt class="pop-summary-card__key">{{ requirement.unitLabel | capitalize }} completed</dt>
               <dd class="pop-summary-card__value">{{ requirement.completed }} {{ requirement.unitLabel }}</dd>
             </div>
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">{{ requirement.unitLabel | capitalize }} remaining</dt>
-              <dd class="pop-summary-card__value">{{ requirement.remaining }} {{ requirement.unitLabel }}</dd>
-            </div>
+            {% if not requirement.isRAR %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">{{ requirement.unitLabel | capitalize }} remaining</dt>
+                <dd class="pop-summary-card__value">{{ requirement.remaining }} {{ requirement.unitLabel }}</dd>
+              </div>
+            {% endif %}
           {% elif requirement.startDate %}
             <div class="pop-summary-card__row">
               <dt class="pop-summary-card__key">Start date and time</dt>

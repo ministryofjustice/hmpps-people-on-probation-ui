@@ -247,3 +247,20 @@ document.querySelectorAll<HTMLElement>('.pop-timeout-warning').forEach(timeoutWa
 
   startWarningTimer()
 })
+
+const feedbackFrame = document.getElementById('pop-feedback-frame') as HTMLIFrameElement | null
+if (feedbackFrame) {
+  window.addEventListener('message', event => {
+    if (!String(event.origin).includes('smartsurvey.co.uk')) return
+
+    let height: number | null = null
+
+    if (typeof event.data === 'object' && event.data !== null) {
+      height = event.data.ssFrameHeight ?? null
+    }
+
+    if (height && height > 100) {
+      feedbackFrame.style.height = `${height}px`
+    }
+  })
+}

@@ -21,14 +21,13 @@ export interface AddressResponse {
 }
 
 export interface TeamResponse {
+  telephoneNumber?: string
   officeAddresses: AddressResponse[]
 }
 
 export interface ManagerResponse {
   name: PersonNameResponse
-  telephoneNumber?: string
   team?: TeamResponse
-  lastUpdatedAt?: string
 }
 
 export interface PersonalContactResponse {
@@ -51,9 +50,14 @@ export interface PersonalDetailsResponse {
   lastUpdatedAt?: string
 }
 
+export interface CategoryResponse {
+  code: string
+  description: string
+}
+
 export interface RequirementResponse {
-  type?: string
-  description?: string
+  mainCategory?: CategoryResponse
+  subCategory?: CategoryResponse
   required?: number
   completed?: number
   unit?: string
@@ -66,19 +70,25 @@ export interface RequirementResponse {
 }
 
 export interface LicenceConditionResponse {
-  type?: string
-  description?: string
+  mainCategory?: CategoryResponse
+  subCategory?: CategoryResponse
   startDate?: string
   expectedEndDate?: string
 }
 
+export interface OffenceResponse {
+  code?: string
+  description?: string
+}
+
 export interface SentenceResponse {
   type?: string
-  charge?: string
   startDate?: string
   expectedEndDate?: string
   requirements: RequirementResponse[]
   licenceConditions: LicenceConditionResponse[]
+  mainOffence?: OffenceResponse
+  additionalOffences?: OffenceResponse[]
   lastUpdatedAt?: string
 }
 
@@ -106,7 +116,7 @@ export interface AppointmentResponse {
   startTime?: string
   endTime?: string
   type?: string
-  description?: string
+  typeCode?: string
   outcome?: string
   nationalStandards?: boolean
   lastUpdatedAt?: string
@@ -204,14 +214,14 @@ export default class PeopleOnProbationApiClient extends RestClient {
     return this.get<SentenceProgressResponse>({ path: `/v1/person/${crn}/sentences` }, asSystem())
   }
 
-  getFutureAppointments(crn: string, page = 0, size = 10) {
+  getFutureAppointments(crn: string, page = 0, size = 50) {
     return this.get<PagedAppointmentsResponse>(
       { path: `/v1/person/${crn}/future-appointments`, query: { page, size } },
       asSystem(),
     )
   }
 
-  getPastAppointments(crn: string, page = 0, size = 10) {
+  getPastAppointments(crn: string, page = 0, size = 50) {
     return this.get<PagedAppointmentsResponse>(
       { path: `/v1/person/${crn}/past-appointments`, query: { page, size } },
       asSystem(),

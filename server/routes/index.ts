@@ -1,8 +1,11 @@
 import { Router } from 'express'
 import { startOfDay, differenceInDays, isBefore, addDays } from 'date-fns'
 
+import logger from '../../logger'
+import config from '../config'
 import type { Services } from '../services'
-import { loadCurrentUser } from '../auth/currentUser'
+import { loadCurrentUser, requireAuthentication } from '../auth/currentUser'
+import normaliseReturnTo from '../auth/returnTo'
 import type { AppointmentResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import {
   formatDateWithDay,
@@ -12,7 +15,7 @@ import {
   isMissedMandatoryAppointmentOrActivity,
   parseLocalDate,
 } from '../utils/utils'
-import appointmentsRoutes from './appointments'
+import appointmentsRoutes, { shouldShowAppointment } from './appointments'
 import goalsRoutes from './goals'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
@@ -47,7 +50,7 @@ function toNextAppointmentView(appointment?: AppointmentResponse): NextAppointme
 
   return {
     date: formatDateWithDay(appointment.date),
-    timeRange: formatTimeRange(appointment.startTime, appointment.endTime),
+    timeRange: appointment.unpaidWork ? undefined : formatTimeRange(appointment.startTime, appointment.endTime),
     variant,
   }
 }
@@ -57,7 +60,7 @@ function toMissedAppointmentView(appointment?: AppointmentResponse): MissedAppoi
 
   return {
     date: formatDateWithDay(appointment.date),
-    timeRange: formatTimeRange(appointment.startTime, appointment.endTime),
+    timeRange: appointment.unpaidWork ? undefined : formatTimeRange(appointment.startTime, appointment.endTime),
   }
 }
 
@@ -86,6 +89,28 @@ export default function routes(services: Services): Router {
 
   router.use(loadCurrentUser)
 
+  router.get('/welcome', requireAuthentication, (req, res) => {
+    const lastSignedInAt = res.locals.user?.registeredUserDetails?.lastSignedInAt
+    const returnTo = normaliseReturnTo(typeof req.query.returnTo === 'string' ? req.query.returnTo : '/')
+    const firstVisit = req.query.firstVisit === 'true'
+
+    const daysSinceLastSignIn = lastSignedInAt ? differenceInDays(new Date(), new Date(lastSignedInAt)) : null
+    const shouldShowInterstitial = firstVisit || !lastSignedInAt || (daysSinceLastSignIn ?? 0) >= 30
+
+    logger.info(
+      { lastSignedInAt, daysSinceLastSignIn, firstVisit, shouldShowInterstitial, returnTo },
+      '[welcome] interstitial decision',
+    )
+
+    if (!shouldShowInterstitial) {
+      logger.info({ returnTo }, '[welcome] skipping interstitial, redirecting')
+      return res.redirect(returnTo)
+    }
+
+    logger.info('[welcome] rendering welcome page')
+    return res.render('pages/welcome', { returnTo })
+  })
+
   router.use('/appointments', appointmentsRoutes(services))
   router.use('/goals', goalsRoutes(services))
   router.use('/requirements', requirementsRoutes(services))
@@ -105,19 +130,22 @@ export default function routes(services: Services): Router {
         }
 
         const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
-          services.peopleOnProbationService.getFutureAppointments(crn, 0, 10),
-          services.peopleOnProbationService.getPastAppointments(crn, 0, 10),
+          services.peopleOnProbationService.getFutureAppointments(crn, 0, 50),
+          services.peopleOnProbationService.getPastAppointments(crn, 0, 50),
           services.peopleOnProbationService.getSentences(crn),
         ])
 
-        const nextAppointment = futureAppointments.content[0] ?? undefined
+        const nextAppointment = futureAppointments.content.find(shouldShowAppointment)
 
-        const missedAppointments = pastAppointments.content.filter(isMissedMandatoryAppointmentOrActivity)
+        const missedAppointments = pastAppointments.content
+          .filter(shouldShowAppointment)
+          .filter(isMissedMandatoryAppointmentOrActivity)
+        const missedAlertEnabled = config.features.missedAppointmentAlert
 
         return res.render('pages/index', {
           nextAppointment: toNextAppointmentView(nextAppointment),
-          missedAppointment: toMissedAppointmentView(missedAppointments[0]),
-          missedAppointmentsCount: missedAppointments.length,
+          missedAppointment: missedAlertEnabled ? toMissedAppointmentView(missedAppointments[0]) : null,
+          missedAppointmentsCount: missedAlertEnabled ? missedAppointments.length : 0,
           orderProgress: toOrderProgressView(sentenceProgress.sentences),
         })
       }

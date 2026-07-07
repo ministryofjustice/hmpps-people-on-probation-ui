@@ -37,6 +37,7 @@ function appSetup(services: Services, production: boolean): Express {
 
   app.get('/cookies', (_req, res) => res.render('pages/cookies'))
   app.get('/privacy', (_req, res) => res.render('pages/privacy'))
+  app.get('/accessibility', (_req, res) => res.render('pages/accessibility'))
   app.get('/autherror', (_req, res) => {
     res.status(403)
     res.render('pages/auth-error')
@@ -56,7 +57,7 @@ function appSetup(services: Services, production: boolean): Express {
   return app
 }
 
-export async function createAppSessionCookie(personReference?: string) {
+export async function createAppSessionCookie(personReference?: string, lastSignedInAt?: string) {
   const session = createAuthenticatedUserSession({
     userId: 'one-login-subject',
     email: 'user@example.com',
@@ -66,6 +67,7 @@ export async function createAppSessionCookie(personReference?: string) {
           personReference,
           status: 'ACTIVE',
           createdAt: '2026-01-01T00:00:00Z',
+          lastSignedInAt,
         }
       : undefined,
   })

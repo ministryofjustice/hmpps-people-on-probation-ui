@@ -31,36 +31,36 @@ describe('GET /expectations', () => {
   })
 
   describe('tab query handling', () => {
-    it('defaults to the probation-service tab when no tab param is given', async () => {
+    it('defaults to the you tab when no tab param is given', async () => {
       const cookie = await createAppSessionCookie()
 
       const res = await request(app).get('/expectations').set('Cookie', cookie)
 
       expect(res.status).toBe(200)
-      expect(res.text).toContain('id="panel-probation-service"')
-      expect(res.text).not.toContain('id="panel-probation-service" hidden')
-      expect(res.text).toContain('id="panel-you" hidden')
+      expect(res.text).toContain('id="panel-you"')
+      expect(res.text).not.toContain('id="panel-you" hidden')
+      expect(res.text).toContain('id="panel-probation-service" hidden')
     })
 
-    it('defaults to the probation-service tab for an unrecognised tab param', async () => {
+    it('defaults to the you tab for an unrecognised tab param', async () => {
       const cookie = await createAppSessionCookie()
 
       const res = await request(app).get('/expectations?tab=unknown').set('Cookie', cookie)
 
       expect(res.status).toBe(200)
-      expect(res.text).not.toContain('id="panel-probation-service" hidden')
-      expect(res.text).toContain('id="panel-you" hidden')
+      expect(res.text).not.toContain('id="panel-you" hidden')
+      expect(res.text).toContain('id="panel-probation-service" hidden')
     })
 
-    it('shows the you tab when tab=you', async () => {
+    it('shows the probation-service tab when tab=probation-service', async () => {
       const cookie = await createAppSessionCookie()
 
-      const res = await request(app).get('/expectations?tab=you').set('Cookie', cookie)
+      const res = await request(app).get('/expectations?tab=probation-service').set('Cookie', cookie)
 
       expect(res.status).toBe(200)
-      expect(res.text).toContain('id="panel-probation-service" hidden')
-      expect(res.text).toContain('id="panel-you"')
-      expect(res.text).not.toContain('id="panel-you" hidden')
+      expect(res.text).toContain('id="panel-you" hidden')
+      expect(res.text).toContain('id="panel-probation-service"')
+      expect(res.text).not.toContain('id="panel-probation-service" hidden')
     })
   })
 
@@ -70,7 +70,7 @@ describe('GET /expectations', () => {
 
       const res = await request(app).get('/expectations').set('Cookie', cookie)
 
-      expect(res.text).toContain('Agreement between you and the Probation Service')
+      expect(res.text).toContain('Probation agreement')
     })
 
     it('renders both tab navigation links', async () => {
@@ -78,8 +78,8 @@ describe('GET /expectations', () => {
 
       const res = await request(app).get('/expectations').set('Cookie', cookie)
 
+      expect(res.text).toContain('What we expect from you')
       expect(res.text).toContain('What to expect from the Probation Service')
-      expect(res.text).toContain('Expectations of you on probation')
     })
   })
 })

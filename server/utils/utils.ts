@@ -8,8 +8,8 @@ const isBlank = (str: string): boolean => !str || /^\s*$/.test(str)
 
 const properCaseName = (name: string): string => (isBlank(name) ? '' : name.split('-').map(properCase).join('-'))
 
-export const convertToTitleCase = (sentence: string): string =>
-  isBlank(sentence) ? '' : sentence.split(' ').map(properCaseName).join(' ')
+export const convertToTitleCase = (value: string): string =>
+  isBlank(value) ? '' : value.split(' ').map(properCaseName).join(' ')
 
 export const initialiseName = (fullName?: string): string | null => {
   if (!fullName) return null
@@ -93,12 +93,22 @@ export const formatUnit = (unit: string | undefined, amount: number): string => 
   return label
 }
 
+const formatAddressLine = (line: string): string =>
+  convertToTitleCase(line).replace(/\b(Of|And|The)\b/g, word => word.toLowerCase())
+
 export const formatAddress = (address?: AddressResponse): string[] => {
   if (!address) return []
-  const houseAndBuilding = [address.houseNumber, address.buildingName].filter(Boolean).join(' ')
-  return [houseAndBuilding, address.street, address.town, address.district, address.county, address.postcode].filter(
-    (line): line is string => Boolean(line),
-  )
+  const houseAndBuilding = [address.houseNumber, address.buildingName && formatAddressLine(address.buildingName)]
+    .filter(Boolean)
+    .join(' ')
+  return [
+    houseAndBuilding,
+    address.street && formatAddressLine(address.street),
+    address.town && formatAddressLine(address.town),
+    address.district && formatAddressLine(address.district),
+    address.county && formatAddressLine(address.county),
+    address.postcode?.toUpperCase(),
+  ].filter((line): line is string => Boolean(line))
 }
 
 export const formatMapUrl = (addressLines: string[]): string | null => {
@@ -109,6 +119,11 @@ export const formatMapUrl = (addressLines: string[]): string | null => {
 export const formatPersonName = (name?: PersonNameResponse): string | undefined => {
   if (!name) return undefined
   return [name.forename, name.middleName, name.surname].filter(Boolean).join(' ')
+}
+
+export const formatPractitionerName = (name?: PersonNameResponse): string | undefined => {
+  const formattedName = formatPersonName(name)
+  return formattedName && /\bunallocated\b/i.test(formattedName) ? undefined : formattedName
 }
 
 export const isMissedMandatoryAppointmentOrActivity = (appointment: AppointmentResponse): boolean =>

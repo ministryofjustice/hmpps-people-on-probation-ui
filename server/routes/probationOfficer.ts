@@ -2,7 +2,7 @@ import { Router } from 'express'
 
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
-import { formatPersonName, formatAddress } from '../utils/utils'
+import { formatPractitionerName, formatAddress } from '../utils/utils'
 
 export default function probationOfficerRoutes(services: Services): Router {
   const router = Router()
@@ -16,15 +16,16 @@ export default function probationOfficerRoutes(services: Services): Router {
 
       const personalDetails = await services.peopleOnProbationService.getPersonalDetails(crn)
       const { practitioner } = personalDetails
+      const officer = practitioner
+        ? {
+            name: formatPractitionerName(practitioner.name),
+            phoneNumber: practitioner.team?.telephoneNumber,
+            officeAddress: formatAddress(practitioner.team?.officeAddresses?.[0]),
+          }
+        : null
 
       return res.render('pages/probation-officer', {
-        officer: practitioner
-          ? {
-              name: formatPersonName(practitioner.name),
-              phoneNumber: practitioner.telephoneNumber,
-              officeAddress: formatAddress(practitioner.team?.officeAddresses?.[0]),
-            }
-          : null,
+        officer: officer && (officer.name || officer.phoneNumber || officer.officeAddress.length) ? officer : null,
       })
     } catch (error) {
       return next(error)

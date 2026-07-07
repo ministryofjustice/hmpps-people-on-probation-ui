@@ -13,6 +13,7 @@ import {
   formatAddress,
   formatMapUrl,
   formatPersonName,
+  formatPractitionerName,
 } from './utils'
 
 describe('convertToTitleCase', () => {
@@ -215,6 +216,20 @@ describe('formatAddress', () => {
       'High Street',
     ])
   })
+
+  it('formats uppercase address fields consistently', () => {
+    expect(
+      formatAddress({
+        houseNumber: '10A',
+        buildingName: 'PROBATION OFFICE',
+        street: 'HIGH STREET',
+        town: 'LEEDS',
+        district: 'CITY CENTRE',
+        county: 'WEST YORKSHIRE',
+        postcode: 'ls2 2bb',
+      }),
+    ).toEqual(['10A Probation Office', 'High Street', 'Leeds', 'City Centre', 'West Yorkshire', 'LS2 2BB'])
+  })
 })
 
 describe('formatMapUrl', () => {
@@ -246,5 +261,16 @@ describe('formatPersonName', () => {
 
   it('skips middle name when absent', () => {
     expect(formatPersonName({ forename: 'Jane', surname: 'Doe' })).toEqual('Jane Doe')
+  })
+})
+
+describe('formatPractitionerName', () => {
+  it('returns undefined for unallocated practitioner names', () => {
+    expect(formatPractitionerName({ forename: 'Unallocated', surname: '' })).toBeUndefined()
+    expect(formatPractitionerName({ forename: 'Probation', surname: 'Unallocated' })).toBeUndefined()
+  })
+
+  it('formats allocated practitioner names', () => {
+    expect(formatPractitionerName({ forename: 'Jane', surname: 'Doe' })).toEqual('Jane Doe')
   })
 })
