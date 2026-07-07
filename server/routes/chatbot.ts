@@ -4,7 +4,11 @@ import config from '../config'
 import logger from '../../logger'
 import type { Services } from '../services'
 
-const UPSTREAM_TIMEOUT_MS = 30_000
+// Inactivity-only timeout. Not a cap on the whole streamed response —
+// legitimate long LLM answers can easily take longer than 30s to fully
+// stream. We reset this timer on every chunk we receive; if the upstream
+// stops sending for this long, we abort and surface an error frame.
+const UPSTREAM_INACTIVITY_TIMEOUT_MS = 30_000
 const POP_USER_TOKEN_TTL_SECONDS = 5 * 60
 
 type UserContext = Record<string, unknown>
@@ -237,10 +241,20 @@ export default function chatbotRoutes(services: Services): Router {
       ? mintPopUserToken(userContext, user.userId, config.popChatbot.userTokenSecret)
       : undefined
 
-    // Abort the upstream call if it hangs, or if the client disconnects.
+    // Abort the upstream call if it goes idle, or if the client disconnects.
+    // The timer is reset on every chunk received from upstream (see the
+    // reader loop below) — so this bounds silence between chunks, not the
+    // total streaming duration.
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
-    req.on('close', () => controller.abort())
+    let idleTimer: NodeJS.Timeout = setTimeout(() => controller.abort(), UPSTREAM_INACTIVITY_TIMEOUT_MS)
+    const resetIdleTimer = () => {
+      clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => controller.abort(), UPSTREAM_INACTIVITY_TIMEOUT_MS)
+    }
+    req.on('close', () => {
+      clearTimeout(idleTimer)
+      controller.abort()
+    })
 
     // Route to the streaming variant of the embed API. The backend at
     // /chatbot/chat-embed-stream already emits properly-formatted
@@ -293,7 +307,11 @@ export default function chatbotRoutes(services: Services): Router {
           // eslint-disable-next-line no-await-in-loop
           const { done, value } = await reader.read()
           if (done) break
-          if (value) res.write(value)
+          if (value) {
+            // Upstream is alive — push the idle-abort window out again.
+            resetIdleTimer()
+            res.write(value)
+          }
         }
       } finally {
         reader.releaseLock()
@@ -309,10 +327,15 @@ export default function chatbotRoutes(services: Services): Router {
         return
       }
       logger.warn({ err }, 'Chatbot proxy failed')
-      send({ type: 'error', text: 'Chatbot service unavailable' })
-      res.end()
+      // Guard the send: we may have already streamed the whole response
+      // out and called res.end() in the reader's finally block — writing
+      // to a finished response throws ERR_STREAM_WRITE_AFTER_END.
+      if (!res.writableEnded) {
+        send({ type: 'error', text: 'Chatbot service unavailable' })
+        res.end()
+      }
     } finally {
-      clearTimeout(timer)
+      clearTimeout(idleTimer)
     }
   })
 
