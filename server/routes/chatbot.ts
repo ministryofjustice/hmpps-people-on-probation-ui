@@ -179,12 +179,24 @@ export default function chatbotRoutes(services: Services): Router {
     const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
     req.on('close', () => controller.abort())
 
+    // Route to the streaming variant of the embed API. The backend at
+    // /chatbot/chat-embed-stream already emits properly-formatted
+    // `data: {...}\n\n` SSE frames matching this route's own SSE contract,
+    // so we forward the response body straight through with no wrapping.
+    // If the deployment config's POP_CHATBOT_API_URL still points at the
+    // old non-streaming endpoint, swap the path suffix here so this route
+    // doesn't require a synchronised deployment-config change.
+    const upstreamUrl = apiUrl.endsWith('/chat-embed')
+      ? `${apiUrl}-stream`
+      : apiUrl
+
     try {
-      const upstream = await fetch(apiUrl, {
+      const upstream = await fetch(upstreamUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-API-Key': apiKey,
+          Accept: 'text/event-stream',
         },
         body: JSON.stringify(upstreamBody),
         signal: controller.signal,
@@ -201,26 +213,26 @@ export default function chatbotRoutes(services: Services): Router {
         return
       }
 
-      const data = (await upstream.json()) as {
-        response?: string
-        conversation_id?: string
-        sensitive_content_detected?: boolean
-        sources?: string[]
+      if (!upstream.body) {
+        send({ type: 'error', text: 'Chatbot service returned no response body' })
+        res.end()
+        return
       }
-      const responseText = data.response ?? ''
 
-      if (data.sensitive_content_detected) {
-        send({ type: 'blocked', text: responseText })
-      } else {
-        send({ type: 'chunk', text: responseText })
+      // Pipe the SSE frames from the backend straight through to the widget.
+      // Reading in chunks (rather than awaiting the whole body) preserves
+      // token-by-token streaming end-to-end.
+      const reader = upstream.body.getReader()
+      try {
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (value) res.write(value)
+        }
+      } finally {
+        reader.releaseLock()
+        if (!res.writableEnded) res.end()
       }
-      send({
-        type: 'done',
-        conversation_id: data.conversation_id,
-        sources: data.sources ?? [],
-        final_text: responseText,
-      })
-      res.end()
     } catch (err) {
       if ((err as { name?: string }).name === 'AbortError') {
         logger.warn('Chatbot proxy aborted (timeout or client disconnect)')

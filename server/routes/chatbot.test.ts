@@ -108,14 +108,14 @@ describe('POST /api/chatbot/chat', () => {
     )
   })
 
-  it('streams a chunk and done event when upstream returns a successful response', async () => {
+  it('pipes SSE frames from upstream straight through to the client', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: jest.fn().mockResolvedValue({
-        response: 'Hello back',
-        conversation_id: 'conv-1',
-        sources: ['doc-a'],
-      }),
+      body: mockUpstreamStreamBody([
+        'data: {"type":"chunk","text":"Hello"}\n\n',
+        'data: {"type":"chunk","text":" back"}\n\n',
+        'data: {"type":"done","conversation_id":"conv-1","sources":["doc-a"]}\n\n',
+      ]),
     } as unknown as Response)
 
     const app = buildApp()
@@ -125,20 +125,24 @@ describe('POST /api/chatbot/chat', () => {
       .send({ message: 'hi', conversation_id: 'conv-1' })
       .expect(200)
 
-    expect(res.text).toContain('"type":"chunk"')
-    expect(res.text).toContain('"text":"Hello back"')
+    // Each individual chunk should appear as its own SSE frame — this is
+    // what preserves token-by-token streaming end-to-end.
+    expect(res.text).toContain('data: {"type":"chunk","text":"Hello"}\n\n')
+    expect(res.text).toContain('data: {"type":"chunk","text":" back"}\n\n')
     expect(res.text).toContain('"type":"done"')
     expect(res.text).toContain('"conversation_id":"conv-1"')
     expect(res.text).toContain('"sources":["doc-a"]')
   })
 
-  it('sends a blocked event when upstream flags sensitive content', async () => {
+  it('forwards a blocked frame from upstream unchanged', async () => {
+    // The streaming backend now emits `blocked` frames itself when
+    // guardrails hit — this proxy just forwards them, no wrapping needed.
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: jest.fn().mockResolvedValue({
-        response: 'blocked',
-        sensitive_content_detected: true,
-      }),
+      body: mockUpstreamStreamBody([
+        'data: {"type":"blocked","text":"I cannot help with that.","guardrail_violations":["jailbreak"]}\n\n',
+        'data: {"type":"done","conversation_id":"conv-blocked"}\n\n',
+      ]),
     } as unknown as Response)
 
     const app = buildApp()
@@ -146,13 +150,29 @@ describe('POST /api/chatbot/chat', () => {
     const res = await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
 
     expect(res.text).toContain('"type":"blocked"')
-    expect(res.text).toContain('"text":"blocked"')
+    expect(res.text).toContain('"text":"I cannot help with that."')
+    expect(res.text).toContain('"guardrail_violations":["jailbreak"]')
+  })
+
+  it('returns an error frame when upstream returns no response body', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: null,
+    } as unknown as Response)
+
+    const app = buildApp()
+
+    const res = await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    expect(res.text).toContain('"type":"error"')
   })
 
   it('calls upstream with X-API-Key header and user_context built server-side', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: jest.fn().mockResolvedValue({ response: 'ok', conversation_id: 'c-2' }),
+      body: mockUpstreamStreamBody([
+        'data: {"type":"done","conversation_id":"c-2"}\n\n',
+      ]),
     } as unknown as Response)
 
     const app = buildApp()
@@ -174,4 +194,34 @@ describe('POST /api/chatbot/chat', () => {
     expect(body.user_context.personalDetails.name).toBe('Jane Doe')
     expect(body.user_context.metadata.crn).toBe('X123456')
   })
+
+  it('appends -stream to a legacy /chat-embed apiUrl so the streaming endpoint is hit', async () => {
+    config.popChatbot.apiUrl = 'https://upstream.test/chatbot/chat-embed'
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody([
+        'data: {"type":"done"}\n\n',
+      ]),
+    } as unknown as Response)
+
+    const app = buildApp()
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://upstream.test/chatbot/chat-embed-stream',
+      expect.any(Object),
+    )
+  })
 })
+
+function mockUpstreamStreamBody(frames: string[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder()
+  const chunks = frames.map(f => encoder.encode(f))
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk)
+      controller.close()
+    },
+  })
+}
