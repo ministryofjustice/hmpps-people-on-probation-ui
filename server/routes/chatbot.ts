@@ -77,8 +77,10 @@ async function buildUserContext(services: Services, user: { userId: string }, cr
   ])
 
   const sentence = sentenceProgress.sentences?.[0]
-  const rar = (sentence?.requirements ?? []).find(r => r.type === 'Rehabilitation Activity Requirement')
-  const upw = (sentence?.requirements ?? []).find(r => r.type === 'Unpaid Work')
+  const rar = (sentence?.requirements ?? []).find(
+    r => r.mainCategory?.description === 'Rehabilitation Activity Requirement',
+  )
+  const upw = (sentence?.requirements ?? []).find(r => r.mainCategory?.description === 'Unpaid Work')
   const upwNext = futureAppointments.content.find(a => a.type === 'Unpaid Work')
   const emergency = personalDetails.emergencyContacts?.[0]
   const { practitioner } = personalDetails
@@ -113,7 +115,7 @@ async function buildUserContext(services: Services, user: { userId: string }, cr
     probationPractitioner: practitioner
       ? {
           name: [practitioner.name?.forename, practitioner.name?.surname].filter(Boolean).join(' '),
-          phone: practitioner.telephoneNumber,
+          phone: practitioner.team?.telephoneNumber,
           officeAddress: [
             officeAddress?.buildingName,
             officeAddress?.street,
@@ -129,15 +131,15 @@ async function buildUserContext(services: Services, user: { userId: string }, cr
       startDate: sentence?.startDate,
       requirementsCompletionDate: sentence?.expectedEndDate,
       requirements: (sentence?.requirements ?? []).map(r => ({
-        category: r.type,
-        requirement: r.description,
+        category: r.mainCategory?.description,
+        requirement: r.subCategory?.description,
       })),
     },
     rehabilitationActivityRequirement: rar
       ? [
           {
-            type: rar.type,
-            activity: rar.description,
+            type: rar.mainCategory?.description,
+            activity: rar.subCategory?.description,
             daysCompleted: rar.completed,
             daysRequired: rar.required,
           },
@@ -157,7 +159,7 @@ async function buildUserContext(services: Services, user: { userId: string }, cr
           ],
           nextAppointment: upwNext
             ? {
-                title: upwNext.description,
+                title: upwNext.type,
                 date: upwNext.date,
                 time: upwNext.startTime,
                 location: upwNext.location?.buildingName,
