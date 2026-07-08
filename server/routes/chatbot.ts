@@ -220,8 +220,10 @@ export default function chatbotRoutes(services: Services): Router {
 
     // Only forward fields the embed API expects. user_context is always
     // built server-side from the authenticated session — never trusted
-    // from the request body.
-    const { message, conversation_id: conversationId } = req.body ?? {}
+    // from the request body. session_token is echoed straight through
+    // from the widget; the backend uses it to prove the caller owns the
+    // conversation on any follow-up (same-conversation) request.
+    const { message, conversation_id: conversationId, session_token: sessionToken } = req.body ?? {}
     let userContext: UserContext | undefined
     if (crn) {
       try {
@@ -230,7 +232,12 @@ export default function chatbotRoutes(services: Services): Router {
         logger.warn({ err }, 'Could not build user context for chat; continuing without it')
       }
     }
-    const upstreamBody = { message, conversation_id: conversationId, user_context: userContext }
+    const upstreamBody = {
+      message,
+      conversation_id: conversationId,
+      session_token: sessionToken,
+      user_context: userContext,
+    }
 
     // When POP_CHATBOT_USER_TOKEN_SECRET is set, sign a short-lived JWT
     // carrying the flattened embed context. The chatbot backend requires
@@ -338,6 +345,83 @@ export default function chatbotRoutes(services: Services): Router {
       }
     } finally {
       clearTimeout(idleTimer)
+    }
+  })
+
+  /**
+   * POST /api/chatbot/chat/feedback — proxies widget thumbs up/down to the
+   * chatbot backend's /chatbot/feedback-embed endpoint. Widget calls
+   * `${apiBaseUrl}/feedback` where apiBaseUrl is /api/chatbot/chat, so the
+   * request lands here.
+   */
+  router.post('/chat/feedback', async (req: Request, res: Response) => {
+    const { apiUrl, apiKey } = config.popChatbot
+    const { user } = res.locals
+
+    if (!user) {
+      res.status(401).json({ error: 'Not authenticated' })
+      return
+    }
+    if (!apiUrl || !apiKey) {
+      res.status(503).json({ error: 'Chatbot service is not configured' })
+      return
+    }
+
+    // Derive feedback URL from the chat streaming URL by swapping the
+    // endpoint path. Keeps env-var footprint at one URL rather than two.
+    const feedbackUrl = apiUrl.replace(/\/chat-embed-stream(\/?)$/, '/feedback-embed$1')
+    if (feedbackUrl === apiUrl) {
+      logger.warn(
+        { apiUrl },
+        'POP_CHATBOT_API_URL does not end with /chat-embed-stream; unable to derive feedback URL',
+      )
+      res.status(503).json({ error: 'Chatbot feedback endpoint is not configured' })
+      return
+    }
+
+    // Only forward the fields the embed feedback endpoint expects. _csrf and
+    // any other body fields are dropped.
+    const {
+      message_id: messageId,
+      feedback_type: feedbackType,
+      feedback_value: feedbackValue,
+      conversation_id: conversationId,
+    } = req.body ?? {}
+
+    if (!messageId || !feedbackType) {
+      res.status(400).json({ error: 'message_id and feedback_type are required' })
+      return
+    }
+
+    try {
+      const upstream = await fetch(feedbackUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({
+          message_id: messageId,
+          feedback_type: feedbackType,
+          feedback_value: feedbackValue ?? null,
+          conversation_id: conversationId,
+        }),
+      })
+
+      if (!upstream.ok) {
+        const text = await upstream.text().catch(() => '')
+        logger.warn(
+          { status: upstream.status, body: text.slice(0, 500) },
+          'Chatbot feedback upstream returned a non-2xx response',
+        )
+        res.status(502).json({ error: 'Chatbot feedback service unavailable' })
+        return
+      }
+
+      res.status(200).json({ message: 'Feedback recorded' })
+    } catch (err) {
+      logger.warn({ err }, 'Chatbot feedback proxy failed')
+      res.status(502).json({ error: 'Chatbot feedback service unavailable' })
     }
   })
 
