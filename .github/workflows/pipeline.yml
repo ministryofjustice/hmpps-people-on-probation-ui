@@ -114,18 +114,70 @@ jobs:
     secrets: inherit
     with:
       environment: ${{ matrix.environments }}
+  # TEMP: Inlined from hmpps-github-actions/.../docker_build.yml@v2 so we can
+  # pass NODE_AUTH_TOKEN to `docker build` as a BuildKit secret. The private
+  # @justiceaiunit/chatbot-widget package needs the token during `npm ci` in
+  # the Dockerfile. GitHub Actions blocks `${{ secrets.X }}` inside `with:`
+  # values on reusable workflow calls (security policy — prevents leaking
+  # caller secrets to callee workflows), so we can't thread the token through
+  # the shared docker_build.yml@v2 workflow's `additional_docker_build_args`
+  # input either. Inlining is the only path from this side.
+  #
+  # When @justiceaiunit/chatbot-widget moves to a public / MoJ-scoped registry,
+  # revert this back to `uses: .../docker_build.yml@v2` (see git history) and
+  # drop the BuildKit-secret handling in the Dockerfile.
   build:
-    name: Build docker image from hmpps-github-actions
+    name: Build docker image
     if: github.ref == 'refs/heads/main'
-    uses: ministryofjustice/hmpps-github-actions/.github/workflows/docker_build.yml@v2 # WORKFLOW_VERSION
+    runs-on: ubuntu-latest
     needs:
       - node_unit_tests
-    with:
-      docker_registry: 'ghcr.io'
-      registry_org: 'ministryofjustice'
-      additional_docker_tag: ${{ inputs.additional_docker_tag }}
-      push: ${{ inputs.push || inputs.push == null }}
-      docker_multiplatform: false
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      app_version: ${{ steps.app_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - id: app_version
+        uses: ministryofjustice/hmpps-github-shared-actions/.github/actions/build-test-and-deploy/create_app_version@c241b9febb7a4fc11e88d0e781cbdfcf8abd84a5 # v1.0.17
+      - uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+      - name: Docker login to ghcr.io
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Set docker tags
+        id: set_tags
+        shell: bash
+        run: |
+          BASE_TAG="ghcr.io/ministryofjustice/hmpps-people-on-probation-ui"
+          TAGS="${BASE_TAG}:${{ steps.app_version.outputs.version }},${BASE_TAG}:latest"
+          if [[ -n "${{ inputs.additional_docker_tag }}" ]]; then
+            TAGS="${TAGS},${BASE_TAG}:${{ inputs.additional_docker_tag }}"
+          fi
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+      - name: Build and push docker image
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          push: ${{ inputs.push || inputs.push == null }}
+          provenance: false
+          build-args: |
+            BUILD_NUMBER=${{ steps.app_version.outputs.version }}
+            GIT_REF=${{ github.sha }}
+            GIT_BRANCH=${{ github.ref_name }}
+          # TEMP: NODE_AUTH_TOKEN needed to pull @justiceaiunit/chatbot-widget
+          # inside the Dockerfile. Remove once the package registry moves.
+          secrets: |
+            NODE_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          tags: ${{ steps.set_tags.outputs.tags }}
   deploy_dev:
     name: Deploy to the development environment
     needs:

@@ -6,6 +6,11 @@ node_modules
 npm-debug.log
 .*
 !.allowed-scripts.mjs
+# TEMP: .npmrc needs to be in the build context so `npm ci` inside the Dockerfile
+# can resolve `//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}` and pull
+# @justiceaiunit/chatbot-widget from GitHub Packages. Once the widget moves to
+# a public / MoJ-scoped registry, drop this exception.
+!.npmrc
 **/*.test.js
 scss-report.txt
 eslint-report.html
