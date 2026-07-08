@@ -22,8 +22,15 @@ ARG BUILD_NUMBER
 ARG GIT_REF
 ARG GIT_BRANCH
 
-COPY package*.json .allowed-scripts.mjs ./
-RUN NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false npm run setup
+COPY package*.json .allowed-scripts.mjs .npmrc ./
+# TEMP: NODE_AUTH_TOKEN is mounted as a BuildKit secret because the private
+# @justiceaiunit/chatbot-widget package lives in JAIU's GitHub Packages and
+# needs auth during `npm ci`. When the widget moves to a public / MoJ-scoped
+# registry, revert this to a plain `RUN npm run setup`, drop the .npmrc COPY,
+# drop the .dockerignore exception, and revert the inlined docker build in
+# .github/workflows/pipeline.yml back to the shared docker_build.yml@v2.
+RUN --mount=type=secret,id=NODE_AUTH_TOKEN,env=NODE_AUTH_TOKEN \
+    NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false npm run setup
 ENV NODE_ENV='production'
 
 COPY . .
