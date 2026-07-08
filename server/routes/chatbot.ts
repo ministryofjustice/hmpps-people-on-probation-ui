@@ -378,7 +378,10 @@ export default function chatbotRoutes(services: Services): Router {
     if (!feedbackUrl) {
       const derived = apiUrl.replace(/\/chat-embed-stream(\/?)$/, '/feedback-embed$1')
       if (derived === apiUrl) {
-        logger.warn({ apiUrl }, 'POP_CHATBOT_API_URL does not end with /chat-embed-stream; set POP_CHATBOT_FEEDBACK_URL explicitly')
+        logger.warn(
+          { apiUrl },
+          'POP_CHATBOT_API_URL does not end with /chat-embed-stream; set POP_CHATBOT_FEEDBACK_URL explicitly',
+        )
         res.status(503).json({ error: 'Chatbot feedback endpoint is not configured' })
         return
       }

@@ -398,6 +398,7 @@ describe('POST /api/chatbot/chat/feedback', () => {
       session_token: 'sig.payload',
     })
     // _csrf is intentionally dropped — never forwarded to the backend.
+    // eslint-disable-next-line no-underscore-dangle
     expect(upstreamBody._csrf).toBeUndefined()
   })
 
