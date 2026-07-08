@@ -113,6 +113,13 @@ export default {
     // or POP_CHATBOT_API_KEY unset and `chatbotEnabled` becomes false.
     apiUrl: get('POP_CHATBOT_API_URL', '') as string,
     apiKey: process.env.POP_CHATBOT_API_KEY,
+    // Optional explicit URL for the embed feedback endpoint. When unset,
+    // the /chat/feedback proxy derives it from POP_CHATBOT_API_URL by
+    // swapping /chat-embed-stream → /feedback-embed. Set this explicitly
+    // if the chat and feedback endpoints ever diverge in path structure —
+    // otherwise feedback would silently 503 while chat kept working, and
+    // the chat smoke test wouldn't catch it.
+    feedbackUrl: get('POP_CHATBOT_FEEDBACK_URL', '') as string,
     // Optional HS256-signing secret shared with the chatbot backend. When set,
     // this route mints a short-lived JWT carrying the flattened user context
     // and passes it via the X-POP-User-Token header. The chatbot then

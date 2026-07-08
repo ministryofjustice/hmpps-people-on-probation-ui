@@ -21,6 +21,12 @@ generic-service:
     # Points at the streaming endpoint on the MoJ Cloud Platform chatbot
     # (via its Next.js proxy which forwards SSE frames through unchanged).
     # The old Railway URL was retired 2026-07.
+    #
+    # Coupled: the /chat/feedback proxy derives the feedback URL by
+    # swapping /chat-embed-stream → /feedback-embed on this same base.
+    # If chat and feedback endpoints ever diverge in path structure,
+    # set POP_CHATBOT_FEEDBACK_URL explicitly to avoid feedback silently
+    # 503-ing while chat keeps working.
     POP_CHATBOT_API_URL: "https://probationchatbot-dev.apps.live.cloud-platform.service.justice.gov.uk/api/proxy/chatbot/chat-embed-stream"
 
 generic-prometheus-alerts:

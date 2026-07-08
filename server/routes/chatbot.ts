@@ -355,7 +355,7 @@ export default function chatbotRoutes(services: Services): Router {
    * request lands here.
    */
   router.post('/chat/feedback', async (req: Request, res: Response) => {
-    const { apiUrl, apiKey } = config.popChatbot
+    const { apiUrl, apiKey, feedbackUrl: configuredFeedbackUrl } = config.popChatbot
     const { user } = res.locals
 
     if (!user) {
@@ -367,22 +367,36 @@ export default function chatbotRoutes(services: Services): Router {
       return
     }
 
-    // Derive feedback URL from the chat streaming URL by swapping the
-    // endpoint path. Keeps env-var footprint at one URL rather than two.
-    const feedbackUrl = apiUrl.replace(/\/chat-embed-stream(\/?)$/, '/feedback-embed$1')
-    if (feedbackUrl === apiUrl) {
-      logger.warn({ apiUrl }, 'POP_CHATBOT_API_URL does not end with /chat-embed-stream; unable to derive feedback URL')
-      res.status(503).json({ error: 'Chatbot feedback endpoint is not configured' })
-      return
+    // Prefer an explicit POP_CHATBOT_FEEDBACK_URL. Fall back to deriving
+    // from POP_CHATBOT_API_URL by swapping the endpoint path (works while
+    // both endpoints live at the same base path). If derivation fails
+    // (URL doesn't end with /chat-embed-stream) we 503 rather than
+    // silently POSTing to the wrong place — otherwise chat would keep
+    // working while feedback broke, and the chat smoke test wouldn't
+    // catch it.
+    let feedbackUrl = configuredFeedbackUrl
+    if (!feedbackUrl) {
+      const derived = apiUrl.replace(/\/chat-embed-stream(\/?)$/, '/feedback-embed$1')
+      if (derived === apiUrl) {
+        logger.warn({ apiUrl }, 'POP_CHATBOT_API_URL does not end with /chat-embed-stream; set POP_CHATBOT_FEEDBACK_URL explicitly')
+        res.status(503).json({ error: 'Chatbot feedback endpoint is not configured' })
+        return
+      }
+      feedbackUrl = derived
     }
 
     // Only forward the fields the embed feedback endpoint expects. _csrf and
-    // any other body fields are dropped.
+    // any other body fields are dropped. session_token proves the caller
+    // owns the conversation — the backend requires it whenever
+    // conversation_id is set (matching the chat flow) so that a leaked
+    // X-API-Key alone can't be used to poison arbitrary conversations'
+    // feedback aggregates.
     const {
       message_id: messageId,
       feedback_type: feedbackType,
       feedback_value: feedbackValue,
       conversation_id: conversationId,
+      session_token: sessionToken,
     } = req.body ?? {}
 
     if (!messageId || !feedbackType) {
@@ -402,6 +416,7 @@ export default function chatbotRoutes(services: Services): Router {
           feedback_type: feedbackType,
           feedback_value: feedbackValue ?? null,
           conversation_id: conversationId,
+          session_token: sessionToken,
         }),
       })
 

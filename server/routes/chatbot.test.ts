@@ -269,3 +269,178 @@ function mockUpstreamStreamBody(frames: string[]): ReadableStream<Uint8Array> {
     },
   })
 }
+
+describe('POST /api/chatbot/chat (session_token forwarding)', () => {
+  let originalChatbotConfig: typeof config.popChatbot
+
+  beforeEach(() => {
+    originalChatbotConfig = { ...config.popChatbot }
+    config.popChatbot.apiUrl = 'https://upstream.test/chat-embed-stream'
+    config.popChatbot.apiKey = 'test-key'
+  })
+
+  afterEach(() => {
+    config.popChatbot.apiUrl = originalChatbotConfig.apiUrl
+    config.popChatbot.apiKey = originalChatbotConfig.apiKey
+    config.popChatbot.userTokenSecret = originalChatbotConfig.userTokenSecret
+    jest.restoreAllMocks()
+    jest.clearAllMocks()
+  })
+
+  it('forwards session_token from request body into upstream body', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp()
+
+    await request(app)
+      .post('/api/chatbot/chat')
+      .send({ message: 'hi', conversation_id: 'embed_abc', session_token: 'sig.payload' })
+      .expect(200)
+
+    const upstreamBody = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(upstreamBody.session_token).toBe('sig.payload')
+    expect(upstreamBody.conversation_id).toBe('embed_abc')
+    expect(upstreamBody.message).toBe('hi')
+  })
+})
+
+describe('POST /api/chatbot/chat/feedback', () => {
+  let originalChatbotConfig: typeof config.popChatbot
+
+  beforeEach(() => {
+    originalChatbotConfig = { ...config.popChatbot }
+    config.popChatbot.apiUrl = 'https://upstream.test/chatbot/chat-embed-stream'
+    config.popChatbot.apiKey = 'test-key'
+    config.popChatbot.feedbackUrl = ''
+  })
+
+  afterEach(() => {
+    config.popChatbot.apiUrl = originalChatbotConfig.apiUrl
+    config.popChatbot.apiKey = originalChatbotConfig.apiKey
+    config.popChatbot.feedbackUrl = originalChatbotConfig.feedbackUrl
+    jest.restoreAllMocks()
+    jest.clearAllMocks()
+  })
+
+  it('returns 401 when no authenticated user is present', async () => {
+    const app = buildApp({ user: undefined })
+
+    await request(app)
+      .post('/api/chatbot/chat/feedback')
+      .send({ message_id: 'm1', feedback_type: 'thumbs_up' })
+      .expect(401, { error: 'Not authenticated' })
+  })
+
+  it('returns 503 when chatbot config is missing', async () => {
+    config.popChatbot.apiUrl = ''
+    const app = buildApp()
+
+    await request(app)
+      .post('/api/chatbot/chat/feedback')
+      .send({ message_id: 'm1', feedback_type: 'thumbs_up' })
+      .expect(503)
+  })
+
+  it('returns 503 when feedback URL cannot be derived and no override is set', async () => {
+    config.popChatbot.apiUrl = 'https://upstream.test/some/unexpected/path'
+    const app = buildApp()
+
+    await request(app)
+      .post('/api/chatbot/chat/feedback')
+      .send({ message_id: 'm1', feedback_type: 'thumbs_up' })
+      .expect(503)
+  })
+
+  it('returns 400 when required fields are missing', async () => {
+    const app = buildApp()
+
+    await request(app).post('/api/chatbot/chat/feedback').send({ feedback_type: 'thumbs_up' }).expect(400)
+
+    await request(app).post('/api/chatbot/chat/feedback').send({ message_id: 'm1' }).expect(400)
+  })
+
+  it('forwards to the derived feedback URL with X-API-Key and the expected body', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(''),
+    } as unknown as Response)
+
+    const app = buildApp()
+
+    await request(app)
+      .post('/api/chatbot/chat/feedback')
+      .send({
+        message_id: 'm1',
+        feedback_type: 'thumbs_up',
+        feedback_value: true,
+        conversation_id: 'embed_abc',
+        session_token: 'sig.payload',
+        _csrf: 'should-be-dropped',
+      })
+      .expect(200)
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchSpy.mock.calls[0]
+    expect(url).toBe('https://upstream.test/chatbot/feedback-embed')
+
+    const headers = (init as RequestInit).headers as Record<string, string>
+    expect(headers['X-API-Key']).toBe('test-key')
+
+    const upstreamBody = JSON.parse((init as RequestInit).body as string)
+    expect(upstreamBody).toEqual({
+      message_id: 'm1',
+      feedback_type: 'thumbs_up',
+      feedback_value: true,
+      conversation_id: 'embed_abc',
+      session_token: 'sig.payload',
+    })
+    // _csrf is intentionally dropped — never forwarded to the backend.
+    expect(upstreamBody._csrf).toBeUndefined()
+  })
+
+  it('prefers POP_CHATBOT_FEEDBACK_URL when set over the derived URL', async () => {
+    config.popChatbot.feedbackUrl = 'https://upstream.test/explicit/feedback'
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(''),
+    } as unknown as Response)
+
+    const app = buildApp()
+
+    await request(app)
+      .post('/api/chatbot/chat/feedback')
+      .send({ message_id: 'm1', feedback_type: 'thumbs_up' })
+      .expect(200)
+
+    expect(fetchSpy.mock.calls[0][0]).toBe('https://upstream.test/explicit/feedback')
+  })
+
+  it('returns 502 when the upstream returns non-2xx', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 502,
+      text: jest.fn().mockResolvedValue('upstream broken'),
+    } as unknown as Response)
+
+    const app = buildApp()
+
+    await request(app)
+      .post('/api/chatbot/chat/feedback')
+      .send({ message_id: 'm1', feedback_type: 'thumbs_up' })
+      .expect(502)
+  })
+
+  it('returns 502 when the upstream fetch throws', async () => {
+    jest.spyOn(global, 'fetch').mockRejectedValue(new Error('network down'))
+
+    const app = buildApp()
+
+    await request(app)
+      .post('/api/chatbot/chat/feedback')
+      .send({ message_id: 'm1', feedback_type: 'thumbs_up' })
+      .expect(502)
+  })
+})
