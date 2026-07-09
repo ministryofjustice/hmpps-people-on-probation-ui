@@ -27,7 +27,7 @@
   },
   "engines": {
     "node": "^24",
-    "npm": "^11"
+    "npm": ">=11 <13"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.1006.0",
