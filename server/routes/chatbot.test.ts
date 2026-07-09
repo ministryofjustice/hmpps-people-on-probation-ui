@@ -202,7 +202,7 @@ describe('POST /api/chatbot/chat', () => {
     expect(body.user_context.metadata.crn).toBe('X123456')
   })
 
-  it('forwards every available source close to as-is, including sources beyond the original fixed set', async () => {
+  it('sanitizes goals and appointments to the fields actually shown on screen', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-goals"}\n\n']),
@@ -227,9 +227,225 @@ describe('POST /api/chatbot/chat', () => {
     await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
 
     const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
-    // Previously dropped entirely — buildUserContext never called these endpoints.
     expect(body.user_context.pastAppointments).toEqual([{ type: 'Office Visit', date: '2026-06-01' }])
-    expect(body.user_context.sentencePlan.goals).toEqual([{ goalTitle: 'Find stable housing', goalStatus: 'ACTIVE' }])
+    expect(body.user_context.sentencePlan.goals).toEqual([
+      { goalTitle: 'Find stable housing', goalStatus: 'ACTIVE', steps: [] },
+    ])
+  })
+
+  it('strips fields the POP UI never shows on any screen, so the chatbot cannot know more than the user can see', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-sanitize"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getPersonalDetails: jest.fn().mockResolvedValue({
+            ...minimalPersonalDetails,
+            lastUpdatedAt: '2026-01-01T00:00:00Z',
+            mainAddress: { street: 'Holloway Road', postcode: 'N7 8JL', lastUpdatedAt: '2026-01-01T00:00:00Z' },
+            practitioner: {
+              name: { forename: 'Alex', surname: 'Murphy' },
+              team: {
+                telephoneNumber: '020 7946 0987',
+                officeAddresses: [{ street: 'Office One' }, { street: 'Office Two (hidden)' }],
+              },
+            },
+          }),
+          getSentences: jest.fn().mockResolvedValue({
+            sentences: [
+              {
+                type: 'Community Order',
+                startDate: '2025-10-01',
+                expectedEndDate: '2026-09-30',
+                mainOffence: { code: 'THEFT1', description: 'Theft' },
+                additionalOffences: [{ code: 'X', description: 'Should never appear' }],
+                lastUpdatedAt: '2026-01-01T00:00:00Z',
+                requirements: [
+                  {
+                    mainCategory: { code: 'F', description: 'Rehabilitation Activity Requirement' },
+                    required: 25,
+                    completed: 8,
+                    unit: 'days',
+                    imposedDate: '2025-09-01',
+                    expectedStartDate: '2026-06-03',
+                    expectedEndDate: '2026-12-31',
+                    lastUpdatedAt: '2026-01-01T00:00:00Z',
+                  },
+                ],
+                licenceConditions: [{ mainCategory: { code: 'L1', description: 'Should never appear' } }],
+              },
+              { type: 'Second sentence — should never appear', requirements: [], licenceConditions: [] },
+            ],
+          }),
+          getPastAppointments: jest.fn().mockResolvedValue({
+            content: [
+              {
+                date: '2026-05-08',
+                type: 'Office Visit',
+                typeCode: 'C123',
+                outcome: 'Failed to attend',
+                attended: false,
+                complied: false,
+                lastUpdatedAt: '2026-01-01T00:00:00Z',
+              },
+            ],
+          }),
+          getSentencePlan: jest.fn().mockResolvedValue({
+            crn: 'X123456',
+            nomis: 'N1',
+            planStatus: 'CURRENT',
+            goals: [
+              {
+                goalTitle: 'Find stable housing',
+                areaOfNeed: 'ACCOMMODATION',
+                relatedAreaOfNeed: ['EMPLOYMENT'],
+                goalStatus: 'ACTIVE',
+                steps: [{ description: 'Register with housing office', status: 'COMPLETED', statusDate: '2026-01-01' }],
+              },
+            ],
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+
+    expect(ctx.personalDetails.lastUpdatedAt).toBeUndefined()
+    expect(ctx.personalDetails.mainAddress.lastUpdatedAt).toBeUndefined()
+    expect(ctx.personalDetails.practitioner.team.officeAddresses).toEqual([{ street: 'Office One' }])
+
+    expect(ctx.sentenceProgress.sentences).toHaveLength(1)
+    expect(ctx.sentenceProgress.sentences[0].mainOffence).toEqual({ description: 'Theft' })
+    expect(ctx.sentenceProgress.sentences[0].additionalOffences).toBeUndefined()
+    expect(ctx.sentenceProgress.sentences[0].lastUpdatedAt).toBeUndefined()
+    expect(ctx.sentenceProgress.sentences[0].licenceConditions).toBeUndefined()
+
+    const rar = ctx.sentenceProgress.sentences[0].requirements[0]
+    expect(rar.required).toBe(25)
+    expect(rar.imposedDate).toBeUndefined()
+    expect(rar.expectedStartDate).toBeUndefined()
+    expect(rar.expectedEndDate).toBeUndefined()
+    expect(rar.lastUpdatedAt).toBeUndefined()
+
+    const pastAppt = ctx.pastAppointments[0]
+    expect(pastAppt.typeCode).toBeUndefined()
+    expect(pastAppt.complied).toBeUndefined()
+    expect(pastAppt.lastUpdatedAt).toBeUndefined()
+    expect(pastAppt.attended).toBe(false)
+
+    expect(ctx.sentencePlan.crn).toBeUndefined()
+    expect(ctx.sentencePlan.nomis).toBeUndefined()
+    expect(ctx.sentencePlan.planStatus).toBeUndefined()
+    expect(ctx.sentencePlan.goals[0].areaOfNeed).toBeUndefined()
+    expect(ctx.sentencePlan.goals[0].relatedAreaOfNeed).toBeUndefined()
+    expect(ctx.sentencePlan.goals[0].steps[0].statusDate).toBeUndefined()
+  })
+
+  it('drops appointments hidden from the appointments screen (matching shouldShowAppointment)', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-hidden"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getFutureAppointments: jest.fn().mockResolvedValue({
+            content: [
+              { date: '2026-07-01', type: 'Community Payback', unpaidWork: { project: { code: 'N07TTA2' } } },
+              { date: '2026-07-02', type: 'Office Visit' },
+            ],
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(ctx.futureAppointments).toHaveLength(1)
+    expect(ctx.futureAppointments[0].date).toBe('2026-07-02')
+  })
+
+  it('resolves unpaid work appointment type and hides the time/location/practitioner the appointments screen also hides for them', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-uw"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getFutureAppointments: jest.fn().mockResolvedValue({
+            content: [
+              {
+                date: '2026-07-01',
+                startTime: '09:00',
+                endTime: '15:00',
+                type: 'Some internal code (NS)',
+                location: { street: 'Should never appear for unpaid work' },
+                practitioner: { name: { forename: 'Alex', surname: 'Murphy' } },
+                unpaidWork: { pickUpLocation: { street: 'Pick up point' }, project: { code: 'ABC123' } },
+              },
+              { date: '2026-07-02', startTime: '10:00', endTime: '10:45', type: 'Office Visit (NS)' },
+            ],
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    const unpaidWorkAppt = ctx.futureAppointments[0]
+    expect(unpaidWorkAppt.type).toBe('Community Payback')
+    expect(unpaidWorkAppt.startTime).toBeUndefined()
+    expect(unpaidWorkAppt.endTime).toBeUndefined()
+    expect(unpaidWorkAppt.location).toBeUndefined()
+    expect(unpaidWorkAppt.practitioner).toBeUndefined()
+
+    const officeVisit = ctx.futureAppointments[1]
+    expect(officeVisit.type).toBe('Office Visit')
+    expect(officeVisit.startTime).toBe('10:00')
+  })
+
+  it('drops goals whose status is not shown on any goals tab, and derives achievedDate from steps for achieved goals', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-goals"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getSentencePlan: jest.fn().mockResolvedValue({
+            goals: [
+              { goalTitle: 'Not shown on any tab', goalStatus: 'REMOVED', steps: [] },
+              {
+                goalTitle: 'Find stable housing',
+                goalStatus: 'ACHIEVED',
+                steps: [
+                  { description: 'Register', status: 'COMPLETED', statusDate: '2026-01-05' },
+                  { description: 'Attend appointment', status: 'COMPLETED', statusDate: '2026-01-10' },
+                ],
+              },
+            ],
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(ctx.sentencePlan.goals).toHaveLength(1)
+    expect(ctx.sentencePlan.goals[0].goalTitle).toBe('Find stable housing')
+    expect(ctx.sentencePlan.goals[0].achievedDate).toBe('2026-01-10')
   })
 
   it('still builds user_context from the working endpoints when one upstream call rejects', async () => {

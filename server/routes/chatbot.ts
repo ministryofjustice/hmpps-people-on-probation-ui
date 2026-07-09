@@ -3,6 +3,20 @@ import jwt from 'jsonwebtoken'
 import config from '../config'
 import logger from '../../logger'
 import type { Services } from '../services'
+import { shouldShowAppointment, resolveAppointmentType } from './appointments'
+import type {
+  AddressResponse,
+  PersonalDetailsResponse,
+  PersonalContactResponse,
+  ManagerResponse,
+  SentenceProgressResponse,
+  SentenceResponse,
+  RequirementResponse,
+  AppointmentResponse,
+  SentencePlanResponse,
+  GoalResponse,
+  StepResponse,
+} from '../data/peopleOnProbationApiClient'
 
 // Inactivity-only timeout. Not a cap on the whole streamed response —
 // legitimate long LLM answers can easily take longer than 30s to fully
@@ -69,16 +83,195 @@ function mintPopUserToken(raw: UserContext, userId: string, secret: string | und
 }
 
 /**
+ * UI-parity sanitizers.
+ *
+ * The chatbot must never know more about a user than the POP UI already
+ * shows them on screen — otherwise the chatbot can surface fields (e.g. a
+ * requirement's internal expectedStartDate/expectedEndDate) that look like a
+ * discrepancy or a leak to a user comparing what they see on screen against
+ * what the chatbot tells them. Each function below mirrors the exact fields
+ * and conditions the corresponding page in server/routes/ renders, rather
+ * than forwarding the raw upstream API response.
+ *
+ * This is a deliberate trade-off versus the old "forward everything"
+ * design: a genuinely new upstream field won't reach the chatbot until it's
+ * explicitly allowlisted here — same as it wouldn't reach a user until a
+ * template is built to show it.
+ */
+function sanitizeAddress(address?: AddressResponse): Omit<AddressResponse, 'lastUpdatedAt'> | undefined {
+  if (!address) return undefined
+  const { lastUpdatedAt, ...rest } = address
+  return rest
+}
+
+function sanitizePersonalDetails(personalDetails: PersonalDetailsResponse): Record<string, unknown> {
+  const { name, preferredName, dateOfBirth, telephoneNumber, mobileNumber, emailAddress, mainAddress, practitioner } =
+    personalDetails
+
+  const sanitizeContact = (contact: PersonalContactResponse) => ({
+    name: contact.name,
+    relationship: contact.relationship,
+    mobileNumber: contact.mobileNumber,
+    emailAddress: contact.emailAddress,
+  })
+
+  const sanitizePractitioner = (mgr: ManagerResponse) => ({
+    name: mgr.name,
+    // Only the first office address is ever shown (see probationOfficer.ts).
+    team: mgr.team
+      ? {
+          telephoneNumber: mgr.team.telephoneNumber,
+          officeAddresses: [sanitizeAddress(mgr.team.officeAddresses?.[0])].filter(Boolean),
+        }
+      : undefined,
+  })
+
+  return {
+    name,
+    preferredName,
+    dateOfBirth,
+    telephoneNumber,
+    mobileNumber,
+    emailAddress,
+    mainAddress: sanitizeAddress(mainAddress),
+    emergencyContacts: personalDetails.emergencyContacts?.map(sanitizeContact),
+    practitioner: practitioner ? sanitizePractitioner(practitioner) : undefined,
+  }
+}
+
+// Requirements with no `required` quantity fall back to a date range on
+// screen (see requirements.ts toRequirementView); quantity-based
+// requirements (unpaid work, RAR) never show a date at all.
+function sanitizeRequirement(requirement: RequirementResponse): Record<string, unknown> | null {
+  const label = requirement.mainCategory?.description || requirement.subCategory?.description
+  const base = { mainCategory: label ? { description: label } : undefined }
+
+  if (requirement.required && requirement.required > 0) {
+    return { ...base, required: requirement.required, completed: requirement.completed, unit: requirement.unit }
+  }
+
+  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
+  const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
+  if (startDate && endDate) {
+    return { ...base, startDate, endDate }
+  }
+
+  // Not shown on the requirements screen at all in this shape.
+  return null
+}
+
+function sanitizeSentence(sentence: SentenceResponse): Record<string, unknown> {
+  return {
+    type: sentence.type,
+    startDate: sentence.startDate,
+    expectedEndDate: sentence.expectedEndDate,
+    mainOffence: sentence.mainOffence?.description ? { description: sentence.mainOffence.description } : undefined,
+    requirements: (sentence.requirements ?? [])
+      .map(sanitizeRequirement)
+      .filter((r): r is Record<string, unknown> => r !== null),
+    // licenceConditions is never rendered anywhere in the UI — dropped entirely.
+  }
+}
+
+function sanitizeSentenceProgress(sentenceProgress: SentenceProgressResponse): Record<string, unknown> {
+  // Only sentences[0] is ever shown (see requirements.ts) — later sentences
+  // in the array are invisible to the user, so they're dropped here too.
+  const sentence = sentenceProgress.sentences?.[0]
+  return { sentences: sentence ? [sanitizeSentence(sentence)] : [] }
+}
+
+function sanitizeAppointment(appointment: AppointmentResponse): Record<string, unknown> {
+  // Unpaid work appointments never show a time, location or "key contact" on
+  // screen — the pick-up/work addresses below stand in for all three (see
+  // appointments.njk's `not appointment.isUnpaidWork` guards).
+  const isUnpaidWork = Boolean(appointment.unpaidWork)
+  return {
+    date: appointment.date,
+    startTime: isUnpaidWork ? undefined : appointment.startTime,
+    endTime: isUnpaidWork ? undefined : appointment.endTime,
+    // resolveAppointmentType renders "Community Payback" for unpaid work and
+    // strips the trailing "(NS)" suffix — the raw `type` field shows neither.
+    type: resolveAppointmentType(appointment),
+    outcome: appointment.outcome,
+    nationalStandards: appointment.nationalStandards,
+    practitioner: !isUnpaidWork && appointment.practitioner?.name ? { name: appointment.practitioner.name } : undefined,
+    location: isUnpaidWork ? undefined : sanitizeAddress(appointment.location),
+    // Forwarded for every appointment (not just ones that trip the
+    // missed-appointment banner, which is feature-flagged and mandatory-only)
+    // because outcome below already prints the same fact as text on the
+    // past-appointments screen (e.g. "Failed to attend") unconditionally,
+    // regardless of that flag.
+    attended: appointment.attended,
+    unpaidWork: appointment.unpaidWork
+      ? {
+          pickUpLocation: sanitizeAddress(appointment.unpaidWork.pickUpLocation),
+          project: appointment.unpaidWork.project
+            ? {
+                code: appointment.unpaidWork.project.code,
+                address: sanitizeAddress(appointment.unpaidWork.project.address),
+              }
+            : undefined,
+        }
+      : undefined,
+    // complied, typeCode: never read anywhere in the UI — dropped entirely.
+  }
+}
+
+function sanitizeAppointments(appointments: AppointmentResponse[]): Record<string, unknown>[] {
+  // Same visibility filter the appointments page applies (hides certain
+  // unpaid-work project codes entirely) — an appointment the user can't see
+  // on their own appointments page shouldn't be known to the chatbot either.
+  return appointments.filter(shouldShowAppointment).map(sanitizeAppointment)
+}
+
+function sanitizeStep(step: StepResponse): Record<string, unknown> {
+  // statusDate is only ever shown in aggregate (goal-level "marked as
+  // achieved on X") — too granular per-step, dropped here.
+  return { description: step.description, actor: step.actor, status: step.status }
+}
+
+// The goals screen only ever renders these three tabs (see goals.ts) — a
+// goal with any other status (or none) isn't reachable from any tab, so it
+// isn't "on the UI" and shouldn't be visible to the chatbot either.
+const VISIBLE_GOAL_STATUSES = ['ACTIVE', 'FUTURE', 'ACHIEVED']
+
+// For an achieved goal, the UI prints "Marked as achieved on <date>" using
+// the latest step statusDate (see goals.ts toGoalView) — even though the
+// per-step statusDate itself is stripped below as too granular.
+function computeAchievedDate(goal: GoalResponse): string | undefined {
+  if (goal.goalStatus !== 'ACHIEVED') return undefined
+  return (goal.steps ?? [])
+    .map(s => s.statusDate)
+    .filter((d): d is string => Boolean(d))
+    .sort()
+    .at(-1)
+}
+
+function sanitizeGoal(goal: GoalResponse): Record<string, unknown> {
+  return {
+    goalTitle: goal.goalTitle,
+    targetDate: goal.targetDate,
+    goalStatus: goal.goalStatus,
+    achievedDate: computeAchievedDate(goal),
+    steps: (goal.steps ?? []).map(sanitizeStep),
+    // areaOfNeed, relatedAreaOfNeed: never shown on the goals screen — dropped.
+  }
+}
+
+function sanitizeSentencePlan(sentencePlan: SentencePlanResponse): Record<string, unknown> {
+  // crn, nomis, planStatus: never shown on the goals screen — dropped.
+  const visibleGoals = (sentencePlan.goals ?? []).filter(g => VISIBLE_GOAL_STATUSES.includes(g.goalStatus))
+  return { goals: visibleGoals.map(sanitizeGoal) }
+}
+
+/**
  * Builds the chatbot's user_context payload from the authenticated user's
  * profile. Driven entirely from server-side data so callers can't supply
  * or tamper with the context.
  *
- * Deliberately generic: every available source is fetched and forwarded
- * close to as-is, rather than hand-picking known fields into a fixed shape.
- * Whatever the upstream API returns — including fields added after this was
- * written — reaches the chatbot without needing a code change here. Adding a
- * genuinely new data source still means adding a fetch call below, but no
- * field within an existing source needs to be named individually again.
+ * Each source is sanitized to UI parity (see the sanitize* functions above)
+ * before being included — the chatbot should only ever be able to tell a
+ * user something they could already see somewhere in the POP UI.
  */
 async function buildUserContext(services: Services, user: { userId: string }, crn: string): Promise<UserContext> {
   const service = services.peopleOnProbationService
@@ -90,11 +283,11 @@ async function buildUserContext(services: Services, user: { userId: string }, cr
   // have access to your personal information in this session…"). Users
   // saw that even though they were signed in.
   const sources = {
-    personalDetails: () => service.getPersonalDetails(crn),
-    sentenceProgress: () => service.getSentences(crn),
-    futureAppointments: () => service.getFutureAppointments(crn, 0, 10).then(r => r.content),
-    pastAppointments: () => service.getPastAppointments(crn, 0, 10).then(r => r.content),
-    sentencePlan: () => service.getSentencePlan(crn),
+    personalDetails: () => service.getPersonalDetails(crn).then(sanitizePersonalDetails),
+    sentenceProgress: () => service.getSentences(crn).then(sanitizeSentenceProgress),
+    futureAppointments: () => service.getFutureAppointments(crn, 0, 10).then(r => sanitizeAppointments(r.content)),
+    pastAppointments: () => service.getPastAppointments(crn, 0, 10).then(r => sanitizeAppointments(r.content)),
+    sentencePlan: () => service.getSentencePlan(crn).then(sanitizeSentencePlan),
   } as const
 
   const entries = await Promise.all(

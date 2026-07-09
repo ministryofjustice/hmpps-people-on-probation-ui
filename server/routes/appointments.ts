@@ -67,7 +67,7 @@ function formatAppointmentType(type?: string): string | undefined {
   return type?.replace(/\s*\(NS\)\s*$/i, '').trim()
 }
 
-function resolveAppointmentType(appointment: AppointmentResponse): string | undefined {
+export function resolveAppointmentType(appointment: AppointmentResponse): string | undefined {
   if (appointment.unpaidWork) return 'Community Payback'
   return formatAppointmentType(appointment.type)
 }
