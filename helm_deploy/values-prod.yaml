@@ -15,12 +15,15 @@ generic-service:
     ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: "https://probation-account.hmpps.service.justice.gov.uk"
     AUDIT_ENABLED: "true"
     FEEDBACK_BANNER_ENABLED: "true"
-    # The old Railway URL was retired 2026-07. No production chatbot
-    # namespace exists on MoJ Cloud Platform yet. Left empty so the
-    # chatbot is cleanly disabled in production (route returns a
-    # well-formed "not configured" error frame) until a proper production
-    # chatbot instance exists.
-    POP_CHATBOT_API_URL: ""
+    # Points at the streaming endpoint on the MoJ Cloud Platform chatbot
+    # prod namespace (via its Next.js proxy which forwards SSE frames
+    # through unchanged).
+    #
+    # POP_CHATBOT_FEEDBACK_URL is set explicitly (rather than derived from
+    # the chat URL by regex-swap) so that if the two ever diverge in path
+    # structure, feedback can't silently 503 while chat keeps working.
+    POP_CHATBOT_API_URL: "https://probationchatbot-prod.apps.live.cloud-platform.service.justice.gov.uk/api/proxy/chatbot/chat-embed-stream"
+    POP_CHATBOT_FEEDBACK_URL: "https://probationchatbot-prod.apps.live.cloud-platform.service.justice.gov.uk/api/proxy/chatbot/feedback-embed"
 
 generic-prometheus-alerts:
   alertSeverity: hmpps-people-on-probation
