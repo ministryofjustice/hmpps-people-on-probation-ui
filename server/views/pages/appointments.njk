@@ -52,14 +52,22 @@
     {% set whyDetailsHtml %}
       <ul class="govuk-list govuk-list--bullet">
         <li>This list might not be up to date yet.{% if lastUpdatedAt %} Last update: {{ lastUpdatedAt }}{% endif %}</li>
-        <li>Tag appointments are sent by the electronic monitoring service</li>
-        <li>Appointments outside the Probation Service are sent through other channels</li>
+        {% if hasTagAppointments %}
+          <li>Tag appointments are sent by the electronic monitoring service</li>
+        {% endif %}
+        {% if hasOtherChannelAppointments %}
+          <li>Appointments outside the Probation Service are sent through other channels</li>
+        {% endif %}
       </ul>
     {% endset %}
 
     {% call govukInsetText({ classes: "guidance-panel" }) %}
-      <p class="govuk-body govuk-!-margin-bottom-4">This list might not show all appointments</p>
-      {{ govukDetails({ summaryText: "Why this might happen", html: whyDetailsHtml }) }}
+      {% if hasTagAppointments or hasOtherChannelAppointments %}
+        <p class="govuk-body govuk-!-margin-bottom-4">This list might not show all appointments and activities</p>
+        {{ govukDetails({ summaryText: "Why this might happen", html: whyDetailsHtml }) }}
+      {% else %}
+        <p class="govuk-body govuk-!-margin-bottom-0">This list might not be up to date yet.{% if lastUpdatedAt %} Last update: {{ lastUpdatedAt }}{% endif %}</p>
+      {% endif %}
     {% endcall %}
 
     {% if futureAppointments.length %}

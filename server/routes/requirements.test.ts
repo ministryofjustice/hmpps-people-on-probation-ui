@@ -174,6 +174,72 @@ describe('GET /requirements', () => {
     })
   })
 
+  describe('last updated banner', () => {
+    it('shows the most recent requirement lastUpdatedAt, formatted with day and date', async () => {
+      fakeDate('2026-06-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            requirements: [
+              {
+                mainCategory: { code: 'UPW', description: 'Unpaid Work' },
+                required: 100,
+                completed: 40,
+                unit: 'HOURS',
+                lastUpdatedAt: '2026-05-01T09:00:00.000Z',
+              },
+              {
+                mainCategory: { code: 'SUP', description: 'Supervision' },
+                expectedStartDate: '2024-01-01',
+                expectedEndDate: '2026-01-01',
+                lastUpdatedAt: '2026-05-14T12:00:00.000Z',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('id="requirements-last-updated"')
+      expect(res.text).toContain('Your requirements were last updated on')
+      expect(res.text).toContain('Thursday 14 May 2026')
+    })
+
+    it('hides the banner when no requirement has a lastUpdatedAt value', async () => {
+      fakeDate('2025-06-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            requirements: [
+              {
+                mainCategory: { code: 'UPW', description: 'Unpaid Work' },
+                required: 100,
+                completed: 40,
+                unit: 'HOURS',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).not.toContain('id="requirements-last-updated"')
+      expect(res.text).not.toContain('Your requirements were last updated on')
+    })
+  })
+
   describe('RAR requirements (mainCategory.code = F)', () => {
     it('shows Maximum days label, hides remaining row and progress bar', async () => {
       fakeDate('2025-06-01')

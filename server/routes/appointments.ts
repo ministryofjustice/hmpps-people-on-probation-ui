@@ -52,6 +52,13 @@ function hasInvalidQueryValue(value: unknown): boolean {
 
 const HIDDEN_PROJECT_CODES = ['N07TTA2']
 
+// Main category codes (RequirementResponse/LicenceConditionResponse.mainCategory.code) that
+// determine which "why this might happen" guidance applies on the appointments page.
+// Codes not in either list (e.g. F = RAR, W = unpaid work) get the plain inset text with no
+// reveal, and no extra guidance bullet is needed for them.
+const TAG_APPOINTMENT_CATEGORY_CODES = ['RM49', 'RM59', 'T']
+const OTHER_CHANNEL_APPOINTMENT_CATEGORY_CODES = ['Q', 'G', 'H', 'P', 'E', 'I', 'RM38', 'RM37']
+
 export function shouldShowAppointment(appointment: AppointmentResponse): boolean {
   return !appointment.unpaidWork?.project?.code || !HIDDEN_PROJECT_CODES.includes(appointment.unpaidWork.project.code)
 }
@@ -230,10 +237,20 @@ export default function appointmentsRoutes(services: Services): Router {
       const crn = res.locals.user?.registeredUserDetails?.personReference
       if (!crn) return res.redirect('/autherror')
 
-      const [futureAppointments, pastAppointments] = await Promise.all([
+      const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
         services.peopleOnProbationService.getFutureAppointments(crn, 0, 50),
         services.peopleOnProbationService.getPastAppointments(crn, 0, 50),
+        services.peopleOnProbationService.getSentences(crn),
       ])
+
+      const mainCategoryCodes = sentenceProgress.sentences.flatMap(sentence => [
+        ...sentence.requirements.map(r => r.mainCategory?.code),
+        ...sentence.licenceConditions.map(lc => lc.mainCategory?.code),
+      ])
+      const hasTagAppointments = mainCategoryCodes.some(code => TAG_APPOINTMENT_CATEGORY_CODES.includes(code))
+      const hasOtherChannelAppointments = mainCategoryCodes.some(code =>
+        OTHER_CHANNEL_APPOINTMENT_CATEGORY_CODES.includes(code),
+      )
 
       const futureAppointmentsToShow = futureAppointments.content.filter(shouldShowAppointment)
       const pastAppointmentsToShow = pastAppointments.content.filter(shouldShowAppointment)
@@ -262,6 +279,8 @@ export default function appointmentsRoutes(services: Services): Router {
         missedAlert,
         missedAppointmentsCount: missedAlertEnabled ? missedAppointments.length : 0,
         lastUpdatedAt: formatDateTime(mostRecentUpdate),
+        hasTagAppointments,
+        hasOtherChannelAppointments,
         futureAppointments: futureAppointmentsToShow.map(toAppointmentCardView),
         pastAppointments: pastAppointmentsToShow.map(toAppointmentCardView),
       })
