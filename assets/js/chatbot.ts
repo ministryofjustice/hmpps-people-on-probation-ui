@@ -3,12 +3,16 @@ import '@justiceaiunit/chatbot-widget/style.css'
 
 // Privacy notice URL — points at the chatbot's own /privacy page, which
 // renders the full notice with proper typography and a back-link to POP UI.
-// Hardcoded to the prod chatbot host so this bundle can ship unchanged
-// across POP UI envs (content is identical dev/prod; only the back-link
-// destination differs, which the chatbot page picks based on its own
-// host). If we later want dev POP UI to link at dev chatbot's page,
-// switch to a server-templated value.
-const CHATBOT_PRIVACY_URL = 'https://probationchatbot-prod.apps.live.cloud-platform.service.justice.gov.uk/privacy'
+// Picked at runtime based on POP UI's own hostname so dev POP UI links to
+// the dev chatbot /privacy page and prod POP UI links to prod. Preprod
+// (and any unknown host) fall back to prod, since the chatbot itself has
+// no preprod deployment and content is identical anyway.
+const PROD_CHATBOT_PRIVACY_URL = 'https://probationchatbot-prod.apps.live.cloud-platform.service.justice.gov.uk/privacy'
+const DEV_CHATBOT_PRIVACY_URL = 'https://probationchatbot-dev.apps.live.cloud-platform.service.justice.gov.uk/privacy'
+const CHATBOT_PRIVACY_URL =
+  typeof window !== 'undefined' && /(^|\.)probation-account-dev\./.test(window.location.host)
+    ? DEV_CHATBOT_PRIVACY_URL
+    : PROD_CHATBOT_PRIVACY_URL
 
 init({
   container: '#chatbot-root',
