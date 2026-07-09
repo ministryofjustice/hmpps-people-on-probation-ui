@@ -8,8 +8,7 @@ import '@justiceaiunit/chatbot-widget/style.css'
 // destination differs, which the chatbot page picks based on its own
 // host). If we later want dev POP UI to link at dev chatbot's page,
 // switch to a server-templated value.
-const CHATBOT_PRIVACY_URL =
-  'https://probationchatbot-prod.apps.live.cloud-platform.service.justice.gov.uk/privacy'
+const CHATBOT_PRIVACY_URL = 'https://probationchatbot-prod.apps.live.cloud-platform.service.justice.gov.uk/privacy'
 
 init({
   container: '#chatbot-root',
