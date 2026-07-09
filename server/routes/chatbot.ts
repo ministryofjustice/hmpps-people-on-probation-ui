@@ -70,40 +70,62 @@ function mintPopUserToken(rich: UserContext, userId: string, secret: string | un
  */
 async function buildUserContext(services: Services, user: { userId: string }, crn: string): Promise<UserContext> {
   const service = services.peopleOnProbationService
-  const [personalDetails, sentenceProgress, futureAppointments] = await Promise.all([
-    service.getPersonalDetails(crn),
-    service.getSentences(crn),
-    service.getFutureAppointments(crn, 0, 10),
+  // Fetch each source independently — if one endpoint 500s or 404s, the
+  // others still contribute their share of context. Previously we used
+  // Promise.all which rejects the whole thing on any single failure,
+  // meaning one flaky upstream call dropped ALL personalisation and the
+  // chatbot fell back to its anonymous-session system prompt ("I don't
+  // have access to your personal information in this session…"). Users
+  // saw that even though they were signed in.
+  type PersonalDetails = Awaited<ReturnType<typeof service.getPersonalDetails>>
+  type SentenceProgress = Awaited<ReturnType<typeof service.getSentences>>
+  type FutureAppointments = Awaited<ReturnType<typeof service.getFutureAppointments>>
+
+  const [personalDetails, sentenceProgress, futureAppointments] = await Promise.all<
+    [Promise<PersonalDetails | null>, Promise<SentenceProgress | null>, Promise<FutureAppointments>]
+  >([
+    service.getPersonalDetails(crn).catch((err: unknown): null => {
+      logger.warn({ err, crn }, 'getPersonalDetails failed; continuing without it')
+      return null
+    }),
+    service.getSentences(crn).catch((err: unknown): null => {
+      logger.warn({ err, crn }, 'getSentences failed; continuing without it')
+      return null
+    }),
+    service.getFutureAppointments(crn, 0, 10).catch((err: unknown): FutureAppointments => {
+      logger.warn({ err, crn }, 'getFutureAppointments failed; continuing without it')
+      return { content: [] } as FutureAppointments
+    }),
   ])
 
-  const sentence = sentenceProgress.sentences?.[0]
+  const sentence = sentenceProgress?.sentences?.[0]
   const rar = (sentence?.requirements ?? []).find(
     r => r.mainCategory?.description === 'Rehabilitation Activity Requirement',
   )
   const upw = (sentence?.requirements ?? []).find(r => r.mainCategory?.description === 'Unpaid Work')
   const upwNext = futureAppointments.content.find(a => a.type === 'Unpaid Work')
-  const emergency = personalDetails.emergencyContacts?.[0]
-  const { practitioner } = personalDetails
+  const emergency = personalDetails?.emergencyContacts?.[0]
+  const practitioner = personalDetails?.practitioner
   const officeAddress = practitioner?.team?.officeAddresses?.[0]
 
   return {
     personalDetails: {
-      name: [personalDetails.name?.forename, personalDetails.name?.surname].filter(Boolean).join(' '),
-      preferredName: personalDetails.preferredName,
-      dateOfBirth: personalDetails.dateOfBirth,
+      name: [personalDetails?.name?.forename, personalDetails?.name?.surname].filter(Boolean).join(' '),
+      preferredName: personalDetails?.preferredName,
+      dateOfBirth: personalDetails?.dateOfBirth,
       userId: user.userId,
     },
     contactDetails: {
       address: [
-        [personalDetails.mainAddress?.houseNumber, personalDetails.mainAddress?.street].filter(Boolean).join(' '),
-        personalDetails.mainAddress?.town,
-        personalDetails.mainAddress?.postcode,
+        [personalDetails?.mainAddress?.houseNumber, personalDetails?.mainAddress?.street].filter(Boolean).join(' '),
+        personalDetails?.mainAddress?.town,
+        personalDetails?.mainAddress?.postcode,
       ]
         .filter(Boolean)
         .join('\n'),
-      phone: personalDetails.telephoneNumber,
-      mobile: personalDetails.mobileNumber,
-      email: personalDetails.emailAddress,
+      phone: personalDetails?.telephoneNumber,
+      mobile: personalDetails?.mobileNumber,
+      email: personalDetails?.emailAddress,
     },
     emergencyContact: emergency
       ? {
