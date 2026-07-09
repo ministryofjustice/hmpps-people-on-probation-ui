@@ -169,6 +169,7 @@ describe('GET /appointments', () => {
   let peopleOnProbationService: {
     getFutureAppointments: jest.Mock
     getPastAppointments: jest.Mock
+    getSentences: jest.Mock
   }
 
   beforeEach(() => {
@@ -177,6 +178,7 @@ describe('GET /appointments', () => {
     peopleOnProbationService = {
       getFutureAppointments: jest.fn().mockResolvedValue({ content: [] }),
       getPastAppointments: jest.fn().mockResolvedValue({ content: [] }),
+      getSentences: jest.fn().mockResolvedValue({ sentences: [] }),
     }
 
     app = appWithAllRoutes({
@@ -541,5 +543,67 @@ describe('GET /appointments', () => {
 
     expect(response.text).not.toContain('Community Payback')
     expect(response.text).toContain('Office visit')
+  })
+
+  it('shows the tag appointments guidance when a requirement main category is a tag code', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          requirements: [{ mainCategory: { code: 'RM49', description: 'Tag' } }],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Tag appointments are sent by the electronic monitoring service')
+    expect(response.text).not.toContain('Appointments outside the Probation Service are sent through other channels')
+    expect(response.text).toContain('Why this might happen')
+  })
+
+  it('shows the other-channel appointments guidance when a licence condition main category matches', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          requirements: [],
+          licenceConditions: [{ mainCategory: { code: 'Q', description: 'Some licence condition' } }],
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Appointments outside the Probation Service are sent through other channels')
+    expect(response.text).not.toContain('Tag appointments are sent by the electronic monitoring service')
+    expect(response.text).toContain('Why this might happen')
+  })
+
+  it('shows the plain inset text with no reveal when only RAR/unpaid work main categories are present', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          requirements: [{ mainCategory: { code: 'F', description: 'RAR' } }],
+          licenceConditions: [{ mainCategory: { code: 'W', description: 'Unpaid work' } }],
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Tag appointments are sent by the electronic monitoring service')
+    expect(response.text).not.toContain('Appointments outside the Probation Service are sent through other channels')
+    expect(response.text).not.toContain('Why this might happen')
+    expect(response.text).not.toContain('This list might not show all appointments')
+    expect(response.text).toContain('This list might not be up to date yet.')
   })
 })

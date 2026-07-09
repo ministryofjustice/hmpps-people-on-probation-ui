@@ -20,7 +20,19 @@ git clone https://github.com/ministryofjustice/hmpps-people-on-probation-ui.git
 cd hmpps-people-on-probation-ui
 ```
 
-### 2. Install dependencies
+### 2. Authenticate with GitHub Packages
+
+Some dependencies (e.g. `@justiceaiunit/chatbot-widget`) are private packages hosted on GitHub Packages, not the public npm registry. Install the [GitHub CLI](https://docs.github.com/en/github-cli/github-cli/quickstart), then generate a `NODE_AUTH_TOKEN` from it:
+
+```bash
+gh auth login
+gh auth refresh -s read:packages
+export NODE_AUTH_TOKEN="$(gh auth token)"
+```
+
+Add the `export` line to your shell profile (e.g. `~/.zshrc`) so it persists across sessions. `NODE_AUTH_TOKEN` must be set before running `npm install`/`npm run setup` below.
+
+### 3. Install dependencies
 
 ```bash
 npm run setup
@@ -28,7 +40,7 @@ npm run setup
 
 This runs `npm ci` and any configured post-install scripts. Use `npm run setup` rather than `npm install` directly.
 
-### 3. Set up environment variables
+### 4. Set up environment variables
 
 Copy the example environment file and fill in the required values:
 

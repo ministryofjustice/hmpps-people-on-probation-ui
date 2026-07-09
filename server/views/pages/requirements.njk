@@ -71,6 +71,12 @@
   {% if requirements.length %}
     <h3 class="govuk-heading-m pop-requirements__section-heading">What is included in your order requirements</h3>
 
+    {% if lastUpdatedAt %}
+      <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6" id="requirements-last-updated">
+        <p class="govuk-body govuk-!-margin-bottom-0">Your requirements were last updated on {{ lastUpdatedAt }}</p>
+      </div>
+    {% endif %}
+
     {% for requirement in requirements %}
       <div class="govuk-!-margin-bottom-2">
         <h4 class="govuk-heading-s">{{ requirement.label }}</h4>

@@ -3,7 +3,14 @@ import { Router } from 'express'
 import { startOfDay, addDays, differenceInDays, isBefore } from 'date-fns'
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
-import { formatDate, formatRemainingDuration, formatIntervalDuration, formatUnit, parseLocalDate } from '../utils/utils'
+import {
+  formatDate,
+  formatDateTimeWithDay,
+  formatRemainingDuration,
+  formatIntervalDuration,
+  formatUnit,
+  parseLocalDate,
+} from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
 
 type DateProgressResult = {
@@ -139,9 +146,16 @@ export default function requirementsRoutes(services: Services): Router {
         .map(toRequirementView)
         .filter((r): r is RequirementView => r !== null)
 
+      const mostRecentUpdate = (sentence?.requirements ?? [])
+        .map(r => r.lastUpdatedAt)
+        .filter(Boolean)
+        .sort()
+        .reverse()[0]
+
       return res.render('pages/requirements', {
         overallOrder,
         requirements,
+        lastUpdatedAt: formatDateTimeWithDay(mostRecentUpdate),
       })
     } catch (error) {
       return next(error)
