@@ -27,7 +27,12 @@ const minimalPersonalDetails = {
   dateOfBirth: '1990-01-01',
 }
 
-function buildApp(opts: { user?: AuthenticatedUserSession; services?: Partial<Services> } = {}): Express {
+function buildApp(
+  opts: {
+    user?: AuthenticatedUserSession
+    services?: { peopleOnProbationService?: Partial<Services['peopleOnProbationService']> }
+  } = {},
+): Express {
   const app = express()
   app.use(express.json())
   app.use((req, res, next) => {
@@ -36,13 +41,15 @@ function buildApp(opts: { user?: AuthenticatedUserSession; services?: Partial<Se
   })
 
   const services = {
+    ...opts.services,
     peopleOnProbationService: {
       getPersonalDetails: jest.fn().mockResolvedValue(minimalPersonalDetails),
       getSentences: jest.fn().mockResolvedValue({ sentences: [] }),
       getFutureAppointments: jest.fn().mockResolvedValue({ content: [] }),
+      getPastAppointments: jest.fn().mockResolvedValue({ content: [] }),
+      getSentencePlan: jest.fn().mockResolvedValue({ crn: 'X123456', nomis: 'N1', goals: [] }),
       ...opts.services?.peopleOnProbationService,
     },
-    ...opts.services,
   } as unknown as Services
 
   app.use('/api/chatbot', chatbotRoutes(services))
@@ -191,8 +198,68 @@ describe('POST /api/chatbot/chat', () => {
     )
     const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
     expect(body.message).toBe('hi')
-    expect(body.user_context.personalDetails.name).toBe('Jane Doe')
+    expect(body.user_context.personalDetails.name).toEqual({ forename: 'Jane', surname: 'Doe' })
     expect(body.user_context.metadata.crn).toBe('X123456')
+  })
+
+  it('forwards every available source close to as-is, including sources beyond the original fixed set', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-goals"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getPastAppointments: jest.fn().mockResolvedValue({
+            content: [{ type: 'Office Visit', date: '2026-06-01' }],
+          }),
+          getSentencePlan: jest.fn().mockResolvedValue({
+            crn: 'X123456',
+            nomis: 'N1',
+            planStatus: 'AGREED',
+            goals: [{ goalTitle: 'Find stable housing', goalStatus: 'ACTIVE' }],
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    // Previously dropped entirely — buildUserContext never called these endpoints.
+    expect(body.user_context.pastAppointments).toEqual([{ type: 'Office Visit', date: '2026-06-01' }])
+    expect(body.user_context.sentencePlan.goals).toEqual([{ goalTitle: 'Find stable housing', goalStatus: 'ACTIVE' }])
+  })
+
+  it('still builds user_context from the working endpoints when one upstream call rejects', async () => {
+    const upstreamError = new Error('future appointments endpoint down')
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-3"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getFutureAppointments: jest.fn().mockRejectedValue(upstreamError),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    // The sources that didn't fail still contribute their share of context.
+    expect(body.user_context.personalDetails.name).toEqual({ forename: 'Jane', surname: 'Doe' })
+    expect(body.user_context.metadata.crn).toBe('X123456')
+    // The failed source is omitted entirely rather than dropping the whole context.
+    expect(body.user_context.futureAppointments).toBeUndefined()
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: upstreamError, crn: 'X123456' }),
+      'futureAppointments failed; continuing without it',
+    )
   })
 
   it('does NOT include X-POP-User-Token header when userTokenSecret is unset', async () => {
