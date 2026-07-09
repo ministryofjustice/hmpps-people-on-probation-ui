@@ -14,34 +14,39 @@ const POP_USER_TOKEN_TTL_SECONDS = 5 * 60
 type UserContext = Record<string, unknown>
 
 /**
- * Flattens the rich UserContext into the shape the chatbot's EmbedUserContext
+ * Flattens the raw UserContext into the shape the chatbot's EmbedUserContext
  * pydantic model accepts (name, preferred_name, order_type, supervision_type,
  * probation_practitioner_name, probation_practitioner_phone,
  * next_appointment_date/time/location, requirements[], licence_conditions[]).
+ * This is a deliberately narrow, fixed-shape channel used only to sign the
+ * identity-binding JWT — it is NOT the path that carries full context to the
+ * LLM prompt (that's the raw user_context body, built by buildUserContext).
  * Unknown/missing fields are omitted so the model's `extra="forbid"` validation
  * on the chatbot side accepts the payload.
  */
-function flattenForEmbedContext(rich: UserContext): Record<string, unknown> {
-  const personalDetails = (rich.personalDetails ?? {}) as Record<string, unknown>
-  const orderDetails = (rich.orderDetails ?? {}) as Record<string, unknown>
-  const practitioner = (rich.probationPractitioner ?? {}) as Record<string, unknown>
-  const appointments = ((rich.appointments as Record<string, unknown>)?.upcoming ?? []) as Array<
-    Record<string, unknown>
-  >
-  const nextAppt = appointments[0] ?? {}
-  const requirements = (orderDetails.requirements as Array<Record<string, unknown>> | undefined) ?? []
+function flattenForEmbedContext(raw: UserContext): Record<string, unknown> {
+  const personalDetails = (raw.personalDetails ?? {}) as Record<string, unknown>
+  const name = (personalDetails.name ?? {}) as Record<string, unknown>
+  const sentenceProgress = (raw.sentenceProgress ?? {}) as Record<string, unknown>
+  const sentence = ((sentenceProgress.sentences as Array<Record<string, unknown>> | undefined) ?? [])[0] ?? {}
+  const practitioner = (personalDetails.practitioner ?? {}) as Record<string, unknown>
+  const practitionerName = (practitioner.name ?? {}) as Record<string, unknown>
+  const practitionerTeam = (practitioner.team ?? {}) as Record<string, unknown>
+  const futureAppointments = (raw.futureAppointments ?? []) as Array<Record<string, unknown>>
+  const nextAppt = futureAppointments[0] ?? {}
+  const requirements = (sentence.requirements as Array<Record<string, unknown>> | undefined) ?? []
 
   const flat: Record<string, unknown> = {
-    name: personalDetails.name,
+    name: [name.forename, name.surname].filter(Boolean).join(' '),
     preferred_name: personalDetails.preferredName,
-    order_type: orderDetails.orderType,
-    probation_practitioner_name: practitioner.name,
-    probation_practitioner_phone: practitioner.phone,
+    order_type: sentence.type,
+    probation_practitioner_name: [practitionerName.forename, practitionerName.surname].filter(Boolean).join(' '),
+    probation_practitioner_phone: practitionerTeam.telephoneNumber,
     next_appointment_date: nextAppt.date,
-    next_appointment_time: nextAppt.time,
-    next_appointment_location: nextAppt.location,
+    next_appointment_time: nextAppt.startTime,
+    next_appointment_location: (nextAppt.location as Record<string, unknown> | undefined)?.buildingName,
     requirements: requirements
-      .map(r => r.requirement as string | undefined)
+      .map(r => (r.subCategory as Record<string, unknown> | undefined)?.description as string | undefined)
       .filter((r): r is string => typeof r === 'string' && r.length > 0)
       .slice(0, 20),
   }
@@ -57,9 +62,9 @@ function flattenForEmbedContext(rich: UserContext): Record<string, unknown> {
  * `exp`, optional `sub`). Returns undefined when no signing secret is
  * configured — the proxy then falls back to sending user_context in the body.
  */
-function mintPopUserToken(rich: UserContext, userId: string, secret: string | undefined): string | undefined {
+function mintPopUserToken(raw: UserContext, userId: string, secret: string | undefined): string | undefined {
   if (!secret) return undefined
-  const ctx = flattenForEmbedContext(rich)
+  const ctx = flattenForEmbedContext(raw)
   return jwt.sign({ sub: userId, ctx }, secret, { algorithm: 'HS256', expiresIn: POP_USER_TOKEN_TTL_SECONDS })
 }
 
@@ -67,6 +72,13 @@ function mintPopUserToken(rich: UserContext, userId: string, secret: string | un
  * Builds the chatbot's user_context payload from the authenticated user's
  * profile. Driven entirely from server-side data so callers can't supply
  * or tamper with the context.
+ *
+ * Deliberately generic: every available source is fetched and forwarded
+ * close to as-is, rather than hand-picking known fields into a fixed shape.
+ * Whatever the upstream API returns — including fields added after this was
+ * written — reaches the chatbot without needing a code change here. Adding a
+ * genuinely new data source still means adding a fetch call below, but no
+ * field within an existing source needs to be named individually again.
  */
 async function buildUserContext(services: Services, user: { userId: string }, crn: string): Promise<UserContext> {
   const service = services.peopleOnProbationService
@@ -77,131 +89,32 @@ async function buildUserContext(services: Services, user: { userId: string }, cr
   // chatbot fell back to its anonymous-session system prompt ("I don't
   // have access to your personal information in this session…"). Users
   // saw that even though they were signed in.
-  type PersonalDetails = Awaited<ReturnType<typeof service.getPersonalDetails>>
-  type SentenceProgress = Awaited<ReturnType<typeof service.getSentences>>
-  type FutureAppointments = Awaited<ReturnType<typeof service.getFutureAppointments>>
+  const sources = {
+    personalDetails: () => service.getPersonalDetails(crn),
+    sentenceProgress: () => service.getSentences(crn),
+    futureAppointments: () => service.getFutureAppointments(crn, 0, 10).then(r => r.content),
+    pastAppointments: () => service.getPastAppointments(crn, 0, 10).then(r => r.content),
+    sentencePlan: () => service.getSentencePlan(crn),
+  } as const
 
-  const [personalDetails, sentenceProgress, futureAppointments] = await Promise.all<
-    [Promise<PersonalDetails | null>, Promise<SentenceProgress | null>, Promise<FutureAppointments>]
-  >([
-    service.getPersonalDetails(crn).catch((err: unknown): null => {
-      logger.warn({ err, crn }, 'getPersonalDetails failed; continuing without it')
-      return null
-    }),
-    service.getSentences(crn).catch((err: unknown): null => {
-      logger.warn({ err, crn }, 'getSentences failed; continuing without it')
-      return null
-    }),
-    service.getFutureAppointments(crn, 0, 10).catch((err: unknown): FutureAppointments => {
-      logger.warn({ err, crn }, 'getFutureAppointments failed; continuing without it')
-      return { content: [] } as FutureAppointments
-    }),
-  ])
-
-  const sentence = sentenceProgress?.sentences?.[0]
-  const rar = (sentence?.requirements ?? []).find(
-    r => r.mainCategory?.description === 'Rehabilitation Activity Requirement',
+  const entries = await Promise.all(
+    (Object.entries(sources) as Array<[keyof typeof sources, (typeof sources)[keyof typeof sources]]>).map(
+      async ([key, fetchSource]) => {
+        try {
+          return [key, await fetchSource()] as const
+        } catch (err) {
+          logger.warn({ err, crn }, `${key} failed; continuing without it`)
+          return [key, null] as const
+        }
+      },
+    ),
   )
-  const upw = (sentence?.requirements ?? []).find(r => r.mainCategory?.description === 'Unpaid Work')
-  const upwNext = futureAppointments.content.find(a => a.type === 'Unpaid Work')
-  const emergency = personalDetails?.emergencyContacts?.[0]
-  const practitioner = personalDetails?.practitioner
-  const officeAddress = practitioner?.team?.officeAddresses?.[0]
+
+  const context = Object.fromEntries(entries.filter(([, value]) => value !== null))
 
   return {
-    personalDetails: {
-      name: [personalDetails?.name?.forename, personalDetails?.name?.surname].filter(Boolean).join(' '),
-      preferredName: personalDetails?.preferredName,
-      dateOfBirth: personalDetails?.dateOfBirth,
-      userId: user.userId,
-    },
-    contactDetails: {
-      address: [
-        [personalDetails?.mainAddress?.houseNumber, personalDetails?.mainAddress?.street].filter(Boolean).join(' '),
-        personalDetails?.mainAddress?.town,
-        personalDetails?.mainAddress?.postcode,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      phone: personalDetails?.telephoneNumber,
-      mobile: personalDetails?.mobileNumber,
-      email: personalDetails?.emailAddress,
-    },
-    emergencyContact: emergency
-      ? {
-          name: [emergency.name?.forename, emergency.name?.surname].filter(Boolean).join(' '),
-          relationship: emergency.relationship,
-          phone: emergency.mobileNumber,
-        }
-      : null,
-    probationPractitioner: practitioner
-      ? {
-          name: [practitioner.name?.forename, practitioner.name?.surname].filter(Boolean).join(' '),
-          phone: practitioner.team?.telephoneNumber,
-          officeAddress: [
-            officeAddress?.buildingName,
-            officeAddress?.street,
-            officeAddress?.town,
-            officeAddress?.postcode,
-          ]
-            .filter(Boolean)
-            .join('\n'),
-        }
-      : null,
-    orderDetails: {
-      orderType: sentence?.type,
-      startDate: sentence?.startDate,
-      requirementsCompletionDate: sentence?.expectedEndDate,
-      requirements: (sentence?.requirements ?? []).map(r => ({
-        category: r.mainCategory?.description,
-        requirement: r.subCategory?.description,
-      })),
-    },
-    rehabilitationActivityRequirement: rar
-      ? [
-          {
-            type: rar.mainCategory?.description,
-            activity: rar.subCategory?.description,
-            daysCompleted: rar.completed,
-            daysRequired: rar.required,
-          },
-        ]
-      : [],
-    unpaidWork: upw
-      ? {
-          totalCompletedHours: upw.completed,
-          hoursRequired: upw.required,
-          percentCompleted: upw.required && upw.completed ? Math.round((upw.completed / upw.required) * 100) : 0,
-          breakdown: [
-            {
-              title: 'Unpaid Work',
-              completed: upw.completed,
-              required: upw.required,
-            },
-          ],
-          nextAppointment: upwNext
-            ? {
-                title: upwNext.type,
-                date: upwNext.date,
-                time: upwNext.startTime,
-                location: upwNext.location?.buildingName,
-              }
-            : null,
-        }
-      : null,
-    appointments: {
-      upcoming: futureAppointments.content
-        .filter(a => a.type !== 'Unpaid Work')
-        .map(a => ({
-          date: a.date,
-          time: a.startTime,
-          location: a.location?.buildingName,
-          title: a.type,
-        })),
-    },
-    metadata: {
-      crn,
-    },
+    ...context,
+    metadata: { crn, userId: user.userId },
   }
 }
 
