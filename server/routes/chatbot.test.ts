@@ -60,8 +60,12 @@ function buildApp(
 describe('POST /api/chatbot/chat', () => {
   let originalChatbotConfig: typeof config.popChatbot
 
+  let originalChatbotFeatureFlag: boolean
+
   beforeEach(() => {
     originalChatbotConfig = { ...config.popChatbot }
+    originalChatbotFeatureFlag = config.features.chatbot
+    config.features.chatbot = true
     config.popChatbot.apiUrl = 'https://upstream.test/chat'
     config.popChatbot.apiKey = 'test-key'
   })
@@ -70,6 +74,7 @@ describe('POST /api/chatbot/chat', () => {
     config.popChatbot.apiUrl = originalChatbotConfig.apiUrl
     config.popChatbot.apiKey = originalChatbotConfig.apiKey
     config.popChatbot.userTokenSecret = originalChatbotConfig.userTokenSecret
+    config.features.chatbot = originalChatbotFeatureFlag
     jest.restoreAllMocks()
     jest.clearAllMocks()
   })
@@ -88,6 +93,19 @@ describe('POST /api/chatbot/chat', () => {
 
     expect(res.text).toContain('"type":"error"')
     expect(res.text).toContain('"text":"Chatbot service is not configured"')
+  })
+
+  it('sends an SSE error when the chatbot feature flag is off, even if credentials are present', async () => {
+    config.features.chatbot = false
+    const fetchSpy = jest.spyOn(global, 'fetch')
+    const app = buildApp()
+
+    const res = await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    expect(res.text).toContain('"type":"error"')
+    expect(res.text).toContain('"text":"Chatbot service is not configured"')
+    // No upstream call should happen when the flag is off.
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('returns a generic error and logs details when upstream returns non-2xx', async () => {
@@ -557,9 +575,12 @@ function mockUpstreamStreamBody(frames: string[]): ReadableStream<Uint8Array> {
 
 describe('POST /api/chatbot/chat (session_token forwarding)', () => {
   let originalChatbotConfig: typeof config.popChatbot
+  let originalChatbotFeatureFlag: boolean
 
   beforeEach(() => {
     originalChatbotConfig = { ...config.popChatbot }
+    originalChatbotFeatureFlag = config.features.chatbot
+    config.features.chatbot = true
     config.popChatbot.apiUrl = 'https://upstream.test/chat-embed-stream'
     config.popChatbot.apiKey = 'test-key'
   })
@@ -568,6 +589,7 @@ describe('POST /api/chatbot/chat (session_token forwarding)', () => {
     config.popChatbot.apiUrl = originalChatbotConfig.apiUrl
     config.popChatbot.apiKey = originalChatbotConfig.apiKey
     config.popChatbot.userTokenSecret = originalChatbotConfig.userTokenSecret
+    config.features.chatbot = originalChatbotFeatureFlag
     jest.restoreAllMocks()
     jest.clearAllMocks()
   })
@@ -594,9 +616,12 @@ describe('POST /api/chatbot/chat (session_token forwarding)', () => {
 
 describe('POST /api/chatbot/chat/feedback', () => {
   let originalChatbotConfig: typeof config.popChatbot
+  let originalChatbotFeatureFlag: boolean
 
   beforeEach(() => {
     originalChatbotConfig = { ...config.popChatbot }
+    originalChatbotFeatureFlag = config.features.chatbot
+    config.features.chatbot = true
     config.popChatbot.apiUrl = 'https://upstream.test/chatbot/chat-embed-stream'
     config.popChatbot.apiKey = 'test-key'
     config.popChatbot.feedbackUrl = ''
@@ -606,6 +631,7 @@ describe('POST /api/chatbot/chat/feedback', () => {
     config.popChatbot.apiUrl = originalChatbotConfig.apiUrl
     config.popChatbot.apiKey = originalChatbotConfig.apiKey
     config.popChatbot.feedbackUrl = originalChatbotConfig.feedbackUrl
+    config.features.chatbot = originalChatbotFeatureFlag
     jest.restoreAllMocks()
     jest.clearAllMocks()
   })
@@ -627,6 +653,19 @@ describe('POST /api/chatbot/chat/feedback', () => {
       .post('/api/chatbot/chat/feedback')
       .send({ message_id: 'm1', feedback_type: 'thumbs_up' })
       .expect(503)
+  })
+
+  it('returns 503 when the chatbot feature flag is off, even if credentials are present', async () => {
+    config.features.chatbot = false
+    const fetchSpy = jest.spyOn(global, 'fetch')
+    const app = buildApp()
+
+    await request(app)
+      .post('/api/chatbot/chat/feedback')
+      .send({ message_id: 'm1', feedback_type: 'thumbs_up' })
+      .expect(503)
+
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('returns 503 when feedback URL cannot be derived and no override is set', async () => {
