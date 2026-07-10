@@ -3,7 +3,12 @@ import jwt from 'jsonwebtoken'
 import config from '../config'
 import logger from '../../logger'
 import type { Services } from '../services'
-import { shouldShowAppointment, resolveAppointmentType } from './appointments'
+import { shouldShowAppointment, toAppointmentCardView } from './appointments'
+import type { AppointmentCardView } from './appointments'
+import { toRequirementView } from './requirements'
+import type { RequirementView } from './requirements'
+import { toGoalView } from './goals'
+import type { GoalView } from './goals'
 import type {
   AddressResponse,
   PersonalDetailsResponse,
@@ -11,11 +16,8 @@ import type {
   ManagerResponse,
   SentenceProgressResponse,
   SentenceResponse,
-  RequirementResponse,
   AppointmentResponse,
   SentencePlanResponse,
-  GoalResponse,
-  StepResponse,
 } from '../data/peopleOnProbationApiClient'
 
 // Inactivity-only timeout. Not a cap on the whole streamed response —
@@ -46,9 +48,9 @@ function flattenForEmbedContext(raw: UserContext): Record<string, unknown> {
   const practitioner = (personalDetails.practitioner ?? {}) as Record<string, unknown>
   const practitionerName = (practitioner.name ?? {}) as Record<string, unknown>
   const practitionerTeam = (practitioner.team ?? {}) as Record<string, unknown>
-  const futureAppointments = (raw.futureAppointments ?? []) as Array<Record<string, unknown>>
-  const nextAppt = futureAppointments[0] ?? {}
-  const requirements = (sentence.requirements as Array<Record<string, unknown>> | undefined) ?? []
+  const futureAppointments = (raw.futureAppointments ?? []) as SanitizedAppointment[]
+  const nextAppt = futureAppointments[0]
+  const requirements = (sentence.requirements as RequirementView[] | undefined) ?? []
 
   const flat: Record<string, unknown> = {
     name: [name.forename, name.surname].filter(Boolean).join(' '),
@@ -56,11 +58,15 @@ function flattenForEmbedContext(raw: UserContext): Record<string, unknown> {
     order_type: sentence.type,
     probation_practitioner_name: [practitionerName.forename, practitionerName.surname].filter(Boolean).join(' '),
     probation_practitioner_phone: practitionerTeam.telephoneNumber,
-    next_appointment_date: nextAppt.date,
-    next_appointment_time: nextAppt.startTime,
-    next_appointment_location: (nextAppt.location as Record<string, unknown> | undefined)?.buildingName,
+    // date/timeRange/address are the same fields the appointments page shows
+    // via toAppointmentCardView — see sanitizeAppointment above.
+    next_appointment_date: nextAppt?.date,
+    next_appointment_time: nextAppt?.timeRange,
+    next_appointment_location: nextAppt?.address?.[0],
+    // RequirementView.label is what the requirements page prints as the
+    // section heading for each requirement (see requirements.ts toRequirementView).
     requirements: requirements
-      .map(r => (r.subCategory as Record<string, unknown> | undefined)?.description as string | undefined)
+      .map(r => r.label)
       .filter((r): r is string => typeof r === 'string' && r.length > 0)
       .slice(0, 20),
   }
@@ -139,36 +145,17 @@ function sanitizePersonalDetails(personalDetails: PersonalDetailsResponse): Reco
   }
 }
 
-// Requirements with no `required` quantity fall back to a date range on
-// screen (see requirements.ts toRequirementView); quantity-based
-// requirements (unpaid work, RAR) never show a date at all.
-function sanitizeRequirement(requirement: RequirementResponse): Record<string, unknown> | null {
-  const label = requirement.mainCategory?.description || requirement.subCategory?.description
-  const base = { mainCategory: label ? { description: label } : undefined }
-
-  if (requirement.required && requirement.required > 0) {
-    return { ...base, required: requirement.required, completed: requirement.completed, unit: requirement.unit }
-  }
-
-  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
-  const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
-  if (startDate && endDate) {
-    return { ...base, startDate, endDate }
-  }
-
-  // Not shown on the requirements screen at all in this shape.
-  return null
-}
-
+// toRequirementView is the exact function requirements.ts hands to the
+// requirements page (see the `res.render('pages/requirements', ...)` call).
+// It already returns null for requirements the page wouldn't render at all,
+// so filtering nulls here matches what the page shows.
 function sanitizeSentence(sentence: SentenceResponse): Record<string, unknown> {
   return {
     type: sentence.type,
     startDate: sentence.startDate,
     expectedEndDate: sentence.expectedEndDate,
     mainOffence: sentence.mainOffence?.description ? { description: sentence.mainOffence.description } : undefined,
-    requirements: (sentence.requirements ?? [])
-      .map(sanitizeRequirement)
-      .filter((r): r is Record<string, unknown> => r !== null),
+    requirements: (sentence.requirements ?? []).map(toRequirementView).filter((r): r is RequirementView => r !== null),
     // licenceConditions is never rendered anywhere in the UI — dropped entirely.
   }
 }
@@ -180,88 +167,39 @@ function sanitizeSentenceProgress(sentenceProgress: SentenceProgressResponse): R
   return { sentences: sentence ? [sanitizeSentence(sentence)] : [] }
 }
 
-function sanitizeAppointment(appointment: AppointmentResponse): Record<string, unknown> {
-  // Unpaid work appointments never show a time, location or "key contact" on
-  // screen — the pick-up/work addresses below stand in for all three (see
-  // appointments.njk's `not appointment.isUnpaidWork` guards).
-  const isUnpaidWork = Boolean(appointment.unpaidWork)
-  return {
-    date: appointment.date,
-    startTime: isUnpaidWork ? undefined : appointment.startTime,
-    endTime: isUnpaidWork ? undefined : appointment.endTime,
-    // resolveAppointmentType renders "Community Payback" for unpaid work and
-    // strips the trailing "(NS)" suffix — the raw `type` field shows neither.
-    type: resolveAppointmentType(appointment),
-    outcome: appointment.outcome,
-    nationalStandards: appointment.nationalStandards,
-    practitioner: !isUnpaidWork && appointment.practitioner?.name ? { name: appointment.practitioner.name } : undefined,
-    location: isUnpaidWork ? undefined : sanitizeAddress(appointment.location),
-    // Forwarded for every appointment (not just ones that trip the
-    // missed-appointment banner, which is feature-flagged and mandatory-only)
-    // because outcome below already prints the same fact as text on the
-    // past-appointments screen (e.g. "Failed to attend") unconditionally,
-    // regardless of that flag.
-    attended: appointment.attended,
-    unpaidWork: appointment.unpaidWork
-      ? {
-          pickUpLocation: sanitizeAddress(appointment.unpaidWork.pickUpLocation),
-          project: appointment.unpaidWork.project
-            ? {
-                code: appointment.unpaidWork.project.code,
-                address: sanitizeAddress(appointment.unpaidWork.project.address),
-              }
-            : undefined,
-        }
-      : undefined,
-    // complied, typeCode: never read anywhere in the UI — dropped entirely.
-  }
+type SanitizedAppointment = Omit<AppointmentCardView, 'mapUrl' | 'calendarUrl' | 'pickUpMapUrl' | 'workMapUrl'>
+
+// toAppointmentCardView is the exact function appointments.ts hands to the
+// appointments page (see the `res.render('pages/appointments', ...)` call).
+// Reusing it means anything the appointments page shows for an appointment
+// row is what the chatbot sees too — mapUrl/calendarUrl/pickUpMapUrl/
+// workMapUrl are the only fields dropped, as those are click-through links
+// rather than information about the user.
+function sanitizeAppointment(appointment: AppointmentResponse): SanitizedAppointment {
+  const { mapUrl, calendarUrl, pickUpMapUrl, workMapUrl, ...rest } = toAppointmentCardView(appointment)
+  return rest
 }
 
-function sanitizeAppointments(appointments: AppointmentResponse[]): Record<string, unknown>[] {
+function sanitizeAppointments(appointments: AppointmentResponse[]): SanitizedAppointment[] {
   // Same visibility filter the appointments page applies (hides certain
   // unpaid-work project codes entirely) — an appointment the user can't see
   // on their own appointments page shouldn't be known to the chatbot either.
   return appointments.filter(shouldShowAppointment).map(sanitizeAppointment)
 }
 
-function sanitizeStep(step: StepResponse): Record<string, unknown> {
-  // statusDate is only ever shown in aggregate (goal-level "marked as
-  // achieved on X") — too granular per-step, dropped here.
-  return { description: step.description, actor: step.actor, status: step.status }
-}
-
-// The goals screen only ever renders these three tabs (see goals.ts) — a
-// goal with any other status (or none) isn't reachable from any tab, so it
-// isn't "on the UI" and shouldn't be visible to the chatbot either.
+// The goals screen only ever renders these three tabs (see goals.ts, which
+// filters by these exact statuses into currentGoals/futureGoals/
+// achievedGoals). A goal with any other status isn't reachable from any tab,
+// so it isn't "on the UI" and shouldn't be visible to the chatbot either.
 const VISIBLE_GOAL_STATUSES = ['ACTIVE', 'FUTURE', 'ACHIEVED']
 
-// For an achieved goal, the UI prints "Marked as achieved on <date>" using
-// the latest step statusDate (see goals.ts toGoalView) — even though the
-// per-step statusDate itself is stripped below as too granular.
-function computeAchievedDate(goal: GoalResponse): string | undefined {
-  if (goal.goalStatus !== 'ACHIEVED') return undefined
-  return (goal.steps ?? [])
-    .map(s => s.statusDate)
-    .filter((d): d is string => Boolean(d))
-    .sort()
-    .at(-1)
-}
-
-function sanitizeGoal(goal: GoalResponse): Record<string, unknown> {
-  return {
-    goalTitle: goal.goalTitle,
-    targetDate: goal.targetDate,
-    goalStatus: goal.goalStatus,
-    achievedDate: computeAchievedDate(goal),
-    steps: (goal.steps ?? []).map(sanitizeStep),
-    // areaOfNeed, relatedAreaOfNeed: never shown on the goals screen — dropped.
-  }
-}
-
-function sanitizeSentencePlan(sentencePlan: SentencePlanResponse): Record<string, unknown> {
+// toGoalView is the exact function goals.ts hands to the goals page (see
+// each `.filter(...).map(toGoalView)` call feeding res.render). Reusing it
+// means the chatbot's view of a goal is byte-for-byte the goals page's view.
+function sanitizeSentencePlan(sentencePlan: SentencePlanResponse): { goals: GoalView[] } {
   // crn, nomis, planStatus: never shown on the goals screen — dropped.
   const visibleGoals = (sentencePlan.goals ?? []).filter(g => VISIBLE_GOAL_STATUSES.includes(g.goalStatus))
-  return { goals: visibleGoals.map(sanitizeGoal) }
+  return { goals: visibleGoals.map(toGoalView) }
 }
 
 /**

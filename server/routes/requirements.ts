@@ -50,7 +50,7 @@ type OverallOrderView = {
   percentComplete: number
 }
 
-type RequirementView = {
+export type RequirementView = {
   label: string
   isRAR: boolean
   percentComplete: number
@@ -65,7 +65,7 @@ type RequirementView = {
   remainingDuration?: string
 }
 
-function toRequirementView(requirement: RequirementResponse): RequirementView | null {
+export function toRequirementView(requirement: RequirementResponse): RequirementView | null {
   const label = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
   const isRAR = requirement.mainCategory?.code === 'F'
 

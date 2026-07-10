@@ -6,6 +6,7 @@ import type { Services } from '../services'
 import type { AuthenticatedUserSession } from '../auth/sessionStore'
 import config from '../config'
 import logger from '../../logger'
+import { formatDate, formatDateWithDay, formatTimeRange } from '../utils/utils'
 
 jest.mock('../../logger', () => ({
   warn: jest.fn(),
@@ -218,7 +219,7 @@ describe('POST /api/chatbot/chat', () => {
             crn: 'X123456',
             nomis: 'N1',
             planStatus: 'AGREED',
-            goals: [{ goalTitle: 'Find stable housing', goalStatus: 'ACTIVE' }],
+            goals: [{ goalTitle: 'Find stable housing', goalStatus: 'ACTIVE', steps: [] }],
           }),
         },
       },
@@ -227,9 +228,11 @@ describe('POST /api/chatbot/chat', () => {
     await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
 
     const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
-    expect(body.user_context.pastAppointments).toEqual([{ type: 'Office Visit', date: '2026-06-01' }])
+    expect(body.user_context.pastAppointments).toEqual([
+      { type: 'Office Visit', date: formatDateWithDay('2026-06-01'), isUnpaidWork: false, address: [] },
+    ])
     expect(body.user_context.sentencePlan.goals).toEqual([
-      { goalTitle: 'Find stable housing', goalStatus: 'ACTIVE', steps: [] },
+      { title: 'Find stable housing', completedSteps: 0, totalSteps: 0, steps: [] },
     ])
   })
 
@@ -369,7 +372,7 @@ describe('POST /api/chatbot/chat', () => {
 
     const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
     expect(ctx.futureAppointments).toHaveLength(1)
-    expect(ctx.futureAppointments[0].date).toBe('2026-07-02')
+    expect(ctx.futureAppointments[0].date).toBe(formatDateWithDay('2026-07-02'))
   })
 
   it('resolves unpaid work appointment type and hides the time/location/practitioner the appointments screen also hides for them', async () => {
@@ -404,14 +407,13 @@ describe('POST /api/chatbot/chat', () => {
     const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
     const unpaidWorkAppt = ctx.futureAppointments[0]
     expect(unpaidWorkAppt.type).toBe('Community Payback')
-    expect(unpaidWorkAppt.startTime).toBeUndefined()
-    expect(unpaidWorkAppt.endTime).toBeUndefined()
-    expect(unpaidWorkAppt.location).toBeUndefined()
-    expect(unpaidWorkAppt.practitioner).toBeUndefined()
+    expect(unpaidWorkAppt.timeRange).toBeUndefined()
+    expect(unpaidWorkAppt.address).toEqual([])
+    expect(unpaidWorkAppt.practitionerName).toBeUndefined()
 
     const officeVisit = ctx.futureAppointments[1]
     expect(officeVisit.type).toBe('Office Visit')
-    expect(officeVisit.startTime).toBe('10:00')
+    expect(officeVisit.timeRange).toBe(formatTimeRange('10:00', '10:45'))
   })
 
   it('drops goals whose status is not shown on any goals tab, and derives achievedDate from steps for achieved goals', async () => {
@@ -444,8 +446,8 @@ describe('POST /api/chatbot/chat', () => {
 
     const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
     expect(ctx.sentencePlan.goals).toHaveLength(1)
-    expect(ctx.sentencePlan.goals[0].goalTitle).toBe('Find stable housing')
-    expect(ctx.sentencePlan.goals[0].achievedDate).toBe('2026-01-10')
+    expect(ctx.sentencePlan.goals[0].title).toBe('Find stable housing')
+    expect(ctx.sentencePlan.goals[0].achievedDate).toBe(formatDate('2026-01-10'))
   })
 
   it('still builds user_context from the working endpoints when one upstream call rejects', async () => {
