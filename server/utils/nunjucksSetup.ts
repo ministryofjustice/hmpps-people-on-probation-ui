@@ -14,7 +14,7 @@ export default function nunjucksSetup(app: express.Express): void {
   app.locals.applicationName = 'Probation Account'
   app.locals.environmentName = config.environmentName
   app.locals.environmentNameColour = config.environmentName === 'PRE-PRODUCTION' ? 'govuk-tag--green' : ''
-  app.locals.chatbotEnabled = Boolean(config.features.chatbot && config.popChatbot.apiUrl && config.popChatbot.apiKey)
+  app.locals.chatbotEnabled = Boolean(config.popChatbot.apiUrl && config.popChatbot.apiKey)
   app.locals.feedbackBanner = config.feedbackBanner
   app.locals.features = config.features
   app.locals.sessionExpiryMinutes = config.session.expiryMinutes
