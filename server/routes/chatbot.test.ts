@@ -367,6 +367,44 @@ describe('POST /api/chatbot/chat', () => {
     expect(ctx.sentencePlan.goals[0].steps[0].statusDate).toBeUndefined()
   })
 
+  it('strips the practitioner name when the /probation-officer page would hide it (unallocated)', async () => {
+    // /probation-officer uses formatPractitionerName, which returns undefined
+    // when the name contains "unallocated" — so the page shows "No probation
+    // officer details are available at this time" for these users. The
+    // chatbot must not send the raw name in that case; otherwise it can
+    // answer "your probation officer is unallocated unallocated" while the
+    // page shows blank state, a direct parity break.
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-unalloc"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getPersonalDetails: jest.fn().mockResolvedValue({
+            ...minimalPersonalDetails,
+            practitioner: {
+              name: { forename: 'Unallocated', surname: 'Unallocated' },
+              team: {
+                telephoneNumber: '020 7946 0987',
+                officeAddresses: [{ street: 'Office One' }],
+              },
+            },
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(ctx.personalDetails.practitioner.name).toBeUndefined()
+    // Non-name officer fields still come through — the page also renders those
+    // independently when they exist.
+    expect(ctx.personalDetails.practitioner.team.telephoneNumber).toBe('020 7946 0987')
+  })
+
   it('drops appointments hidden from the appointments screen (matching shouldShowAppointment)', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
