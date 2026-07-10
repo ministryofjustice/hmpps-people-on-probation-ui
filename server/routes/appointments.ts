@@ -14,7 +14,7 @@ import {
 } from '../utils/utils'
 import type { AppointmentResponse } from '../data/peopleOnProbationApiClient'
 
-type AppointmentCardView = {
+export type AppointmentCardView = {
   date?: string
   timeRange?: string
   type?: string
@@ -67,7 +67,7 @@ function formatAppointmentType(type?: string): string | undefined {
   return type?.replace(/\s*\(NS\)\s*$/i, '').trim()
 }
 
-function resolveAppointmentType(appointment: AppointmentResponse): string | undefined {
+export function resolveAppointmentType(appointment: AppointmentResponse): string | undefined {
   if (appointment.unpaidWork) return 'Community Payback'
   return formatAppointmentType(appointment.type)
 }
@@ -177,7 +177,7 @@ export function generateIcs(params: {
   return lines.join('\r\n')
 }
 
-function toAppointmentCardView(appointment: AppointmentResponse): AppointmentCardView {
+export function toAppointmentCardView(appointment: AppointmentResponse): AppointmentCardView {
   const address = appointment.unpaidWork ? [] : formatAddress(appointment.location)
   const pickUpAddress = appointment.unpaidWork ? formatAddress(appointment.unpaidWork.pickUpLocation) : undefined
   const workAddress = appointment.unpaidWork ? formatAddress(appointment.unpaidWork.project?.address) : undefined
@@ -190,7 +190,10 @@ function toAppointmentCardView(appointment: AppointmentResponse): AppointmentCar
     address,
     mapUrl: formatMapUrl(address),
     calendarUrl: buildCalendarUrl(appointment),
-    practitionerName: formatPractitionerName(appointment.practitioner?.name),
+    // The template only renders this alongside `not isUnpaidWork` (see
+    // appointments.njk), so gate here too — the view object shouldn't carry
+    // a fact the page wouldn't actually show.
+    practitionerName: appointment.unpaidWork ? undefined : formatPractitionerName(appointment.practitioner?.name),
     attended: appointment.attended,
     outcome: formatOutcome(appointment.outcome),
     pickUpAddress,

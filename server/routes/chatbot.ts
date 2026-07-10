@@ -3,6 +3,22 @@ import jwt from 'jsonwebtoken'
 import config from '../config'
 import logger from '../../logger'
 import type { Services } from '../services'
+import { shouldShowAppointment, toAppointmentCardView } from './appointments'
+import type { AppointmentCardView } from './appointments'
+import { toRequirementView } from './requirements'
+import type { RequirementView } from './requirements'
+import { toGoalView } from './goals'
+import type { GoalView } from './goals'
+import type {
+  AddressResponse,
+  PersonalDetailsResponse,
+  PersonalContactResponse,
+  ManagerResponse,
+  SentenceProgressResponse,
+  SentenceResponse,
+  AppointmentResponse,
+  SentencePlanResponse,
+} from '../data/peopleOnProbationApiClient'
 
 // Inactivity-only timeout. Not a cap on the whole streamed response —
 // legitimate long LLM answers can easily take longer than 30s to fully
@@ -32,9 +48,9 @@ function flattenForEmbedContext(raw: UserContext): Record<string, unknown> {
   const practitioner = (personalDetails.practitioner ?? {}) as Record<string, unknown>
   const practitionerName = (practitioner.name ?? {}) as Record<string, unknown>
   const practitionerTeam = (practitioner.team ?? {}) as Record<string, unknown>
-  const futureAppointments = (raw.futureAppointments ?? []) as Array<Record<string, unknown>>
-  const nextAppt = futureAppointments[0] ?? {}
-  const requirements = (sentence.requirements as Array<Record<string, unknown>> | undefined) ?? []
+  const futureAppointments = (raw.futureAppointments ?? []) as SanitizedAppointment[]
+  const nextAppt = futureAppointments[0]
+  const requirements = (sentence.requirements as RequirementView[] | undefined) ?? []
 
   const flat: Record<string, unknown> = {
     name: [name.forename, name.surname].filter(Boolean).join(' '),
@@ -42,11 +58,15 @@ function flattenForEmbedContext(raw: UserContext): Record<string, unknown> {
     order_type: sentence.type,
     probation_practitioner_name: [practitionerName.forename, practitionerName.surname].filter(Boolean).join(' '),
     probation_practitioner_phone: practitionerTeam.telephoneNumber,
-    next_appointment_date: nextAppt.date,
-    next_appointment_time: nextAppt.startTime,
-    next_appointment_location: (nextAppt.location as Record<string, unknown> | undefined)?.buildingName,
+    // date/timeRange/address are the same fields the appointments page shows
+    // via toAppointmentCardView — see sanitizeAppointment above.
+    next_appointment_date: nextAppt?.date,
+    next_appointment_time: nextAppt?.timeRange,
+    next_appointment_location: nextAppt?.address?.[0],
+    // RequirementView.label is what the requirements page prints as the
+    // section heading for each requirement (see requirements.ts toRequirementView).
     requirements: requirements
-      .map(r => (r.subCategory as Record<string, unknown> | undefined)?.description as string | undefined)
+      .map(r => r.label)
       .filter((r): r is string => typeof r === 'string' && r.length > 0)
       .slice(0, 20),
   }
@@ -69,16 +89,127 @@ function mintPopUserToken(raw: UserContext, userId: string, secret: string | und
 }
 
 /**
+ * UI-parity sanitizers.
+ *
+ * The chatbot must never know more about a user than the POP UI already
+ * shows them on screen — otherwise the chatbot can surface fields (e.g. a
+ * requirement's internal expectedStartDate/expectedEndDate) that look like a
+ * discrepancy or a leak to a user comparing what they see on screen against
+ * what the chatbot tells them. Each function below mirrors the exact fields
+ * and conditions the corresponding page in server/routes/ renders, rather
+ * than forwarding the raw upstream API response.
+ *
+ * This is a deliberate trade-off versus the old "forward everything"
+ * design: a genuinely new upstream field won't reach the chatbot until it's
+ * explicitly allowlisted here — same as it wouldn't reach a user until a
+ * template is built to show it.
+ */
+function sanitizeAddress(address?: AddressResponse): Omit<AddressResponse, 'lastUpdatedAt'> | undefined {
+  if (!address) return undefined
+  const { lastUpdatedAt, ...rest } = address
+  return rest
+}
+
+function sanitizePersonalDetails(personalDetails: PersonalDetailsResponse): Record<string, unknown> {
+  const { name, preferredName, dateOfBirth, telephoneNumber, mobileNumber, emailAddress, mainAddress, practitioner } =
+    personalDetails
+
+  const sanitizeContact = (contact: PersonalContactResponse) => ({
+    name: contact.name,
+    relationship: contact.relationship,
+    mobileNumber: contact.mobileNumber,
+    emailAddress: contact.emailAddress,
+  })
+
+  const sanitizePractitioner = (mgr: ManagerResponse) => ({
+    name: mgr.name,
+    // Only the first office address is ever shown (see probationOfficer.ts).
+    team: mgr.team
+      ? {
+          telephoneNumber: mgr.team.telephoneNumber,
+          officeAddresses: [sanitizeAddress(mgr.team.officeAddresses?.[0])].filter(Boolean),
+        }
+      : undefined,
+  })
+
+  return {
+    name,
+    preferredName,
+    dateOfBirth,
+    telephoneNumber,
+    mobileNumber,
+    emailAddress,
+    mainAddress: sanitizeAddress(mainAddress),
+    emergencyContacts: personalDetails.emergencyContacts?.map(sanitizeContact),
+    practitioner: practitioner ? sanitizePractitioner(practitioner) : undefined,
+  }
+}
+
+// toRequirementView is the exact function requirements.ts hands to the
+// requirements page (see the `res.render('pages/requirements', ...)` call).
+// It already returns null for requirements the page wouldn't render at all,
+// so filtering nulls here matches what the page shows.
+function sanitizeSentence(sentence: SentenceResponse): Record<string, unknown> {
+  return {
+    type: sentence.type,
+    startDate: sentence.startDate,
+    expectedEndDate: sentence.expectedEndDate,
+    mainOffence: sentence.mainOffence?.description ? { description: sentence.mainOffence.description } : undefined,
+    requirements: (sentence.requirements ?? []).map(toRequirementView).filter((r): r is RequirementView => r !== null),
+    // licenceConditions is never rendered anywhere in the UI — dropped entirely.
+  }
+}
+
+function sanitizeSentenceProgress(sentenceProgress: SentenceProgressResponse): Record<string, unknown> {
+  // Only sentences[0] is ever shown (see requirements.ts) — later sentences
+  // in the array are invisible to the user, so they're dropped here too.
+  const sentence = sentenceProgress.sentences?.[0]
+  return { sentences: sentence ? [sanitizeSentence(sentence)] : [] }
+}
+
+type SanitizedAppointment = Omit<AppointmentCardView, 'mapUrl' | 'calendarUrl' | 'pickUpMapUrl' | 'workMapUrl'>
+
+// toAppointmentCardView is the exact function appointments.ts hands to the
+// appointments page (see the `res.render('pages/appointments', ...)` call).
+// Reusing it means anything the appointments page shows for an appointment
+// row is what the chatbot sees too — mapUrl/calendarUrl/pickUpMapUrl/
+// workMapUrl are the only fields dropped, as those are click-through links
+// rather than information about the user.
+function sanitizeAppointment(appointment: AppointmentResponse): SanitizedAppointment {
+  const { mapUrl, calendarUrl, pickUpMapUrl, workMapUrl, ...rest } = toAppointmentCardView(appointment)
+  return rest
+}
+
+function sanitizeAppointments(appointments: AppointmentResponse[]): SanitizedAppointment[] {
+  // Same visibility filter the appointments page applies (hides certain
+  // unpaid-work project codes entirely) — an appointment the user can't see
+  // on their own appointments page shouldn't be known to the chatbot either.
+  return appointments.filter(shouldShowAppointment).map(sanitizeAppointment)
+}
+
+// The goals screen only ever renders these three tabs (see goals.ts, which
+// filters by these exact statuses into currentGoals/futureGoals/
+// achievedGoals). A goal with any other status isn't reachable from any tab,
+// so it isn't "on the UI" and shouldn't be visible to the chatbot either.
+const VISIBLE_GOAL_STATUSES = ['ACTIVE', 'FUTURE', 'ACHIEVED']
+
+// toGoalView is the exact function goals.ts hands to the goals page (see
+// each `.filter(...).map(toGoalView)` call feeding res.render). Reusing it
+// means the chatbot's view of a goal is byte-for-byte the goals page's view.
+function sanitizeSentencePlan(sentencePlan: SentencePlanResponse): { goals: GoalView[] } {
+  // crn, nomis, planStatus: never shown on the goals screen — dropped.
+  const visibleGoals = (sentencePlan.goals ?? []).filter(g => VISIBLE_GOAL_STATUSES.includes(g.goalStatus))
+  return { goals: visibleGoals.map(toGoalView) }
+}
+
+/**
  * Builds the chatbot's user_context payload from the authenticated user's
  * profile. Driven entirely from server-side data so callers can't supply
  * or tamper with the context.
  *
- * Deliberately generic: every available source is fetched and forwarded
- * close to as-is, rather than hand-picking known fields into a fixed shape.
- * Whatever the upstream API returns — including fields added after this was
- * written — reaches the chatbot without needing a code change here. Adding a
- * genuinely new data source still means adding a fetch call below, but no
- * field within an existing source needs to be named individually again.
+ * Each source is sanitized to UI parity (see the sanitize* functions above)
+ * before being included — the chatbot should only ever be able to tell a
+ * user something they could already see somewhere in the POP UI.
  */
 async function buildUserContext(services: Services, user: { userId: string }, crn: string): Promise<UserContext> {
   const service = services.peopleOnProbationService
@@ -90,11 +221,11 @@ async function buildUserContext(services: Services, user: { userId: string }, cr
   // have access to your personal information in this session…"). Users
   // saw that even though they were signed in.
   const sources = {
-    personalDetails: () => service.getPersonalDetails(crn),
-    sentenceProgress: () => service.getSentences(crn),
-    futureAppointments: () => service.getFutureAppointments(crn, 0, 10).then(r => r.content),
-    pastAppointments: () => service.getPastAppointments(crn, 0, 10).then(r => r.content),
-    sentencePlan: () => service.getSentencePlan(crn),
+    personalDetails: () => service.getPersonalDetails(crn).then(sanitizePersonalDetails),
+    sentenceProgress: () => service.getSentences(crn).then(sanitizeSentenceProgress),
+    futureAppointments: () => service.getFutureAppointments(crn, 0, 10).then(r => sanitizeAppointments(r.content)),
+    pastAppointments: () => service.getPastAppointments(crn, 0, 10).then(r => sanitizeAppointments(r.content)),
+    sentencePlan: () => service.getSentencePlan(crn).then(sanitizeSentencePlan),
   } as const
 
   const entries = await Promise.all(

@@ -24,13 +24,13 @@ const STEP_STATUS_TAGS: Record<string, { text: string; classes: string }> = {
   NO_LONGER_NEEDED: { text: 'No longer needed', classes: 'govuk-tag--grey' },
 }
 
-type StepView = {
+export type StepView = {
   description: string
   actor: string
   tag: { text: string; classes: string }
 }
 
-type GoalView = {
+export type GoalView = {
   title: string
   targetDate?: string
   achievedDate?: string
@@ -39,7 +39,7 @@ type GoalView = {
   steps: StepView[]
 }
 
-function toStepView(step: StepResponse): StepView {
+export function toStepView(step: StepResponse): StepView {
   return {
     description: step.description ?? '',
     actor: ACTOR_LABELS[step.actor ?? ''] ?? step.actor ?? '',
@@ -47,7 +47,7 @@ function toStepView(step: StepResponse): StepView {
   }
 }
 
-function toGoalView(goal: GoalResponse): GoalView {
+export function toGoalView(goal: GoalResponse): GoalView {
   const steps = goal.steps.map(toStepView)
   const completedSteps = goal.steps.filter(s => s.status === 'COMPLETED').length
   const achievedDate =
