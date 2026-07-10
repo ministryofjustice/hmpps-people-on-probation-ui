@@ -147,7 +147,7 @@ export default function chatbotRoutes(services: Services): Router {
       res.write(`data: ${JSON.stringify(payload)}\n\n`)
     }
 
-    if (!apiUrl || !apiKey) {
+    if (!config.features.chatbot || !apiUrl || !apiKey) {
       send({ type: 'error', text: 'Chatbot service is not configured' })
       res.end()
       return
@@ -297,7 +297,7 @@ export default function chatbotRoutes(services: Services): Router {
       res.status(401).json({ error: 'Not authenticated' })
       return
     }
-    if (!apiUrl || !apiKey) {
+    if (!config.features.chatbot || !apiUrl || !apiKey) {
       res.status(503).json({ error: 'Chatbot service is not configured' })
       return
     }
