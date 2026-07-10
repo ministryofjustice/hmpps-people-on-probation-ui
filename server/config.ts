@@ -136,5 +136,12 @@ export default {
   },
   features: {
     missedAppointmentAlert: get('FEATURE_MISSED_APPOINTMENT_ALERT', 'false') === 'true',
+    // Master switch for the chatbot widget and its /api/chatbot routes.
+    // On by default so existing envs where the chatbot is live keep it
+    // live without an extra helm values entry — set FEATURE_CHATBOT=false
+    // to switch it off. Independent of POP_CHATBOT_API_URL/API_KEY so the
+    // widget can be dark-launched (creds present, flag off) or emergency-
+    // killed (flag off, creds untouched) without a redeploy.
+    chatbot: get('FEATURE_CHATBOT', 'true') === 'true',
   },
 }
