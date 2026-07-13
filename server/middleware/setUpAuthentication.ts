@@ -197,10 +197,15 @@ export default function setUpAuthentication(auditService?: AuditService): Router
 
       const session = await refreshAuthenticatedUserSession(sessionId)
       if (!session) {
+        logger.info({ correlationId: req.id }, 'Session keep-alive failed: session not found or expired')
         clearAppSessionCookie(res)
         return res.sendStatus(401)
       }
 
+      logger.info(
+        { correlationId: req.id, crn: session.registeredUserDetails?.personReference },
+        'Session keep-alive refreshed',
+      )
       setAppSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
       return res.sendStatus(204)
     } catch (err) {
@@ -212,6 +217,11 @@ export default function setUpAuthentication(auditService?: AuditService): Router
     try {
       const sessionId = getAppSessionCookie(req)
       if (sessionId) {
+        const session = await getAuthenticatedUserSession(sessionId)
+        logger.info(
+          { correlationId: req.id, crn: session?.registeredUserDetails?.personReference },
+          'Session timed out',
+        )
         await deleteAuthenticatedUserSession(sessionId)
         clearAppSessionCookie(res)
       }
@@ -254,6 +264,11 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       await saveAuthenticatedUserSession(session)
       setAppSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
 
+      logger.info(
+        { correlationId: req.id, crn: registeredUserDetails.personReference },
+        'Local sign-in bypass used to establish session',
+      )
+
       return res.redirect(`/welcome?firstVisit=true&returnTo=${encodeURIComponent(normaliseReturnTo(returnTo))}`)
     } catch (err) {
       return next(err)
@@ -265,23 +280,37 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : null
       const rawToken = typeof req.query.token === 'string' ? req.query.token : null
       const registrationInviteToken = normaliseToken(rawToken)
+      const flow = registrationInviteToken ? 'registration' : 'login'
 
+      logger.info({ correlationId: req.id, flow }, 'Sign-in flow started')
+
+      let registrationInviteId: string | undefined
       if (registrationInviteToken) {
         try {
-          await getPeopleOnProbationService().validateRegistrationInvite(registrationInviteToken)
+          const invite = await getPeopleOnProbationService().validateRegistrationInvite(registrationInviteToken)
+          registrationInviteId = invite.id
         } catch (err: unknown) {
-          logger.warn({ err }, 'Registration invite token validation failed')
+          logger.warn({ correlationId: req.id, err }, 'Registration invite token validation failed')
           const redirect = authErrorRedirect(err)
           return redirect ? res.redirect(redirect) : next(err)
         }
+        logger.info({ correlationId: req.id, registrationInviteId }, 'Registration invite token validated')
       }
 
-      const transaction = createOneLoginTransaction(returnTo, registrationInviteToken ?? undefined)
+      const transaction = createOneLoginTransaction(
+        returnTo,
+        registrationInviteToken ?? undefined,
+        registrationInviteId,
+      )
       await saveOneLoginTransaction(transaction)
 
       setOneLoginTransactionCookie(res, transaction.id, getOneLoginTransactionTtlSeconds())
 
       const authorizeUrl = await buildOneLoginAuthorizeUrl(transaction)
+      logger.info(
+        { correlationId: req.id, transactionId: transaction.id, registrationInviteId, flow },
+        'Redirecting to One Login authorize endpoint',
+      )
       return res.redirect(authorizeUrl.toString())
     } catch (err) {
       return next(err)
@@ -293,29 +322,42 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       const transactionId = getOneLoginTransactionCookie(req)
 
       if (!transactionId) {
-        logger.warn('One Login callback received without transaction cookie')
+        logger.warn({ correlationId: req.id }, 'One Login callback received without transaction cookie')
         return res.redirect('/sign-in-error')
       }
 
       const transaction = await getOneLoginTransaction(transactionId)
 
       if (!transaction) {
-        logger.warn('One Login callback received with unknown or expired transaction')
+        logger.warn(
+          { correlationId: req.id, transactionId },
+          'One Login callback received with unknown or expired transaction',
+        )
         clearOneLoginTransactionCookie(res)
         return res.redirect('/sign-in-error')
       }
 
+      const flow = transaction.registrationInviteToken ? 'registration' : 'login'
+      const { registrationInviteId } = transaction
+      logger.info({ correlationId: req.id, transactionId, registrationInviteId, flow }, 'One Login callback received')
+
       const { code, state, error } = req.query
 
       if (error || typeof code !== 'string' || typeof state !== 'string') {
-        logger.warn({ error }, 'One Login callback error or missing code/state')
+        logger.warn(
+          { correlationId: req.id, transactionId, registrationInviteId, flow, error },
+          'One Login callback error or missing code/state',
+        )
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
         return res.redirect('/sign-in-error')
       }
 
       if (state !== transaction.state) {
-        logger.warn('One Login callback state mismatch')
+        logger.warn(
+          { correlationId: req.id, transactionId, registrationInviteId, flow },
+          'One Login callback state mismatch',
+        )
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
         return res.redirect('/sign-in-error')
@@ -325,11 +367,19 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       try {
         oneLoginUser = await authenticateOneLoginCallback(code, transaction)
       } catch (err) {
-        logger.warn({ err }, 'One Login authentication failed')
+        logger.warn(
+          { correlationId: req.id, transactionId, registrationInviteId, flow, err },
+          'One Login authentication failed',
+        )
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
         return res.redirect('/sign-in-error')
       }
+
+      logger.info(
+        { correlationId: req.id, transactionId, registrationInviteId, flow },
+        'One Login token exchange succeeded',
+      )
 
       await logAuthenticationAttempt(auditService, req, transaction, oneLoginUser)
 
@@ -337,7 +387,10 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       try {
         registeredUserDetails = await getRegisteredUserDetails(transaction, oneLoginUser)
       } catch (err: unknown) {
-        logger.warn({ err }, 'Failed to fetch registered user details after One Login callback')
+        logger.warn(
+          { correlationId: req.id, transactionId, registrationInviteId, flow, err },
+          'Failed to fetch registered user details after One Login callback',
+        )
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
         await logAuthenticationFailure(
@@ -351,6 +404,18 @@ export default function setUpAuthentication(auditService?: AuditService): Router
         const redirect = authErrorRedirect(err)
         return redirect ? res.redirect(redirect) : next(err)
       }
+
+      logger.info(
+        {
+          correlationId: req.id,
+          transactionId,
+          registrationInviteId,
+          flow,
+          crn: registeredUserDetails.personReference,
+          registeredUserStatus: registeredUserDetails.status,
+        },
+        'Registered user details resolved',
+      )
 
       const session = createAuthenticatedUserSession({
         userId: oneLoginUser.userId,
@@ -370,6 +435,17 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       await logSuccessfulAuthentication(auditService, req, transaction, oneLoginUser, registeredUserDetails)
 
       const isRegistration = Boolean(transaction.registrationInviteToken)
+      logger.info(
+        {
+          correlationId: req.id,
+          transactionId,
+          registrationInviteId,
+          flow,
+          crn: registeredUserDetails.personReference,
+        },
+        isRegistration ? 'User registration completed' : 'User signed in',
+      )
+
       const welcomeParams = new URLSearchParams({ returnTo: transaction.returnTo || '/' })
       if (isRegistration) welcomeParams.set('firstVisit', 'true')
       return res.redirect(`/welcome?${welcomeParams.toString()}`)
@@ -383,6 +459,8 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       const sessionId = getAppSessionCookie(req)
       const session = sessionId ? await getAuthenticatedUserSession(sessionId) : null
       const idToken = session?.idToken
+
+      logger.info({ correlationId: req.id, crn: session?.registeredUserDetails?.personReference }, 'Sign-out requested')
 
       if (sessionId) {
         await deleteAuthenticatedUserSession(sessionId)

@@ -4,6 +4,7 @@ import { OneLoginTransaction } from './loginTransactionStore'
 import { getOneLoginDiscoveryDocument, OneLoginDiscoveryDocument } from './oneLoginDiscovery'
 import { getOneLoginPrivateKey } from './oneLoginKeys'
 import config from '../config'
+import logger from '../../logger'
 
 type OneLoginTokenResponse = {
   access_token?: string
@@ -78,6 +79,7 @@ async function exchangeCodeForTokens(code: string, transaction: OneLoginTransact
   })
 
   if (!response.ok) {
+    logger.warn({ transactionId: transaction.id, status: response.status }, 'One Login token exchange request failed')
     throw new Error(`Failed to exchange One Login authorisation code: ${response.status}`)
   }
 
@@ -87,7 +89,12 @@ async function exchangeCodeForTokens(code: string, transaction: OneLoginTransact
   }
 }
 
-async function verifyIdToken(idToken: string, nonce: string, discoveryDocument: OneLoginDiscoveryDocument) {
+async function verifyIdToken(
+  idToken: string,
+  nonce: string,
+  discoveryDocument: OneLoginDiscoveryDocument,
+  transactionId: string,
+) {
   const clientId = getRequiredClientId()
   const jwks = createRemoteJWKSet(new URL(discoveryDocument.jwks_uri))
   const { payload } = await jwtVerify(idToken, jwks, {
@@ -96,19 +103,26 @@ async function verifyIdToken(idToken: string, nonce: string, discoveryDocument: 
   })
 
   if (payload.nonce !== nonce) {
+    logger.warn({ transactionId, oneLoginSubject: payload.sub }, 'One Login ID token nonce mismatch')
     throw new Error('One Login ID token nonce did not match the login transaction')
   }
 
   if (!payload.sub) {
+    logger.warn({ transactionId }, 'One Login ID token missing subject')
     throw new Error('One Login ID token did not include a subject')
   }
 
   if (!payload.iat || payload.iat > Math.floor(Date.now() / 1000) + clockSkewToleranceSeconds) {
+    logger.warn({ transactionId, oneLoginSubject: payload.sub }, 'One Login ID token issued-at time is invalid')
     throw new Error('One Login ID token issued-at time is invalid')
   }
 
   const expectedVot = getExpectedVectorOfTrust()
   if (payload.vot !== expectedVot) {
+    logger.warn(
+      { transactionId, oneLoginSubject: payload.sub, expectedVot, actualVot: payload.vot },
+      'One Login ID token vector of trust mismatch',
+    )
     throw new Error('One Login ID token vector of trust did not match the requested authentication level')
   }
 
@@ -124,7 +138,11 @@ function getExpectedVectorOfTrust() {
     : requestedVectorOfTrust
 }
 
-async function getUserInfo(accessToken: string | undefined, discoveryDocument: OneLoginDiscoveryDocument) {
+async function getUserInfo(
+  accessToken: string | undefined,
+  discoveryDocument: OneLoginDiscoveryDocument,
+  transactionId: string,
+) {
   if (!accessToken) return null
 
   const response = await fetch(discoveryDocument.userinfo_endpoint, {
@@ -135,6 +153,7 @@ async function getUserInfo(accessToken: string | undefined, discoveryDocument: O
   })
 
   if (!response.ok) {
+    logger.warn({ transactionId, status: response.status }, 'One Login userinfo request failed')
     return null
   }
 
@@ -143,8 +162,13 @@ async function getUserInfo(accessToken: string | undefined, discoveryDocument: O
 
 export async function authenticateOneLoginCallback(code: string, transaction: OneLoginTransaction) {
   const { discoveryDocument, tokenResponse } = await exchangeCodeForTokens(code, transaction)
-  const idTokenPayload = await verifyIdToken(tokenResponse.id_token, transaction.nonce, discoveryDocument)
-  const userInfo = await getUserInfo(tokenResponse.access_token, discoveryDocument)
+  const idTokenPayload = await verifyIdToken(
+    tokenResponse.id_token,
+    transaction.nonce,
+    discoveryDocument,
+    transaction.id,
+  )
+  const userInfo = await getUserInfo(tokenResponse.access_token, discoveryDocument, transaction.id)
 
   return {
     userId: idTokenPayload.sub,
