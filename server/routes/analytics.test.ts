@@ -176,5 +176,42 @@ describe('POST /analytics/events', () => {
       expect(sentEvents[0].sessionId).toBe(realSessionId)
       expect(sentEvents[0].userId).toBe('registered-user-id')
     })
+
+    it('never forwards a client-supplied userId on an unauthenticated request', async () => {
+      const app = buildApp()
+
+      await request(app)
+        .post('/analytics/events')
+        .send({ events: [buildEvent({ userId: 'attacker-supplied-user-id' })] })
+        .expect(202)
+
+      const [sentEvents] = postAnalyticsEventsMock.mock.calls[0]
+      expect(sentEvents[0].userId).toBeUndefined()
+      expect(sentEvents[0].sessionId).toBe('unauthenticated')
+    })
+
+    it('does not forward unknown fields the client adds to an event', async () => {
+      const app = buildApp()
+
+      await request(app)
+        .post('/analytics/events')
+        .send({
+          events: [
+            {
+              ...buildEvent(),
+              crn: 'X123456',
+              email: 'someone@example.com',
+              adminOverride: true,
+            },
+          ],
+        })
+        .expect(202)
+
+      const [sentEvents] = postAnalyticsEventsMock.mock.calls[0]
+      expect(sentEvents[0]).not.toHaveProperty('crn')
+      expect(sentEvents[0]).not.toHaveProperty('email')
+      expect(sentEvents[0]).not.toHaveProperty('adminOverride')
+      expect(sentEvents[0]).toEqual({ ...buildEvent(), sessionId: 'unauthenticated' })
+    })
   })
 })

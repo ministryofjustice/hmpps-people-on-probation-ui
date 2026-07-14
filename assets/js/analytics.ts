@@ -1,4 +1,4 @@
-import { AnalyticsClient, type QueueStorage } from './lib/analytics/client'
+import { AnalyticsClient } from './lib/analytics/client'
 import { createEvent, type CreateEventContext } from './lib/analytics/events'
 
 const APPLICATION = 'hmpps-people-on-probation-ui'
@@ -14,39 +14,9 @@ function generateId(): string {
   })
 }
 
-// Wraps a real Storage so a full/disabled store (e.g. private browsing)
-// can't throw into the rest of the page — analytics must never break a
-// user journey.
-function safeStorage(storage: Storage): QueueStorage {
-  return {
-    getItem: key => {
-      try {
-        return storage.getItem(key)
-      } catch {
-        return null
-      }
-    },
-    setItem: (key, value) => {
-      try {
-        storage.setItem(key, value)
-      } catch {
-        // ignore
-      }
-    },
-    removeItem: key => {
-      try {
-        storage.removeItem(key)
-      } catch {
-        // ignore
-      }
-    },
-  }
-}
-
 try {
   const client = new AnalyticsClient({
     endpoint: ENDPOINT,
-    storage: safeStorage(window.localStorage),
     sendBeacon: window.navigator.sendBeacon
       ? (url, body) => window.navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }))
       : undefined,
@@ -69,11 +39,10 @@ try {
 
   // This app has no client-side router — every route/page change is a
   // full page load, so one page_viewed per script execution is exactly
-  // "on route/page change" for a traditional multi-page app. enqueue()
-  // only queues; flush() actually sends it (and anything else queued,
-  // e.g. leftover events retried from a previous page's failed send).
-  client.enqueue(createEvent(eventContext(), 'page_viewed'))
-  client.flush(false)
+  // "on route/page change" for a traditional multi-page app. Sent
+  // immediately, once, best-effort (see client.ts) — no queue, so there's
+  // nothing here that can be sent twice.
+  client.send(createEvent(eventContext(), 'page_viewed'))
 
   const pageLoadedAt = Date.now()
   let pageExitTracked = false
@@ -89,8 +58,7 @@ try {
     if (pageExitTracked) return
     pageExitTracked = true
     const durationSeconds = Math.round((Date.now() - pageLoadedAt) / 1000)
-    client.enqueue(createEvent(eventContext(), 'page_exited', { durationSeconds }))
-    client.flush(true)
+    client.send(createEvent(eventContext(), 'page_exited', { durationSeconds }), true)
   }
 
   document.addEventListener('visibilitychange', () => {

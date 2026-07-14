@@ -71,8 +71,15 @@ export default function analyticsRoutes(): Router {
     const appSessionCookie = getAppSessionCookie(req)
     const session = appSessionCookie ? await getAuthenticatedUserSession(appSessionCookie) : null
     const userId = session?.registeredUserDetails?.id
+
     const enrichedEvents: AnalyticsEvent[] = events.map(event => ({
-      ...event,
+      eventId: event.eventId,
+      eventName: event.eventName,
+      occurredAt: event.occurredAt,
+      application: event.application,
+      deviceType: event.deviceType,
+      pagePath: event.pagePath,
+      properties: event.properties,
       sessionId: session?.id ?? 'unauthenticated',
       ...(userId ? { userId } : {}),
     }))
