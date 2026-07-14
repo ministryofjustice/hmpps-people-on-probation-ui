@@ -1,6 +1,7 @@
 import PeopleOnProbationApiClient, {
   type CompleteOneLoginRegistrationRequest,
   type CurrentRegisteredUserRequest,
+  type AnalyticsEvent,
 } from '../data/peopleOnProbationApiClient'
 import { getAuthenticationClient } from '../data/index'
 
@@ -41,6 +42,10 @@ export default class PeopleOnProbationService {
 
   getSentencePlan(crn: string) {
     return this.peopleOnProbationApiClient.getSentencePlan(crn)
+  }
+
+  postAnalyticsEvents(events: AnalyticsEvent[]) {
+    return this.peopleOnProbationApiClient.postAnalyticsEvents(events)
   }
 }
 

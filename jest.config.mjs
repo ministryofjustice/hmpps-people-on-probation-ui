@@ -2,8 +2,8 @@ export default {
   transform: {
     '^.+\\.tsx?$': ['ts-jest'],
   },
-  collectCoverageFrom: ['server/**/*.{ts,js,jsx,mjs}'],
-  testMatch: ['<rootDir>/(server|job)/**/?(*.)(cy|test).{ts,js,jsx,mjs}'],
+  collectCoverageFrom: ['server/**/*.{ts,js,jsx,mjs}', 'assets/js/lib/**/*.{ts,js}'],
+  testMatch: ['<rootDir>/(server|job)/**/?(*.)(cy|test).{ts,js,jsx,mjs}', '<rootDir>/assets/js/**/?(*.)(test).{ts,js}'],
   testEnvironment: 'node',
   reporters: [
     'default',

@@ -34,6 +34,7 @@ import normaliseReturnTo from '../auth/returnTo'
 import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
 import AuditService from '../services/auditService'
 import type { RegisteredUserResponse } from '../data/peopleOnProbationApiClient'
+import { trackServerAnalyticsEvent } from '../services/analyticsService'
 
 const toError = (err: unknown): Error => {
   if (err instanceof Error) return err
@@ -222,6 +223,20 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           { correlationId: req.id, crn: session?.registeredUserDetails?.personReference },
           'Session timed out',
         )
+        // Only fire session_ended when the session was still present at
+        // this point (i.e. this route was reached via a proactive redirect
+        // rather than the session having already expired/been evicted from
+        // the store) — otherwise there's no reliable session/user data to
+        // report and the analytics duration query already estimates from
+        // the last recorded event in these cases.
+        if (session) {
+          trackServerAnalyticsEvent({
+            eventName: 'session_ended',
+            sessionId: session.id,
+            userId: session.registeredUserDetails?.id,
+            pagePath: req.path,
+          })
+        }
         await deleteAuthenticatedUserSession(sessionId)
         clearAppSessionCookie(res)
       }
@@ -291,6 +306,11 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           registrationInviteId = invite.id
         } catch (err: unknown) {
           logger.warn({ correlationId: req.id, err }, 'Registration invite token validation failed')
+          trackServerAnalyticsEvent({
+            eventName: 'registration_failure',
+            pagePath: req.path,
+            properties: { failureReason: 'invite_invalid_or_expired' },
+          })
           const redirect = authErrorRedirect(err)
           return redirect ? res.redirect(redirect) : next(err)
         }
@@ -348,6 +368,12 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           { correlationId: req.id, transactionId, registrationInviteId, flow, error },
           'One Login callback error or missing code/state',
         )
+        trackServerAnalyticsEvent({
+          eventName: `${flow}_failure`,
+          sessionId: transactionId,
+          pagePath: req.path,
+          properties: { failureReason: 'callback_error_or_missing_params' },
+        })
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
         return res.redirect('/sign-in-error')
@@ -358,6 +384,12 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           { correlationId: req.id, transactionId, registrationInviteId, flow },
           'One Login callback state mismatch',
         )
+        trackServerAnalyticsEvent({
+          eventName: `${flow}_failure`,
+          sessionId: transactionId,
+          pagePath: req.path,
+          properties: { failureReason: 'state_mismatch' },
+        })
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
         return res.redirect('/sign-in-error')
@@ -371,6 +403,12 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           { correlationId: req.id, transactionId, registrationInviteId, flow, err },
           'One Login authentication failed',
         )
+        trackServerAnalyticsEvent({
+          eventName: `${flow}_failure`,
+          sessionId: transactionId,
+          pagePath: req.path,
+          properties: { failureReason: 'one_login_authentication_failed' },
+        })
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
         return res.redirect('/sign-in-error')
@@ -391,6 +429,12 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           { correlationId: req.id, transactionId, registrationInviteId, flow, err },
           'Failed to fetch registered user details after One Login callback',
         )
+        trackServerAnalyticsEvent({
+          eventName: `${flow}_failure`,
+          sessionId: transactionId,
+          pagePath: req.path,
+          properties: { failureReason: 'registered_user_details_failed' },
+        })
         await deleteOneLoginTransaction(transactionId)
         clearOneLoginTransactionCookie(res)
         await logAuthenticationFailure(
@@ -446,6 +490,27 @@ export default function setUpAuthentication(auditService?: AuditService): Router
         isRegistration ? 'User registration completed' : 'User signed in',
       )
 
+      trackServerAnalyticsEvent({
+        eventName: isRegistration ? 'registration_success' : 'login_success',
+        sessionId: transactionId,
+        pagePath: req.path,
+        properties: { registeredUserStatus: registeredUserDetails.status },
+        userId: registeredUserDetails.id,
+      })
+
+      // Distinct from registration_success/login_success (an auth outcome):
+      // this marks the start of the authenticated session itself, using the
+      // real app session id — the same id used for every subsequent
+      // page_viewed/page_exited/session_ended event for this session (see
+      // the /analytics/events proxy, which attaches it server-side since
+      // the session cookie is httpOnly and the client can never read it).
+      trackServerAnalyticsEvent({
+        eventName: 'session_started',
+        sessionId: session.id,
+        userId: registeredUserDetails.id,
+        pagePath: req.path,
+      })
+
       const welcomeParams = new URLSearchParams({ returnTo: transaction.returnTo || '/' })
       if (isRegistration) welcomeParams.set('firstVisit', 'true')
       return res.redirect(`/welcome?${welcomeParams.toString()}`)
@@ -461,6 +526,15 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       const idToken = session?.idToken
 
       logger.info({ correlationId: req.id, crn: session?.registeredUserDetails?.personReference }, 'Sign-out requested')
+
+      if (session) {
+        trackServerAnalyticsEvent({
+          eventName: 'session_ended',
+          sessionId: session.id,
+          userId: session.registeredUserDetails?.id,
+          pagePath: req.path,
+        })
+      }
 
       if (sessionId) {
         await deleteAuthenticatedUserSession(sessionId)
