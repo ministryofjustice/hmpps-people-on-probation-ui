@@ -27,10 +27,14 @@ function isValidEvent(value: unknown): value is IncomingAnalyticsEvent {
 }
 
 /**
- * Same-origin proxy the browser posts batched analytics events to. Mounted
- * ahead of CSRF protection in app.ts (see comment there) since this is a
- * fire-and-forget telemetry sink, not a session-mutating action, and needs
- * to accept navigator.sendBeacon() requests which cannot carry a CSRF token.
+ * Same-origin proxy the browser posts analytics events to. The wire format
+ * accepts an array of events (up to MAX_EVENTS_PER_BATCH) since that's the
+ * documented API contract, but the client (assets/js/analytics.ts) sends
+ * each event individually as it happens rather than accumulating several —
+ * there's no queue to batch from. Mounted ahead of CSRF protection in
+ * app.ts (see comment there) since this is a fire-and-forget telemetry
+ * sink, not a session-mutating action, and needs to accept
+ * navigator.sendBeacon() requests which cannot carry a CSRF token.
  */
 export default function analyticsRoutes(): Router {
   const router = Router()
