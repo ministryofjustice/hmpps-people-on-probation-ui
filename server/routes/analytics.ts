@@ -1,11 +1,9 @@
 import { Router } from 'express'
 import config from '../config'
 import logger from '../../logger'
-import { postAnalyticsEvents, type AnalyticsEvent } from '../services/analyticsService'
+import { postAnalyticsEvent, type AnalyticsEvent, type AnalyticsEventName } from '../services/analyticsService'
 import { getAppSessionCookie } from '../auth/cookies'
 import { getAuthenticatedUserSession } from '../auth/sessionStore'
-
-const MAX_EVENTS_PER_BATCH = 50
 
 // The client never sends sessionId — the server is the only party that can
 // resolve the real authenticated session (the cookie is httpOnly) or be
@@ -13,12 +11,27 @@ const MAX_EVENTS_PER_BATCH = 50
 // anything) arrives on the wire.
 type IncomingAnalyticsEvent = Omit<AnalyticsEvent, 'sessionId'>
 
+const VALID_EVENT_NAMES: ReadonlySet<AnalyticsEventName> = new Set([
+  'page_viewed',
+  'page_exited',
+  'session_started',
+  'session_ended',
+  'registration_succeeded',
+  'registration_failed',
+  'login_succeeded',
+  'login_failed',
+])
+
+function isValidEventName(value: unknown): value is AnalyticsEventName {
+  return typeof value === 'string' && VALID_EVENT_NAMES.has(value as AnalyticsEventName)
+}
+
 function isValidEvent(value: unknown): value is IncomingAnalyticsEvent {
   if (!value || typeof value !== 'object') return false
   const event = value as Partial<IncomingAnalyticsEvent>
   return (
     typeof event.eventId === 'string' &&
-    typeof event.eventName === 'string' &&
+    isValidEventName(event.eventName) &&
     typeof event.occurredAt === 'string' &&
     typeof event.application === 'string' &&
     typeof event.deviceType === 'string' &&
@@ -27,14 +40,12 @@ function isValidEvent(value: unknown): value is IncomingAnalyticsEvent {
 }
 
 /**
- * Same-origin proxy the browser posts analytics events to. The wire format
- * accepts an array of events (up to MAX_EVENTS_PER_BATCH) since that's the
- * documented API contract, but the client (assets/js/analytics.ts) sends
- * each event individually as it happens rather than accumulating several —
- * there's no queue to batch from. Mounted ahead of CSRF protection in
- * app.ts (see comment there) since this is a fire-and-forget telemetry
- * sink, not a session-mutating action, and needs to accept
- * navigator.sendBeacon() requests which cannot carry a CSRF token.
+ * Same-origin proxy the browser posts one analytics event to at a time —
+ * matches the backend's POST /v1/analytics/events contract, which takes a
+ * single event object as the request body. Mounted
+ * ahead of CSRF protection in app.ts (see comment there) since this is a
+ * fire-and-forget telemetry sink, not a session-mutating action, and needs
+ * to accept navigator.sendBeacon() requests which cannot carry a CSRF token.
  */
 export default function analyticsRoutes(): Router {
   const router = Router()
@@ -47,13 +58,8 @@ export default function analyticsRoutes(): Router {
       return
     }
 
-    const events = req.body?.events
-    if (!Array.isArray(events) || events.length === 0 || events.length > MAX_EVENTS_PER_BATCH) {
-      res.sendStatus(400)
-      return
-    }
-
-    if (!events.every(isValidEvent)) {
+    const event = req.body
+    if (!isValidEvent(event)) {
       res.sendStatus(400)
       return
     }
@@ -76,7 +82,7 @@ export default function analyticsRoutes(): Router {
     const session = appSessionCookie ? await getAuthenticatedUserSession(appSessionCookie) : null
     const userId = session?.registeredUserDetails?.id
 
-    const enrichedEvents: AnalyticsEvent[] = events.map(event => ({
+    const enrichedEvent: AnalyticsEvent = {
       eventId: event.eventId,
       eventName: event.eventName,
       occurredAt: event.occurredAt,
@@ -86,11 +92,11 @@ export default function analyticsRoutes(): Router {
       properties: event.properties,
       sessionId: session?.id ?? 'unauthenticated',
       ...(userId ? { userId } : {}),
-    }))
+    }
 
-    const ok = await postAnalyticsEvents(enrichedEvents)
+    const ok = await postAnalyticsEvent(enrichedEvent)
     if (!ok) {
-      logger.warn({ batchSize: events.length }, 'Analytics event batch could not be forwarded upstream')
+      logger.warn({ eventId: enrichedEvent.eventId }, 'Analytics event could not be forwarded upstream')
       res.sendStatus(502)
       return
     }

@@ -24,7 +24,7 @@ export class AnalyticsClient {
    */
   send(event: AnalyticsEvent, useBeacon = false): void {
     try {
-      const body = JSON.stringify({ events: [event] })
+      const body = JSON.stringify(event)
 
       if (useBeacon && this.options.sendBeacon) {
         const accepted = this.options.sendBeacon(this.options.endpoint, body)

@@ -1,33 +1,39 @@
 import { randomUUID } from 'crypto'
+import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 import config from '../config'
 import logger from '../../logger'
 import { getPeopleOnProbationService } from './peopleOnProbationService'
-import type { AnalyticsEvent } from '../data/peopleOnProbationApiClient'
+import type { AnalyticsEvent, AnalyticsEventName } from '../data/peopleOnProbationApiClient'
 
-export type { AnalyticsEvent, AnalyticsDeviceType } from '../data/peopleOnProbationApiClient'
+export type { AnalyticsEvent, AnalyticsEventName, AnalyticsDeviceType } from '../data/peopleOnProbationApiClient'
 
 const APPLICATION_NAME = 'hmpps-people-on-probation-ui'
 
 /**
- * Forwards a batch of already-built analytics events to the People on
- * Probation API (same backend/auth as every other call in this app — see
- * PeopleOnProbationApiClient.postAnalyticsEvents). Never throws — analytics
+ * Forwards one already-built analytics event to the People on Probation
+ * API (same backend/auth as every other call in this app — see
+ * PeopleOnProbationApiClient.postAnalyticsEvent). Never throws — analytics
  * must never block or break a user journey, so every failure (feature
  * disabled, network error, non-2xx response) is caught and logged, and the
- * promise always resolves.
+ * promise always resolves. A 409 (the backend already has this eventId —
+ * e.g. a rare duplicate delivery attempt) is treated as success, not a
+ * failure, since the event is recorded either way.
  */
-export async function postAnalyticsEvents(events: AnalyticsEvent[]): Promise<boolean> {
-  if (!events.length) return true
-
+export async function postAnalyticsEvent(event: AnalyticsEvent): Promise<boolean> {
   if (!config.features.analytics) {
     return true
   }
 
   try {
-    await getPeopleOnProbationService().postAnalyticsEvents(events)
+    await getPeopleOnProbationService().postAnalyticsEvent(event)
     return true
   } catch (err) {
-    logger.warn({ err }, 'Failed to send analytics event batch')
+    if ((err as SanitisedError | null | undefined)?.responseStatus === 409) {
+      logger.debug({ eventId: event.eventId }, 'Analytics event already recorded (duplicate eventId)')
+      return true
+    }
+
+    logger.warn({ err }, 'Failed to send analytics event')
     return false
   }
 }
@@ -42,7 +48,7 @@ export async function postAnalyticsEvents(events: AnalyticsEvent[]): Promise<boo
  * this, matching the "never block a user journey" requirement.
  */
 export function trackServerAnalyticsEvent(params: {
-  eventName: string
+  eventName: AnalyticsEventName
   sessionId?: string
   pagePath: string
   properties?: Record<string, unknown>
@@ -67,5 +73,5 @@ export function trackServerAnalyticsEvent(params: {
     properties: params.properties,
   }
 
-  postAnalyticsEvents([event]).catch(err => logger.warn({ err }, 'Failed to track server analytics event'))
+  postAnalyticsEvent(event).catch(err => logger.warn({ err }, 'Failed to track server analytics event'))
 }

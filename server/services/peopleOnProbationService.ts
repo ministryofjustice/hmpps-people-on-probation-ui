@@ -44,8 +44,8 @@ export default class PeopleOnProbationService {
     return this.peopleOnProbationApiClient.getSentencePlan(crn)
   }
 
-  postAnalyticsEvents(events: AnalyticsEvent[]) {
-    return this.peopleOnProbationApiClient.postAnalyticsEvents(events)
+  postAnalyticsEvent(event: AnalyticsEvent) {
+    return this.peopleOnProbationApiClient.postAnalyticsEvent(event)
   }
 }
 

@@ -1,8 +1,18 @@
 import { detectDeviceType, type AnalyticsDeviceType } from './deviceType'
 
+export type AnalyticsEventName =
+  | 'page_viewed'
+  | 'page_exited'
+  | 'session_started'
+  | 'session_ended'
+  | 'registration_succeeded'
+  | 'registration_failed'
+  | 'login_succeeded'
+  | 'login_failed'
+
 export type AnalyticsEvent = {
   eventId: string
-  eventName: string
+  eventName: AnalyticsEventName
   occurredAt: string
   // Not set by the client — the server always attaches the real
   // authenticated session id (or a fixed fallback when unauthenticated)
@@ -35,7 +45,7 @@ export type CreateEventContext = {
  */
 export function createEvent(
   context: CreateEventContext,
-  eventName: string,
+  eventName: AnalyticsEventName,
   properties?: Record<string, unknown>,
 ): AnalyticsEvent {
   return {

@@ -307,7 +307,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
         } catch (err: unknown) {
           logger.warn({ correlationId: req.id, err }, 'Registration invite token validation failed')
           trackServerAnalyticsEvent({
-            eventName: 'registration_failure',
+            eventName: 'registration_failed',
             pagePath: req.path,
             properties: { failureReason: 'invite_invalid_or_expired' },
           })
@@ -369,7 +369,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           'One Login callback error or missing code/state',
         )
         trackServerAnalyticsEvent({
-          eventName: `${flow}_failure`,
+          eventName: `${flow}_failed`,
           sessionId: transactionId,
           pagePath: req.path,
           properties: { failureReason: 'callback_error_or_missing_params' },
@@ -385,7 +385,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           'One Login callback state mismatch',
         )
         trackServerAnalyticsEvent({
-          eventName: `${flow}_failure`,
+          eventName: `${flow}_failed`,
           sessionId: transactionId,
           pagePath: req.path,
           properties: { failureReason: 'state_mismatch' },
@@ -404,7 +404,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           'One Login authentication failed',
         )
         trackServerAnalyticsEvent({
-          eventName: `${flow}_failure`,
+          eventName: `${flow}_failed`,
           sessionId: transactionId,
           pagePath: req.path,
           properties: { failureReason: 'one_login_authentication_failed' },
@@ -430,7 +430,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
           'Failed to fetch registered user details after One Login callback',
         )
         trackServerAnalyticsEvent({
-          eventName: `${flow}_failure`,
+          eventName: `${flow}_failed`,
           sessionId: transactionId,
           pagePath: req.path,
           properties: { failureReason: 'registered_user_details_failed' },
@@ -491,14 +491,14 @@ export default function setUpAuthentication(auditService?: AuditService): Router
       )
 
       trackServerAnalyticsEvent({
-        eventName: isRegistration ? 'registration_success' : 'login_success',
+        eventName: isRegistration ? 'registration_succeeded' : 'login_succeeded',
         sessionId: transactionId,
         pagePath: req.path,
         properties: { registeredUserStatus: registeredUserDetails.status },
         userId: registeredUserDetails.id,
       })
 
-      // Distinct from registration_success/login_success (an auth outcome):
+      // Distinct from registration_succeeded/login_succeeded (an auth outcome):
       // this marks the start of the authenticated session itself, using the
       // real app session id — the same id used for every subsequent
       // page_viewed/page_exited/session_ended event for this session (see

@@ -14,13 +14,13 @@ function buildEvent(overrides: Partial<AnalyticsEvent> = {}): AnalyticsEvent {
 }
 
 describe('AnalyticsClient', () => {
-  it('sends the event via fetch as a single-event batch', () => {
+  it('sends the event via fetch as the request body directly', () => {
     const sendFetch = jest.fn().mockResolvedValue({ ok: true })
     const client = new AnalyticsClient({ endpoint: '/analytics/events', sendFetch })
 
     client.send(buildEvent())
 
-    expect(sendFetch).toHaveBeenCalledWith('/analytics/events', JSON.stringify({ events: [buildEvent()] }))
+    expect(sendFetch).toHaveBeenCalledWith('/analytics/events', JSON.stringify(buildEvent()))
   })
 
   it('does not throw when the fetch call rejects', async () => {
@@ -47,7 +47,7 @@ describe('AnalyticsClient', () => {
 
     client.send(buildEvent(), true)
 
-    expect(sendBeacon).toHaveBeenCalledWith('/analytics/events', JSON.stringify({ events: [buildEvent()] }))
+    expect(sendBeacon).toHaveBeenCalledWith('/analytics/events', JSON.stringify(buildEvent()))
     expect(sendFetch).not.toHaveBeenCalled()
   })
 
@@ -57,7 +57,7 @@ describe('AnalyticsClient', () => {
 
     client.send(buildEvent(), true)
 
-    expect(sendFetch).toHaveBeenCalledWith('/analytics/events', JSON.stringify({ events: [buildEvent()] }))
+    expect(sendFetch).toHaveBeenCalledWith('/analytics/events', JSON.stringify(buildEvent()))
   })
 
   it('falls back to fetch when the beacon sender refuses the payload (returns false)', () => {
@@ -67,8 +67,8 @@ describe('AnalyticsClient', () => {
 
     client.send(buildEvent(), true)
 
-    expect(sendBeacon).toHaveBeenCalledWith('/analytics/events', JSON.stringify({ events: [buildEvent()] }))
-    expect(sendFetch).toHaveBeenCalledWith('/analytics/events', JSON.stringify({ events: [buildEvent()] }))
+    expect(sendBeacon).toHaveBeenCalledWith('/analytics/events', JSON.stringify(buildEvent()))
+    expect(sendFetch).toHaveBeenCalledWith('/analytics/events', JSON.stringify(buildEvent()))
   })
 
   it('does not use the beacon sender when useBeacon is false, even if one is configured', () => {
