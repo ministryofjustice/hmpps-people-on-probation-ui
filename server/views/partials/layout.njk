@@ -26,7 +26,11 @@
   {% block breadcrumb %}{% endblock %}
 {% endblock %}
 
-{% block bodyStart %}{% endblock %}
+{% block bodyStart %}
+  {% if user and analyticsEnabled %}
+    <script type="module" src="{{ '/assets/js/analytics.js' | assetMap }}"></script>
+  {% endif %}
+{% endblock %}
 
 {% block bodyEnd %}
   {% if user and feedbackBanner.enabled and currentPage !== "feedback" %}

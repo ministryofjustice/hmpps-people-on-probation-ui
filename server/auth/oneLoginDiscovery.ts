@@ -1,4 +1,5 @@
 import config from '../config'
+import logger from '../../logger'
 
 export type OneLoginDiscoveryDocument = {
   issuer: string
@@ -92,8 +93,11 @@ export async function getOneLoginDiscoveryDocument() {
     }
   } catch (error) {
     if (!cachedDiscoveryDocument) {
+      logger.warn({ err: error }, 'Failed to fetch One Login discovery document and no cached copy is available')
       throw error
     }
+
+    logger.warn({ err: error }, 'Failed to refresh One Login discovery document; falling back to stale cached copy')
   }
 
   return cachedDiscoveryDocument.document

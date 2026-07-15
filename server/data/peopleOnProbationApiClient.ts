@@ -189,6 +189,30 @@ export interface SentencePlanResponse {
   goals: GoalResponse[]
 }
 
+export type AnalyticsDeviceType = 'desktop' | 'tablet' | 'mobile' | 'unknown'
+
+export type AnalyticsEventName =
+  | 'page_viewed'
+  | 'page_exited'
+  | 'session_started'
+  | 'session_ended'
+  | 'registration_succeeded'
+  | 'registration_failed'
+  | 'login_succeeded'
+  | 'login_failed'
+
+export type AnalyticsEvent = {
+  eventId: string
+  eventName: AnalyticsEventName
+  occurredAt: string
+  sessionId: string
+  userId?: string
+  application: string
+  deviceType: AnalyticsDeviceType
+  pagePath: string
+  properties?: Record<string, unknown>
+}
+
 export interface PeopleOnProbationApiErrorResponse {
   status: number
   errorCode: string
@@ -260,5 +284,12 @@ export default class PeopleOnProbationApiClient extends RestClient {
 
   getSentencePlan(crn: string) {
     return this.get<SentencePlanResponse>({ path: `/v1/person/${crn}/sentence-plan` }, asSystem())
+  }
+
+  postAnalyticsEvent(event: AnalyticsEvent) {
+    return this.post<{ eventId: string }, PeopleOnProbationApiErrorResponse>(
+      { path: '/v1/analytics/events', data: event },
+      asSystem(),
+    )
   }
 }

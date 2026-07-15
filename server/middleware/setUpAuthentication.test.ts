@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser'
 import setUpAuthentication from './setUpAuthentication'
 import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
 import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
+import { trackServerAnalyticsEvent } from '../services/analyticsService'
 import { appSessionCookieName } from '../auth/cookies'
 import {
   createAuthenticatedUserSession,
@@ -22,10 +23,16 @@ jest.mock('../auth/oneLoginKeys', () => ({
 jest.mock('../services/peopleOnProbationService', () => ({
   getPeopleOnProbationService: jest.fn(),
 }))
+jest.mock('../services/analyticsService', () => ({
+  trackServerAnalyticsEvent: jest.fn(),
+}))
 
 const mockedGetOneLoginPublicJwk = getOneLoginPublicJwk as jest.MockedFunction<typeof getOneLoginPublicJwk>
 const mockedGetPeopleOnProbationService = getPeopleOnProbationService as jest.MockedFunction<
   typeof getPeopleOnProbationService
+>
+const mockedTrackServerAnalyticsEvent = trackServerAnalyticsEvent as jest.MockedFunction<
+  typeof trackServerAnalyticsEvent
 >
 
 describe('setUpAuthentication', () => {
@@ -86,10 +93,21 @@ describe('setUpAuthentication', () => {
   describe('GET /session-timeout', () => {
     it('renders the session-timeout page when there is no app session cookie', async () => {
       await request(buildApp()).get('/session-timeout').expect(200)
+
+      expect(mockedTrackServerAnalyticsEvent).not.toHaveBeenCalled()
     })
 
-    it('deletes the session and clears the cookie when there is a valid app session cookie', async () => {
-      const session = createAuthenticatedUserSession({ userId: 'user-id', email: 'user@example.com' })
+    it('deletes the session, clears the cookie, and fires session_ended when there is a valid app session cookie', async () => {
+      const session = createAuthenticatedUserSession({
+        userId: 'user-id',
+        email: 'user@example.com',
+        registeredUserDetails: {
+          id: 'registered-user-id',
+          personReference: 'X123456',
+          status: 'ACTIVE',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+      })
       await saveAuthenticatedUserSession(session)
 
       await request(buildApp())
@@ -99,6 +117,13 @@ describe('setUpAuthentication', () => {
         .expect('Set-Cookie', new RegExp(`${appSessionCookieName}=;`))
 
       expect(await getAuthenticatedUserSession(session.id)).toBeNull()
+      expect(mockedTrackServerAnalyticsEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: 'session_ended',
+          sessionId: session.id,
+          userId: 'registered-user-id',
+        }),
+      )
     })
   })
 
@@ -127,6 +152,49 @@ describe('setUpAuthentication', () => {
         .set('Cookie', `${appSessionCookieName}=${session.id}`)
         .expect(204)
         .expect('Set-Cookie', new RegExp(`${appSessionCookieName}=`))
+    })
+  })
+
+  describe('GET /sign-out', () => {
+    beforeEach(() => {
+      // Short-circuits the redirect before it needs to reach GOV.UK One
+      // Login's discovery document, keeping these tests network-free.
+      config.localAuth.enabled = true
+    })
+
+    it('fires session_ended with the real session id and userId when there is a valid session', async () => {
+      const session = createAuthenticatedUserSession({
+        userId: 'one-login-subject',
+        email: 'user@example.com',
+        registeredUserDetails: {
+          id: 'registered-user-id',
+          personReference: 'X123456',
+          status: 'ACTIVE',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+      })
+      await saveAuthenticatedUserSession(session)
+
+      await request(buildApp())
+        .get('/sign-out')
+        .set('Cookie', `${appSessionCookieName}=${session.id}`)
+        .expect(302)
+        .expect('Location', '/')
+
+      expect(mockedTrackServerAnalyticsEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: 'session_ended',
+          sessionId: session.id,
+          userId: 'registered-user-id',
+        }),
+      )
+      expect(await getAuthenticatedUserSession(session.id)).toBeNull()
+    })
+
+    it('does not fire session_ended when there is no session', async () => {
+      await request(buildApp()).get('/sign-out').expect(302).expect('Location', '/')
+
+      expect(mockedTrackServerAnalyticsEvent).not.toHaveBeenCalled()
     })
   })
 

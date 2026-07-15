@@ -11,6 +11,7 @@ export type OneLoginTransaction = {
   codeChallenge: string
   returnTo: string
   registrationInviteToken?: string
+  registrationInviteId?: string
   createdAt: number
 }
 
@@ -42,6 +43,7 @@ function pruneExpiredInMemoryTransactions() {
 export function createOneLoginTransaction(
   returnTo?: string | null,
   registrationInviteToken?: string,
+  registrationInviteId?: string,
 ): OneLoginTransaction {
   const codeVerifier = randomBase64Url(64)
 
@@ -53,6 +55,7 @@ export function createOneLoginTransaction(
     codeChallenge: createCodeChallenge(codeVerifier),
     returnTo: normaliseReturnTo(returnTo),
     registrationInviteToken,
+    registrationInviteId,
     createdAt: Date.now(),
   }
 }

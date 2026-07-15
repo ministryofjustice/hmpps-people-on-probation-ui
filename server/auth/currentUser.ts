@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express'
 import { getAppSessionCookie, setAppSessionCookie, clearAppSessionCookie } from './cookies'
 import { refreshAuthenticatedUserSession, getAuthenticatedUserSessionTtlSeconds } from './sessionStore'
 import normaliseReturnTo from './returnTo'
+import logger from '../../logger'
 
 export async function loadCurrentUser(req: Request, res: Response, next: NextFunction) {
   const sessionId = getAppSessionCookie(req)
@@ -19,6 +20,7 @@ export async function loadCurrentUser(req: Request, res: Response, next: NextFun
     } else {
       clearAppSessionCookie(res)
       res.locals.sessionTimedOut = true
+      logger.info({ correlationId: req.id }, 'App session expired or not found; user will be redirected to sign in')
     }
   }
 

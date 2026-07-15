@@ -143,5 +143,6 @@ export default {
     // widget can be dark-launched (creds present, flag off) or emergency-
     // killed (flag off, creds untouched) without a redeploy.
     chatbot: get('FEATURE_CHATBOT', 'true') === 'true',
+    analytics: get('FEATURE_ANALYTICS', 'true') === 'true',
   },
 }

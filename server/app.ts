@@ -16,6 +16,7 @@ import setUpWebSecurity from './middleware/setUpWebSecurity'
 import setUpWebSession from './middleware/setUpWebSession'
 
 import routes from './routes'
+import analyticsRoutes from './routes/analytics'
 import type { Services } from './services'
 
 export default function createApp(services: Services): express.Application {
@@ -34,6 +35,13 @@ export default function createApp(services: Services): express.Application {
   app.use(setUpStaticResources())
   nunjucksSetup(app)
   app.use(setUpAuthentication(services.auditService))
+
+  // Mounted ahead of CSRF protection: this is a fire-and-forget telemetry
+  // sink (no session-mutating side effects) that must accept
+  // navigator.sendBeacon() requests, which cannot carry a CSRF token, and
+  // must work on unauthenticated pages (e.g. sign-in failures) too.
+  app.use('/analytics', analyticsRoutes())
+
   app.use(setUpCsrf())
 
   app.use(routes(services))
