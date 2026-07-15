@@ -76,6 +76,16 @@
     margin: 0;
     word-break: break-word;
     overflow-wrap: break-word;
+
+    // govuk-tag caps itself at max-width: 160px (with overflow-wrap: break-word)
+    // to handle a single very long word — but our outcome labels are short
+    // phrases (e.g. "Attended but failed to comply"), which hit that cap and
+    // wrap mid-phrase even though the row has plenty of room. Let the tag
+    // size to its content instead.
+    .govuk-tag {
+      max-width: none;
+      white-space: nowrap;
+    }
   }
 }
 

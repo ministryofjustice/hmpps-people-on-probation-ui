@@ -424,7 +424,7 @@ describe('POST /api/chatbot/chat', () => {
 
     const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
     const unpaidWorkAppt = ctx.futureAppointments[0]
-    expect(unpaidWorkAppt.type).toBe('Community Payback')
+    expect(unpaidWorkAppt.type).toBe('Community payback (unpaid work)')
     expect(unpaidWorkAppt.timeRange).toBeUndefined()
     expect(unpaidWorkAppt.address).toEqual([])
     expect(unpaidWorkAppt.practitionerName).toBeUndefined()

@@ -1,9 +1,144 @@
 import type { Express } from 'express'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
-import { buildCalendarFilename, buildCalendarUrl, generateIcs } from './appointments'
+import {
+  buildCalendarFilename,
+  buildCalendarUrl,
+  generateIcs,
+  resolveAppointmentType,
+  resolveOutcomeTag,
+} from './appointments'
 import type { Services } from '../services'
 import config from '../config'
+
+describe('resolveAppointmentType', () => {
+  it('maps a known typeCode to its user-friendly label, ignoring the free-text type', () => {
+    expect(resolveAppointmentType({ typeCode: 'COAP', type: 'Planned Office Visit (NS)' })).toBe(
+      'In-person appointment',
+    )
+    expect(resolveAppointmentType({ typeCode: 'COPT', type: 'Planned Telephone Contact (NS)' })).toBe(
+      'Phone appointment',
+    )
+    expect(resolveAppointmentType({ typeCode: 'COVC', type: 'Planned Video Contact (NS)' })).toBe('Video appointment')
+    expect(resolveAppointmentType({ typeCode: 'CHVS', type: 'Home Visit to Case (NS)' })).toBe('Home visit')
+    expect(resolveAppointmentType({ typeCode: 'CUPA', type: 'CP/UPW - Appointment/Attendance (NS)' })).toBe(
+      'Community payback (unpaid work)',
+    )
+    expect(resolveAppointmentType({ typeCode: 'DRGAPT', type: 'Drug Test Appointment (NS)' })).toBe(
+      'Drug test appointment',
+    )
+    expect(resolveAppointmentType({ typeCode: 'DRGDAA', type: 'Appointment for Drug Testing Assessment (NS)' })).toBe(
+      'Drug test assessment',
+    )
+    expect(resolveAppointmentType({ typeCode: 'GTS', type: 'Final Appointment with Provider' })).toBe(
+      'Final appointment with support service',
+    )
+    expect(resolveAppointmentType({ typeCode: 'GTS1', type: 'Initial Appointment with Provider' })).toBe(
+      'First appointment with support service',
+    )
+    expect(resolveAppointmentType({ typeCode: 'CAPW', type: 'AcP - Attendance -Pre-Group 1:1 (NS)' })).toBe(
+      'Meeting before course',
+    )
+  })
+
+  it('matches the code case-insensitively', () => {
+    expect(resolveAppointmentType({ typeCode: 'coap', type: 'Planned Office Visit (NS)' })).toBe(
+      'In-person appointment',
+    )
+  })
+
+  it('always uses the unpaid work label when unpaidWork is present, regardless of typeCode', () => {
+    expect(resolveAppointmentType({ typeCode: 'COAP', type: 'Anything at all', unpaidWork: {} })).toBe(
+      'Community payback (unpaid work)',
+    )
+  })
+
+  it('falls back to the NS-stripped raw type text when the typeCode is missing or unrecognised', () => {
+    expect(resolveAppointmentType({ type: 'Some Brand New Contact Type (NS)' })).toBe('Some Brand New Contact Type')
+    expect(resolveAppointmentType({ typeCode: 'ZZZZ', type: 'Some Brand New Contact Type (NS)' })).toBe(
+      'Some Brand New Contact Type',
+    )
+  })
+
+  it('returns undefined when there is no type, no typeCode, and no unpaid work', () => {
+    expect(resolveAppointmentType({})).toBeUndefined()
+  })
+})
+
+describe('resolveOutcomeTag', () => {
+  it('maps known outcome text to its friendly label and colour', () => {
+    expect(resolveOutcomeTag('Attended - Complied')).toEqual({ text: 'Attended', classes: 'govuk-tag--green' })
+    expect(resolveOutcomeTag('Attended - Failed to Comply')).toEqual({
+      text: 'Attended but failed to comply',
+      classes: 'govuk-tag--red',
+    })
+    expect(resolveOutcomeTag('Attended - Sent Home (behaviour)')).toEqual({
+      text: 'Attended but failed to comply',
+      classes: 'govuk-tag--red',
+    })
+    expect(resolveOutcomeTag('Attended - Sent Home (service issues)')).toEqual({
+      text: 'Attended but sent home early',
+      classes: 'govuk-tag--green',
+    })
+    expect(resolveOutcomeTag('Failed to Attend')).toEqual({ text: 'Missed', classes: 'govuk-tag--red' })
+    expect(resolveOutcomeTag('Failed to Comply with other Instruction')).toEqual({
+      text: 'Did not comply with instructions',
+      classes: 'govuk-tag--red',
+    })
+    expect(resolveOutcomeTag('Rescheduled - PoP Request')).toEqual({
+      text: 'Rescheduled at your request',
+      classes: 'govuk-tag--grey',
+    })
+    expect(resolveOutcomeTag('Rescheduled - Service Request')).toEqual({
+      text: 'Rescheduled by Probation Service',
+      classes: 'govuk-tag--grey',
+    })
+    expect(resolveOutcomeTag('Suspended')).toEqual({ text: 'Sentence suspended', classes: 'govuk-tag--green' })
+    expect(resolveOutcomeTag('Unacceptable Absence')).toEqual({
+      text: 'Missed – absence reason rejected',
+      classes: 'govuk-tag--red',
+    })
+    expect(resolveOutcomeTag('YOT Breach - Not Enforceable')).toEqual({
+      text: 'Breach – not enforceable',
+      classes: 'govuk-tag--grey',
+    })
+  })
+
+  it('maps any "Acceptable Absence"/"Acceptable Failure" sub-reason to the same neutral label', () => {
+    expect(resolveOutcomeTag('Acceptable Absence - Court/Legal')).toEqual({
+      text: 'Absence accepted',
+      classes: 'govuk-tag--grey',
+    })
+    expect(resolveOutcomeTag('Acceptable Absence - Employment')).toEqual({
+      text: 'Absence accepted',
+      classes: 'govuk-tag--grey',
+    })
+    expect(resolveOutcomeTag('Acceptable Absence-Professional Judgement Decision')).toEqual({
+      text: 'Absence accepted',
+      classes: 'govuk-tag--grey',
+    })
+    expect(resolveOutcomeTag('Acceptable Failure - None in following 12 months')).toEqual({
+      text: 'Absence accepted',
+      classes: 'govuk-tag--grey',
+    })
+  })
+
+  it('matches regardless of case and minor punctuation differences', () => {
+    expect(resolveOutcomeTag('attended - complied')).toEqual({ text: 'Attended', classes: 'govuk-tag--green' })
+    expect(resolveOutcomeTag('FAILED TO ATTEND')).toEqual({ text: 'Missed', classes: 'govuk-tag--red' })
+  })
+
+  it('falls back to a neutral tag with the original text for unrecognised outcomes', () => {
+    expect(resolveOutcomeTag('Some Brand New Outcome')).toEqual({
+      text: 'Some Brand New Outcome',
+      classes: 'govuk-tag--grey',
+    })
+  })
+
+  it('returns undefined when there is no outcome', () => {
+    expect(resolveOutcomeTag(undefined)).toBeUndefined()
+  })
+})
 
 describe('generateIcs', () => {
   it('escapes text fields for iCalendar clients', () => {
@@ -104,7 +239,7 @@ describe('buildCalendarUrl', () => {
       unpaidWork: {},
     })
 
-    expect(calendarUrl).toBe('/appointments/calendar?date=2026-08-10&title=Community+Payback')
+    expect(calendarUrl).toBe('/appointments/calendar?date=2026-08-10&title=Community+payback+%28unpaid+work%29')
     expect(calendarUrl).not.toContain('location')
   })
 })
@@ -372,7 +507,7 @@ describe('GET /appointments', () => {
       .expect(200)
 
     expect(response.text).toContain('Missed mandatory appointment or activity')
-    expect(response.text).toContain('‘Community Payback’')
+    expect(response.text).toContain('‘Community payback (unpaid work)’')
   })
 
   it('only renders the date row for unpaid work appointments', async () => {
@@ -419,7 +554,9 @@ describe('GET /appointments', () => {
 
     expect(response.text).toContain('Friday 12 June 2026')
     expect(response.text).toContain('Add to calendar')
-    expect(response.text).toContain('/appointments/calendar?date=2026-06-12&amp;title=Community+Payback')
+    expect(response.text).toContain(
+      '/appointments/calendar?date=2026-06-12&amp;title=Community+payback+%28unpaid+work%29',
+    )
     expect(response.text).not.toContain('startTime')
     expect(response.text).not.toContain('endTime')
     expect(response.text).not.toContain('location=')
@@ -454,7 +591,7 @@ describe('GET /appointments', () => {
     expect(response.text).not.toContain('9am to 12pm')
   })
 
-  it('replaces POP Request with Your Request in appointment outcome', async () => {
+  it('maps a known outcome to its friendly label and colour', async () => {
     peopleOnProbationService.getPastAppointments.mockResolvedValue({
       content: [
         {
@@ -471,7 +608,8 @@ describe('GET /appointments', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).toContain('Rescheduled - Your Request')
+    expect(response.text).toContain('Rescheduled at your request')
+    expect(response.text).toContain('govuk-tag--grey')
     expect(response.text).not.toContain('POP Request')
   })
 
@@ -515,7 +653,7 @@ describe('GET /appointments', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).not.toContain('Community Payback')
+    expect(response.text).not.toContain('Community payback')
     expect(response.text).toContain('Office visit')
   })
 
@@ -541,7 +679,7 @@ describe('GET /appointments', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).not.toContain('Community Payback')
+    expect(response.text).not.toContain('Community payback')
     expect(response.text).toContain('Office visit')
   })
 

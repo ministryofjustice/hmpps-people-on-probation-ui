@@ -167,16 +167,21 @@ function sanitizeSentenceProgress(sentenceProgress: SentenceProgressResponse): R
   return { sentences: sentence ? [sanitizeSentence(sentence)] : [] }
 }
 
-type SanitizedAppointment = Omit<AppointmentCardView, 'mapUrl' | 'calendarUrl' | 'pickUpMapUrl' | 'workMapUrl'>
+type SanitizedAppointment = Omit<
+  AppointmentCardView,
+  'mapUrl' | 'calendarUrl' | 'pickUpMapUrl' | 'workMapUrl' | 'outcomeTagClasses'
+>
 
 // toAppointmentCardView is the exact function appointments.ts hands to the
 // appointments page (see the `res.render('pages/appointments', ...)` call).
 // Reusing it means anything the appointments page shows for an appointment
 // row is what the chatbot sees too — mapUrl/calendarUrl/pickUpMapUrl/
-// workMapUrl are the only fields dropped, as those are click-through links
-// rather than information about the user.
+// workMapUrl are click-through links rather than information about the user,
+// and outcomeTagClasses is a CSS colour class for the status badge, so both
+// are dropped here.
 function sanitizeAppointment(appointment: AppointmentResponse): SanitizedAppointment {
-  const { mapUrl, calendarUrl, pickUpMapUrl, workMapUrl, ...rest } = toAppointmentCardView(appointment)
+  const { mapUrl, calendarUrl, pickUpMapUrl, workMapUrl, outcomeTagClasses, ...rest } =
+    toAppointmentCardView(appointment)
   return rest
 }
 
