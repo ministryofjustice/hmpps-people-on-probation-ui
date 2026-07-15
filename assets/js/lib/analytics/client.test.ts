@@ -60,6 +60,17 @@ describe('AnalyticsClient', () => {
     expect(sendFetch).toHaveBeenCalledWith('/analytics/events', JSON.stringify({ events: [buildEvent()] }))
   })
 
+  it('falls back to fetch when the beacon sender refuses the payload (returns false)', () => {
+    const sendFetch = jest.fn().mockResolvedValue({ ok: true })
+    const sendBeacon = jest.fn().mockReturnValue(false)
+    const client = new AnalyticsClient({ endpoint: '/analytics/events', sendFetch, sendBeacon })
+
+    client.send(buildEvent(), true)
+
+    expect(sendBeacon).toHaveBeenCalledWith('/analytics/events', JSON.stringify({ events: [buildEvent()] }))
+    expect(sendFetch).toHaveBeenCalledWith('/analytics/events', JSON.stringify({ events: [buildEvent()] }))
+  })
+
   it('does not use the beacon sender when useBeacon is false, even if one is configured', () => {
     const sendFetch = jest.fn().mockResolvedValue({ ok: true })
     const sendBeacon = jest.fn()

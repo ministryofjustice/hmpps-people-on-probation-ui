@@ -44,7 +44,7 @@ try {
   // nothing here that can be sent twice.
   client.send(createEvent(eventContext(), 'page_viewed'))
 
-  const pageLoadedAt = Date.now()
+  let pageLoadedAt = Date.now()
   let pageExitTracked = false
 
   // visibilitychange (→ hidden) is the primary signal: on mobile the OS can
@@ -65,6 +65,23 @@ try {
     if (document.visibilityState === 'hidden') trackPageExited()
   })
   window.addEventListener('pagehide', trackPageExited)
+
+  // A back/forward-cache restore (Safari/Firefox's back button, commonly)
+  // resumes this exact script instance without re-running it — so without
+  // this, a bfcache-restored visit sends no page_viewed (the top-level
+  // call above never re-executes) and, since pageExitTracked is still true
+  // from the exit that put the page into bfcache, no page_exited either
+  // when the user leaves again. pageshow fires on every load (including
+  // normal fresh ones), so persisted must be checked to only act on true
+  // restores. Resetting pageLoadedAt here is what keeps the next
+  // page_exited's duration scoped to the restored viewing period rather
+  // than including the entire frozen-in-bfcache gap.
+  window.addEventListener('pageshow', event => {
+    if (!event.persisted) return
+    pageExitTracked = false
+    pageLoadedAt = Date.now()
+    client.send(createEvent(eventContext(), 'page_viewed'))
+  })
 } catch {
   // Analytics must never break the page it's running on.
 }

@@ -14,16 +14,21 @@ export class AnalyticsClient {
 
   /**
    * Pass useBeacon=true when the page is being hidden/unloaded so delivery
-   * doesn't depend on the page staying alive; falls back to fetch if no
-   * beacon sender is configured.
+   * doesn't depend on the page staying alive. Falls back to fetch if no
+   * beacon sender is configured, or if the beacon itself refuses to queue
+   * the payload (returns false — e.g. the browser's per-origin pending-
+   * beacon queue is full, or the payload is over its size limit). fetch
+   * with keepalive is a different delivery mechanism with different
+   * constraints, so it stands a real chance of getting through even when
+   * the beacon declined.
    */
   send(event: AnalyticsEvent, useBeacon = false): void {
     try {
       const body = JSON.stringify({ events: [event] })
 
       if (useBeacon && this.options.sendBeacon) {
-        this.options.sendBeacon(this.options.endpoint, body)
-        return
+        const accepted = this.options.sendBeacon(this.options.endpoint, body)
+        if (accepted) return
       }
 
       this.options.sendFetch(this.options.endpoint, body).catch(() => {
