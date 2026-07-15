@@ -209,7 +209,9 @@
             {% if appointment.outcome %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Status</dt>
-                <dd class="pop-summary-card__value">{{ appointment.outcome }}</dd>
+                <dd class="pop-summary-card__value">
+                  {{ govukTag({ text: appointment.outcome, classes: appointment.outcomeTagClasses }) }}
+                </dd>
               </div>
             {% endif %}
           </dl>

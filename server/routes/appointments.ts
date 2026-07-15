@@ -26,6 +26,7 @@ export type AppointmentCardView = {
   practitionerName?: string
   attended?: boolean
   outcome?: string
+  outcomeTagClasses?: string
   pickUpAddress?: string[]
   pickUpMapUrl?: string | null
   workAddress?: string[]
@@ -67,13 +68,87 @@ function formatAppointmentType(type?: string): string | undefined {
   return type?.replace(/\s*\(NS\)\s*$/i, '').trim()
 }
 
-export function resolveAppointmentType(appointment: AppointmentResponse): string | undefined {
-  if (appointment.unpaidWork) return 'Community Payback'
-  return formatAppointmentType(appointment.type)
+const APPOINTMENT_TYPE_CODE_LABELS: Record<string, string> = {
+  C084: 'In-person appointment', // 3 Way Meeting (NS)
+  CAPY: 'Course activity', // AcP - Attendance (NS)
+  CAPW: 'Meeting before course', // AcP - Attendance - Pre-Group 1:1 (NS)
+  C243: 'Alcohol rehab appointment – group', // Alcohol Group Work Session (NS)
+  C089: 'Alcohol rehab appointment', // Alcohol Key Worker Session (NS)
+  C314: 'Appointment with support service', // Appointment with External Agency (NS)
+  GTS2: 'Appointment with support service', // Appointment with Provider
+  C357: 'Appointment with psychologist', // Appointment with Psychologist
+  C242: 'Drug rehab appointment – group', // Drug Group Work Session (NS)
+  C090: 'Drug rehab appointment', // Drug Key Worker Session (NS)
+  DRGAPT: 'Drug test appointment', // Drug Test Appointment (NS)
+  GTS: 'Final appointment with support service', // Final Appointment with Provider
+  CHVS: 'Home visit', // Home Visit to Case (NS)
+  COAI: 'First in-person appointment', // Initial Appointment - In office (NS)
+  GTS1: 'First appointment with support service', // Initial Appointment with Provider
+  COSR: 'Appointment', // Interview for Report / Other
+  MHT2: 'Mental health appointment', // Mental Health 3 way appointment
+  MHT1: 'Mental health appointment', // Mental Health Session
+  COOO: 'In-person appointment', // Planned Contact – other than office (NS)
+  CODC: 'Doorstep appointment', // Planned Doorstep Contact (NS)
+  COAP: 'In-person appointment', // Planned Office Visit (NS)
+  COPT: 'Phone appointment', // Planned Telephone Contact (NS)
+  COVC: 'Video appointment', // Planned Video Contact (NS)
+  CUPA: 'Community payback (unpaid work)', // CP/UPW - Appointment/Attendance (NS)
+  CAPX: 'Course activity', // IAPS Attendance (NS)
+  CAPZ: 'Review meeting after course', // AcP - Attendance - Post Programme Review (NS)
+  DRGDAA: 'Drug test assessment', // Appointment for Drug Testing Assessment (NS)
+  CRSAPT: 'Appointment with support service', // Appointment with CRS Provider (NS)
+  CRSSAA: 'Appointment with support service', // Appointment with CRS Staff (NS)
 }
 
-function formatOutcome(outcome?: string): string | undefined {
-  return outcome?.replace(/\bPOP Request\b/gi, 'Your Request')
+export function resolveAppointmentType(appointment: AppointmentResponse): string | undefined {
+  if (appointment.unpaidWork) return 'Community payback (unpaid work)'
+  const codeLabel = appointment.typeCode ? APPOINTMENT_TYPE_CODE_LABELS[appointment.typeCode.toUpperCase()] : undefined
+  return codeLabel ?? formatAppointmentType(appointment.type)
+}
+
+type OutcomeTag = { text: string; classes: string }
+
+const ABSENCE_ACCEPTED_TAG: OutcomeTag = { text: 'Absence accepted', classes: 'govuk-tag--grey' }
+
+// Keyed on the outcome text normalised via normalizeOutcomeText below (lowercase,
+// punctuation/whitespace collapsed to single spaces) — the backend's outcome
+// text is otherwise free text, so this tolerates minor spacing/casing/dash
+// differences (e.g. "PoP Request" vs "POP Request") while still requiring the
+// wording to match.
+const OUTCOME_TAGS: Record<string, OutcomeTag> = {
+  'attended complied': { text: 'Attended', classes: 'govuk-tag--green' },
+  'attended failed to comply': { text: 'Attended but failed to comply', classes: 'govuk-tag--red' },
+  'attended sent home behaviour': { text: 'Attended but failed to comply', classes: 'govuk-tag--red' },
+  'attended sent home service issues': { text: 'Attended but sent home early', classes: 'govuk-tag--green' },
+  'failed to attend': { text: 'Missed', classes: 'govuk-tag--red' },
+  'failed to comply with other instruction': { text: 'Did not comply with instructions', classes: 'govuk-tag--red' },
+  'rescheduled pop request': { text: 'Rescheduled at your request', classes: 'govuk-tag--grey' },
+  'rescheduled service request': { text: 'Rescheduled by Probation Service', classes: 'govuk-tag--grey' },
+  suspended: { text: 'Sentence suspended', classes: 'govuk-tag--green' },
+  'unacceptable absence': { text: 'Missed – absence reason rejected', classes: 'govuk-tag--red' },
+  'yot breach not enforceable': { text: 'Breach – not enforceable', classes: 'govuk-tag--grey' },
+}
+
+function normalizeOutcomeText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+export function resolveOutcomeTag(outcome?: string): OutcomeTag | undefined {
+  if (!outcome) return undefined
+  const normalized = normalizeOutcomeText(outcome)
+
+  // "Acceptable Absence - <reason>" and "Acceptable Failure - <reason>" cover
+  // many sub-reasons (court/legal, employment, medical, holiday, etc.) that
+  // all resolve to the same label/colour — matched by prefix rather than
+  // enumerating every reason so new sub-reasons still resolve correctly.
+  if (normalized.startsWith('acceptable absence') || normalized.startsWith('acceptable failure')) {
+    return ABSENCE_ACCEPTED_TAG
+  }
+
+  return OUTCOME_TAGS[normalized] ?? { text: outcome, classes: 'govuk-tag--grey' }
 }
 
 export function buildCalendarUrl(appointment: AppointmentResponse): string | undefined {
@@ -181,6 +256,7 @@ export function toAppointmentCardView(appointment: AppointmentResponse): Appoint
   const address = appointment.unpaidWork ? [] : formatAddress(appointment.location)
   const pickUpAddress = appointment.unpaidWork ? formatAddress(appointment.unpaidWork.pickUpLocation) : undefined
   const workAddress = appointment.unpaidWork ? formatAddress(appointment.unpaidWork.project?.address) : undefined
+  const outcomeTag = resolveOutcomeTag(appointment.outcome)
   return {
     date: formatDateWithDay(appointment.date),
     timeRange: appointment.unpaidWork ? undefined : formatTimeRange(appointment.startTime, appointment.endTime),
@@ -190,12 +266,10 @@ export function toAppointmentCardView(appointment: AppointmentResponse): Appoint
     address,
     mapUrl: formatMapUrl(address),
     calendarUrl: buildCalendarUrl(appointment),
-    // The template only renders this alongside `not isUnpaidWork` (see
-    // appointments.njk), so gate here too — the view object shouldn't carry
-    // a fact the page wouldn't actually show.
     practitionerName: appointment.unpaidWork ? undefined : formatPractitionerName(appointment.practitioner?.name),
     attended: appointment.attended,
-    outcome: formatOutcome(appointment.outcome),
+    outcome: outcomeTag?.text,
+    outcomeTagClasses: outcomeTag?.classes,
     pickUpAddress,
     pickUpMapUrl: pickUpAddress ? formatMapUrl(pickUpAddress) : null,
     workAddress,
