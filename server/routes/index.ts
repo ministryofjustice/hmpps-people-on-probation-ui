@@ -6,6 +6,7 @@ import config from '../config'
 import type { Services } from '../services'
 import { loadCurrentUser, requireAuthentication } from '../auth/currentUser'
 import normaliseReturnTo from '../auth/returnTo'
+import { getSessionCrn } from '../auth/sessionStore'
 import type { AppointmentResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import {
   formatDateWithDay,
@@ -23,6 +24,8 @@ import detailsRoutes from './details'
 import chatbotRoutes from './chatbot'
 import expectationsRoutes from './expectations'
 import feedbackRoutes from './feedback'
+import adminRoutes from './admin'
+import setUpAdminAuthentication from '../middleware/setUpAdminAuthentication'
 
 type NextAppointmentView = {
   date?: string
@@ -120,10 +123,18 @@ export default function routes(services: Services): Router {
   router.use('/expectations', expectationsRoutes(services))
   router.use('/feedback', feedbackRoutes(services))
 
+  // Admin "preview as user" feature — independent HMPPS Auth identity
+  // (res.locals.adminUser), fully separate from the citizen One Login
+  // session above (res.locals.user). See server/middleware/
+  // setUpAdminAuthentication.ts and server/routes/admin.ts.
+  if (config.features.adminPreview) {
+    router.use('/admin', setUpAdminAuthentication(services), adminRoutes(services))
+  }
+
   router.get('/', async (req, res, next) => {
     try {
       if (res.locals.user) {
-        const crn = res.locals.user.registeredUserDetails?.personReference
+        const crn = getSessionCrn(res.locals.user)
 
         if (!crn) {
           return res.redirect('/autherror')

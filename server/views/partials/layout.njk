@@ -1,5 +1,6 @@
 {% extends "govuk/template.njk" %}
 {% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block head %}
@@ -14,6 +15,13 @@
 {% endblock %}
 
 {% block beforeContent %}
+  {% if user.previewedByAdmin %}
+    {{ govukNotificationBanner({
+      html: 'You are previewing this account as CRN <strong>' + user.adminPreviewSubject.personReference + '</strong>. <form method="post" action="/admin/preview/end" class="pop-admin-preview-banner__form"><input type="hidden" name="_csrf" value="' + csrfToken + '"><button type="submit" class="govuk-link pop-admin-preview-banner__exit">Exit preview</button></form>',
+      titleText: "Admin preview",
+      classes: "govuk-!-margin-top-6"
+    }) }}
+  {% endif %}
   {% if user and feedbackBanner.enabled and currentPage !== "feedback" %}
     {{ govukPhaseBanner({
       tag: {
@@ -65,7 +73,7 @@
             classes: "pop-timeout-warning__stay-signed-in",
             type: "button"
           }) }}
-          <a class="govuk-link pop-timeout-warning__sign-out" href="/sign-out">Sign out</a>
+          <a class="govuk-link pop-timeout-warning__sign-out" href="{{ '/admin/sign-out' if user.previewedByAdmin else '/sign-out' }}">Sign out</a>
         </div>
       </div>
     </div>

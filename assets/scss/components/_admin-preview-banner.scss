@@ -1,0 +1,14 @@
+.pop-admin-preview-banner__form {
+  display: inline;
+  margin: 0;
+}
+
+.pop-admin-preview-banner__exit {
+  @include govuk-font($size: 19);
+  background: none;
+  border: none;
+  padding: 0;
+  color: $govuk-link-colour;
+  text-decoration: underline;
+  cursor: pointer;
+}

@@ -68,6 +68,9 @@ generic-service:
       POP_CHATBOT_USER_TOKEN_SECRET: 'POP_CHATBOT_USER_TOKEN_SECRET'
     sqs-hmpps-audit-secret:
       AUDIT_SQS_QUEUE_URL: 'sqs_queue_url'
+    hmpps-people-on-probation-ui-auth-code:
+      AUTH_CODE_CLIENT_ID: 'AUTH_CODE_CLIENT_ID'
+      AUTH_CODE_CLIENT_SECRET: 'AUTH_CODE_CLIENT_SECRET'
 
 generic-prometheus-alerts:
   targetApplication: hmpps-people-on-probation-ui

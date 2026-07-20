@@ -2,6 +2,7 @@ import type { Express } from 'express'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import { appSessionCookieName } from '../auth/cookies'
+import { createAuthenticatedUserSession, saveAuthenticatedUserSession } from '../auth/sessionStore'
 import type { Services } from '../services'
 
 let app: Express
@@ -99,6 +100,42 @@ describe('GET /details', () => {
 
     expect(response.text).toContain('Your details')
     expect(response.text).toContain('John Smith')
+  })
+
+  it('renders an admin preview session exactly like a real citizen session, with the exit-preview banner', async () => {
+    peopleOnProbationService.getPersonalDetails.mockResolvedValue({
+      name: { forename: 'John', surname: 'Smith' },
+      emergencyContacts: [],
+    })
+
+    const previewSession = createAuthenticatedUserSession({
+      userId: 'admin-preview:admin1',
+      adminPreviewSubject: {
+        personReference: 'X123456',
+        startedAt: '2026-01-01T00:00:00Z',
+      },
+      previewedByAdmin: 'admin1',
+    })
+    await saveAuthenticatedUserSession(previewSession)
+
+    const response = await request(app)
+      .get('/details')
+      .set('Cookie', `${appSessionCookieName}=${previewSession.id}`)
+      .expect(200)
+
+    expect(response.text).toContain('John Smith')
+    expect(response.text).toContain('You are previewing this account as CRN')
+    expect(response.text).toContain('X123456')
+    expect(response.text).toContain('Exit preview')
+    expect(peopleOnProbationService.getPersonalDetails).toHaveBeenCalledWith('X123456')
+
+    // The banner "Exit preview" ends just the preview (POST, stays signed
+    // in to HMPPS Auth); the nav "Sign out" does a full HMPPS Auth logout
+    // instead of the citizen /sign-out route (there is no One Login session
+    // to end for an admin).
+    expect(response.text).toContain('action="/admin/preview/end"')
+    expect(response.text).toContain('href="/admin/sign-out"')
+    expect(response.text).not.toContain('href="/sign-out"')
   })
 
   it('should pass errors to the next error handler', async () => {

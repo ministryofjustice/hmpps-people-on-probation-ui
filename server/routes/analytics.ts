@@ -80,6 +80,15 @@ export default function analyticsRoutes(): Router {
     // every analytics ping.
     const appSessionCookie = getAppSessionCookie(req)
     const session = appSessionCookie ? await getAuthenticatedUserSession(appSessionCookie) : null
+
+    if (session?.previewedByAdmin) {
+      // Admin "preview as user" sessions (server/routes/admin.ts) aren't
+      // real citizen usage — never attribute analytics to the CRN being
+      // previewed or the admin doing the previewing.
+      res.sendStatus(202)
+      return
+    }
+
     const userId = session?.registeredUserDetails?.id
 
     const enrichedEvent: AnalyticsEvent = {

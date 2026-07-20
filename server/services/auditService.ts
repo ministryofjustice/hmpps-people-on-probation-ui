@@ -12,6 +12,9 @@ export enum AuditAction {
   USER_REGISTRATION_FAILED = 'USER_REGISTRATION_FAILED',
   USER_SIGN_IN_ATTEMPTED = 'USER_SIGN_IN_ATTEMPTED',
   USER_SIGN_IN_FAILED = 'USER_SIGN_IN_FAILED',
+  ADMIN_PREVIEW_SEARCH_ATTEMPTED = 'ADMIN_PREVIEW_SEARCH_ATTEMPTED',
+  ADMIN_PREVIEW_STARTED = 'ADMIN_PREVIEW_STARTED',
+  ADMIN_PREVIEW_ENDED = 'ADMIN_PREVIEW_ENDED',
 }
 
 export interface AuditEvent {
@@ -98,6 +101,33 @@ export default class AuditService {
     await this.logAuditEvent({
       ...eventDetails,
       action: AuditAction.USER_SIGN_IN_FAILED,
+    })
+  }
+
+  // Admin "preview as user" feature (server/routes/admin.ts) — who is the
+  // admin's own HMPPS Auth username, subjectId is the CRN being
+  // searched/previewed.
+  async logAdminPreviewSearchAttempt(eventDetails: Omit<AuditEvent, 'action' | 'subjectType'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.ADMIN_PREVIEW_SEARCH_ATTEMPTED,
+      subjectType: 'CRN',
+    })
+  }
+
+  async logAdminPreviewStarted(eventDetails: Omit<AuditEvent, 'action' | 'subjectType'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.ADMIN_PREVIEW_STARTED,
+      subjectType: 'CRN',
+    })
+  }
+
+  async logAdminPreviewEnded(eventDetails: Omit<AuditEvent, 'action' | 'subjectType'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.ADMIN_PREVIEW_ENDED,
+      subjectType: 'CRN',
     })
   }
 }

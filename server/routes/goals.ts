@@ -3,6 +3,7 @@ import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
+import { getSessionCrn } from '../auth/sessionStore'
 import { formatDate, formatDateTimeWithDay } from '../utils/utils'
 import type { GoalResponse, StepResponse } from '../data/peopleOnProbationApiClient'
 
@@ -82,7 +83,7 @@ export default function goalsRoutes(services: Services): Router {
     const activeTab: Tab = VALID_TABS.includes(req.query.tab as Tab) ? (req.query.tab as Tab) : 'current'
 
     try {
-      const crn = res.locals.user?.registeredUserDetails?.personReference
+      const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
       const plan = await services.peopleOnProbationService.getSentencePlan(crn)

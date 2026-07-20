@@ -4,6 +4,8 @@ import cookieParser from 'cookie-parser'
 import analyticsRoutes from './analytics'
 import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
 import { createAppSessionCookie } from './testutils/appSetup'
+import { appSessionCookieName } from '../auth/cookies'
+import { createAuthenticatedUserSession, saveAuthenticatedUserSession } from '../auth/sessionStore'
 import config from '../config'
 import logger from '../../logger'
 import type { AnalyticsEvent } from '../data/peopleOnProbationApiClient'
@@ -162,6 +164,21 @@ describe('POST /analytics/events', () => {
       const [sentEvent] = postAnalyticsEventMock.mock.calls[0]
       expect(sentEvent.userId).toBeUndefined()
       expect(sentEvent.sessionId).toBe('unauthenticated')
+    })
+
+    it('acks immediately without forwarding when the session is an admin preview', async () => {
+      const previewSession = createAuthenticatedUserSession({
+        userId: 'admin-preview:admin1',
+        adminPreviewSubject: { personReference: 'X123456', startedAt: '2026-01-01T00:00:00Z' },
+        previewedByAdmin: 'admin1',
+      })
+      await saveAuthenticatedUserSession(previewSession)
+      const cookie = `${appSessionCookieName}=${previewSession.id}`
+      const app = buildApp()
+
+      await request(app).post('/analytics/events').set('Cookie', cookie).send(buildEvent()).expect(202)
+
+      expect(postAnalyticsEventMock).not.toHaveBeenCalled()
     })
 
     it('does not forward unknown fields the client adds to the event', async () => {
