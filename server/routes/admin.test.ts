@@ -7,7 +7,7 @@ import adminRoutes from './admin'
 import nunjucksSetup from '../utils/nunjucksSetup'
 import setUpWebSession from '../middleware/setUpWebSession'
 import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
-import { appSessionCookieName } from '../auth/cookies'
+import { adminPreviewSessionCookieName, appSessionCookieName } from '../auth/cookies'
 import { getAuthenticatedUserSession } from '../auth/sessionStore'
 import AuditService from '../services/auditService'
 import config from '../config'
@@ -143,7 +143,7 @@ describe('POST /admin/search', () => {
     )
   })
 
-  it('starts a preview session and sets the app session cookie when the CRN is found', async () => {
+  it('starts a preview session and sets the admin-preview session cookie when the CRN is found', async () => {
     const { app, getPersonalDetailsMock, auditService } = buildApp()
     getPersonalDetailsMock.mockResolvedValue({ name: { forename: 'Jane', surname: 'Doe' } })
 
@@ -151,7 +151,7 @@ describe('POST /admin/search', () => {
 
     expect(response.headers.location).toBe('/')
     const setCookieHeader = response.headers['set-cookie'] as unknown as string[]
-    const appSessionCookie = setCookieHeader.find(cookie => cookie.startsWith(appSessionCookieName))
+    const appSessionCookie = setCookieHeader.find(cookie => cookie.startsWith(adminPreviewSessionCookieName))
     expect(appSessionCookie).toBeDefined()
 
     const sessionId = appSessionCookie.split('=')[1].split(';')[0]
@@ -165,6 +165,23 @@ describe('POST /admin/search', () => {
     expect(auditService.logAdminPreviewStarted).toHaveBeenCalledWith(
       expect.objectContaining({ who: 'admin1', subjectId: 'X123456' }),
     )
+  })
+
+  it('does not touch an existing citizen app session cookie in the same browser', async () => {
+    const { app, getPersonalDetailsMock } = buildApp()
+    getPersonalDetailsMock.mockResolvedValue({ name: { forename: 'Jane', surname: 'Doe' } })
+
+    const response = await request(app)
+      .post('/admin/search')
+      .set('Cookie', `${appSessionCookieName}=some-unrelated-citizen-session-id`)
+      .send({ crn: 'X123456' })
+      .expect(302)
+
+    const setCookieHeader = response.headers['set-cookie'] as unknown as string[]
+    expect(setCookieHeader.some(cookie => cookie.startsWith(adminPreviewSessionCookieName))).toBe(true)
+    // The admin-preview cookie is separate from the citizen app session
+    // cookie, so starting a preview must never re-set or clear it.
+    expect(setCookieHeader.some(cookie => cookie.startsWith(appSessionCookieName))).toBe(false)
   })
 
   it('logs a warning but does not throw when the audit call fails', async () => {
@@ -185,7 +202,7 @@ describe('POST /admin/preview/end', () => {
 
     const startResponse = await request(app).post('/admin/search').send({ crn: 'X123456' }).expect(302)
     const setCookieHeader = startResponse.headers['set-cookie'] as unknown as string[]
-    const appSessionCookie = setCookieHeader.find(cookie => cookie.startsWith(appSessionCookieName))
+    const appSessionCookie = setCookieHeader.find(cookie => cookie.startsWith(adminPreviewSessionCookieName))
     const sessionId = appSessionCookie.split('=')[1].split(';')[0]
 
     const endResponse = await request(app).post('/admin/preview/end').set('Cookie', appSessionCookie).expect(302)

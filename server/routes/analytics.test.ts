@@ -4,7 +4,7 @@ import cookieParser from 'cookie-parser'
 import analyticsRoutes from './analytics'
 import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
 import { createAppSessionCookie } from './testutils/appSetup'
-import { appSessionCookieName } from '../auth/cookies'
+import { adminPreviewSessionCookieName } from '../auth/cookies'
 import { createAuthenticatedUserSession, saveAuthenticatedUserSession } from '../auth/sessionStore'
 import config from '../config'
 import logger from '../../logger'
@@ -173,7 +173,7 @@ describe('POST /analytics/events', () => {
         previewedByAdmin: 'admin1',
       })
       await saveAuthenticatedUserSession(previewSession)
-      const cookie = `${appSessionCookieName}=${previewSession.id}`
+      const cookie = `${adminPreviewSessionCookieName}=${previewSession.id}`
       const app = buildApp()
 
       await request(app).post('/analytics/events').set('Cookie', cookie).send(buildEvent()).expect(202)

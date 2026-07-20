@@ -1,7 +1,7 @@
 import type { Express } from 'express'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
-import { appSessionCookieName } from '../auth/cookies'
+import { appSessionCookieName, adminPreviewSessionCookieName } from '../auth/cookies'
 import { createAuthenticatedUserSession, saveAuthenticatedUserSession } from '../auth/sessionStore'
 import type { Services } from '../services'
 
@@ -120,7 +120,7 @@ describe('GET /details', () => {
 
     const response = await request(app)
       .get('/details')
-      .set('Cookie', `${appSessionCookieName}=${previewSession.id}`)
+      .set('Cookie', `${adminPreviewSessionCookieName}=${previewSession.id}`)
       .expect(200)
 
     expect(response.text).toContain('John Smith')

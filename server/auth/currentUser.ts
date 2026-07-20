@@ -1,16 +1,30 @@
 import { Request, Response, NextFunction } from 'express'
-import { getAppSessionCookie, setAppSessionCookie, clearAppSessionCookie } from './cookies'
+import {
+  getAppSessionCookie,
+  setAppSessionCookie,
+  clearAppSessionCookie,
+  getAdminPreviewSessionCookie,
+  setAdminPreviewSessionCookie,
+  clearAdminPreviewSessionCookie,
+} from './cookies'
 import { refreshAuthenticatedUserSession, getAuthenticatedUserSessionTtlSeconds } from './sessionStore'
 import normaliseReturnTo from './returnTo'
 import logger from '../../logger'
 
 export async function loadCurrentUser(req: Request, res: Response, next: NextFunction) {
-  const sessionId = getAppSessionCookie(req)
+  // An active admin preview (server/routes/admin.ts) takes precedence over
+  // a citizen session that happens to share the same browser - the two are
+  // on separate cookies and can coexist without one clobbering the other.
+  const previewSessionId = getAdminPreviewSessionCookie(req)
+  const isPreviewSession = Boolean(previewSessionId)
+  const sessionId = previewSessionId ?? getAppSessionCookie(req)
+  const setSessionCookie = isPreviewSession ? setAdminPreviewSessionCookie : setAppSessionCookie
+  const clearSessionCookie = isPreviewSession ? clearAdminPreviewSessionCookie : clearAppSessionCookie
 
   if (sessionId) {
     const session = await refreshAuthenticatedUserSession(sessionId)
     if (session) {
-      setAppSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
+      setSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
       res.locals.user = session
       const sessionExpiresInSeconds = Math.floor((session.expiresAt - Date.now()) / 1000)
       res.locals.sessionTimeoutWarning = {
@@ -18,7 +32,7 @@ export async function loadCurrentUser(req: Request, res: Response, next: NextFun
         countdownSeconds: Math.min(5 * 60, sessionExpiresInSeconds),
       }
     } else {
-      clearAppSessionCookie(res)
+      clearSessionCookie(res)
       res.locals.sessionTimedOut = true
       logger.info({ correlationId: req.id }, 'App session expired or not found; user will be redirected to sign in')
     }
@@ -32,7 +46,7 @@ export function requireAuthentication(req: Request, res: Response, next: NextFun
     return next()
   }
 
-  if (res.locals.sessionTimedOut || getAppSessionCookie(req)) {
+  if (res.locals.sessionTimedOut || getAppSessionCookie(req) || getAdminPreviewSessionCookie(req)) {
     return res.redirect('/session-timeout')
   }
 

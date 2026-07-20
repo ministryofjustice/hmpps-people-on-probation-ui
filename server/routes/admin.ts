@@ -12,7 +12,7 @@ import {
   getAuthenticatedUserSessionTtlSeconds,
   getSessionCrn,
 } from '../auth/sessionStore'
-import { getAppSessionCookie, setAppSessionCookie } from '../auth/cookies'
+import { getAdminPreviewSessionCookie, setAdminPreviewSessionCookie } from '../auth/cookies'
 import endActiveAdminPreviewSession from '../auth/adminPreviewSession'
 import logger from '../../logger'
 
@@ -41,10 +41,14 @@ async function auditSearchAttempt(
 // Admin "preview as user" feature. Every route here sits behind
 // requireAdminRole (checks res.locals.adminUser, the HMPPS Auth identity —
 // see setUpAdminAuthentication.ts), never res.locals.user. On a successful
-// CRN search, /search mints a normal entry in the same session store/cookie
-// every citizen session already uses (server/auth/sessionStore.ts), marked
-// with previewedByAdmin — from that point on every existing citizen-facing
-// route works completely unchanged, with zero special-casing.
+// CRN search, /search mints a normal entry in the same session store every
+// citizen session already uses (server/auth/sessionStore.ts), marked with
+// previewedByAdmin, but keyed by its own admin-preview cookie (see
+// server/auth/cookies.ts) rather than the citizen app-session cookie — so a
+// preview can never collide with or overwrite a real citizen session
+// sharing the same browser. server/auth/currentUser.ts still loads it into
+// res.locals.user, so every existing citizen-facing route works completely
+// unchanged, with zero special-casing.
 export default function adminRoutes(services: Services): Router {
   const router = Router()
 
@@ -54,11 +58,11 @@ export default function adminRoutes(services: Services): Router {
 
   router.get('/search', async (req, res, next) => {
     try {
-      const appSessionId = getAppSessionCookie(req)
-      const currentSession = appSessionId ? await getAuthenticatedUserSession(appSessionId) : null
+      const previewSessionId = getAdminPreviewSessionCookie(req)
+      const currentSession = previewSessionId ? await getAuthenticatedUserSession(previewSessionId) : null
 
       return res.render('pages/admin/search', {
-        activePreviewCrn: currentSession?.previewedByAdmin ? getSessionCrn(currentSession) : undefined,
+        activePreviewCrn: currentSession ? getSessionCrn(currentSession) : undefined,
       })
     } catch (error) {
       return next(error)
@@ -100,7 +104,7 @@ export default function adminRoutes(services: Services): Router {
         previewedByAdmin: adminUsername,
       })
       await saveAuthenticatedUserSession(previewSession)
-      setAppSessionCookie(res, previewSession.id, getAuthenticatedUserSessionTtlSeconds())
+      setAdminPreviewSessionCookie(res, previewSession.id, getAuthenticatedUserSessionTtlSeconds())
 
       if (services.auditService) {
         try {
