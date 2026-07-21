@@ -2,7 +2,7 @@ import { Router } from 'express'
 import config from '../config'
 import logger from '../../logger'
 import { postAnalyticsEvent, type AnalyticsEvent, type AnalyticsEventName } from '../services/analyticsService'
-import { getAppSessionCookie } from '../auth/cookies'
+import { getAppSessionCookie, getAdminPreviewSessionCookie } from '../auth/cookies'
 import { getAuthenticatedUserSession } from '../auth/sessionStore'
 
 // The client never sends sessionId — the server is the only party that can
@@ -78,8 +78,19 @@ export default function analyticsRoutes(): Router {
     // Read the session directly (not loadCurrentUser) to avoid the side
     // effect of refreshing session TTL / rewriting the session cookie on
     // every analytics ping.
+    // An admin "preview as user" session (server/routes/admin.ts) lives on
+    // its own cookie, separate from a real citizen session — check it first
+    // since it's never real citizen usage: never attribute analytics to the
+    // CRN being previewed or the admin doing the previewing.
+    const previewSessionCookie = getAdminPreviewSessionCookie(req)
+    if (previewSessionCookie) {
+      res.sendStatus(202)
+      return
+    }
+
     const appSessionCookie = getAppSessionCookie(req)
     const session = appSessionCookie ? await getAuthenticatedUserSession(appSessionCookie) : null
+
     const userId = session?.registeredUserDetails?.id
 
     const enrichedEvent: AnalyticsEvent = {

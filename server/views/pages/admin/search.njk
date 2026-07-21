@@ -1,0 +1,47 @@
+{% extends "../../partials/layout.njk" %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageTitle = "Preview a probation account – Check your probation account – GOV.UK" %}
+{% set currentPage = "admin-search" %}
+
+{% block content %}
+  <div class="govuk-grid-row govuk-!-margin-top-9">
+    <div class="govuk-grid-column-two-thirds">
+
+      {% if errorMessage %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: [{ text: errorMessage, href: "#crn" }]
+        }) }}
+      {% endif %}
+
+      <h1 class="govuk-heading-l">Preview a probation account</h1>
+
+      {% if activePreviewCrn %}
+        <p class="govuk-body">You are currently previewing CRN <strong>{{ activePreviewCrn }}</strong>.</p>
+        <form method="post" action="/admin/preview/end" novalidate>
+          <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+          {{ govukButton({ text: "Exit preview", classes: "govuk-button--secondary" }) }}
+        </form>
+      {% endif %}
+
+      <form method="post" action="/admin/search" novalidate>
+        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+        {{ govukInput({
+          label: { text: "CRN", classes: "govuk-label--m" },
+          hint: { text: "For example, X123456" },
+          id: "crn",
+          name: "crn",
+          value: crn,
+          errorMessage: { text: errorMessage } if errorMessage else undefined
+        }) }}
+
+        {{ govukButton({ text: "Search" }) }}
+      </form>
+
+    </div>
+  </div>
+{% endblock %}

@@ -2,6 +2,7 @@ import { Router } from 'express'
 
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
+import { getSessionCrn } from '../auth/sessionStore'
 import { formatDate, formatPersonName, formatAddress } from '../utils/utils'
 import type { PersonalContactResponse } from '../data/peopleOnProbationApiClient'
 
@@ -28,7 +29,7 @@ export default function detailsRoutes(services: Services): Router {
 
   router.get('/', async (_req, res, next) => {
     try {
-      const crn = res.locals.user?.registeredUserDetails?.personReference
+      const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
       const personalDetails = await services.peopleOnProbationService.getPersonalDetails(crn)

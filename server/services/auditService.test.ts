@@ -205,4 +205,68 @@ describe('Audit service', () => {
       })
     })
   })
+
+  describe('logAdminPreviewSearchAttempt', () => {
+    it('sends admin preview search attempt audit message', async () => {
+      await auditService.logAdminPreviewSearchAttempt({
+        who: 'admin1',
+        subjectId: 'X123456',
+        correlationId: 'request123',
+        details: { outcome: 'found' },
+      })
+
+      expect(mockedHmppsAuditService.sendAuditMessage).toHaveBeenCalledWith({
+        action: AuditAction.ADMIN_PREVIEW_SEARCH_ATTEMPTED,
+        who: 'admin1',
+        subjectId: 'X123456',
+        subjectType: 'CRN',
+        correlationId: 'request123',
+        service: 'hmpps-probation-accounts',
+        details: JSON.stringify({ outcome: 'found' }),
+        logErrors: true,
+      })
+    })
+  })
+
+  describe('logAdminPreviewStarted', () => {
+    it('sends admin preview started audit message', async () => {
+      await auditService.logAdminPreviewStarted({
+        who: 'admin1',
+        subjectId: 'X123456',
+        correlationId: 'request123',
+      })
+
+      expect(mockedHmppsAuditService.sendAuditMessage).toHaveBeenCalledWith({
+        action: AuditAction.ADMIN_PREVIEW_STARTED,
+        who: 'admin1',
+        subjectId: 'X123456',
+        subjectType: 'CRN',
+        correlationId: 'request123',
+        service: 'hmpps-probation-accounts',
+        details: undefined,
+        logErrors: true,
+      })
+    })
+  })
+
+  describe('logAdminPreviewEnded', () => {
+    it('sends admin preview ended audit message', async () => {
+      await auditService.logAdminPreviewEnded({
+        who: 'admin1',
+        subjectId: 'X123456',
+        correlationId: 'request123',
+      })
+
+      expect(mockedHmppsAuditService.sendAuditMessage).toHaveBeenCalledWith({
+        action: AuditAction.ADMIN_PREVIEW_ENDED,
+        who: 'admin1',
+        subjectId: 'X123456',
+        subjectType: 'CRN',
+        correlationId: 'request123',
+        service: 'hmpps-probation-accounts',
+        details: undefined,
+        logErrors: true,
+      })
+    })
+  })
 })

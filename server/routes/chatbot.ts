@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import config from '../config'
 import logger from '../../logger'
 import type { Services } from '../services'
+import { getSessionCrn } from '../auth/sessionStore'
 import { shouldShowAppointment, toAppointmentCardView } from './appointments'
 import type { AppointmentCardView } from './appointments'
 import { toRequirementView } from './requirements'
@@ -268,7 +269,7 @@ export default function chatbotRoutes(services: Services): Router {
     const { apiUrl } = config.popChatbot
     const { apiKey } = config.popChatbot
     const { user } = res.locals
-    const crn = user?.registeredUserDetails?.personReference
+    const crn = getSessionCrn(user)
 
     if (!user) {
       res.status(401).json({ error: 'Not authenticated' })

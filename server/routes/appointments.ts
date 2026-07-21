@@ -3,6 +3,7 @@ import { Router } from 'express'
 import config from '../config'
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
+import { getSessionCrn } from '../auth/sessionStore'
 import {
   formatDateWithDay,
   formatTimeRange,
@@ -311,7 +312,7 @@ export default function appointmentsRoutes(services: Services): Router {
 
   router.get('/', async (_req, res, next) => {
     try {
-      const crn = res.locals.user?.registeredUserDetails?.personReference
+      const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
       const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([

@@ -3,6 +3,7 @@ import { Router } from 'express'
 import { startOfDay, addDays, differenceInDays, isBefore } from 'date-fns'
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
+import { getSessionCrn } from '../auth/sessionStore'
 import {
   formatDate,
   formatDateTimeWithDay,
@@ -120,7 +121,7 @@ export default function requirementsRoutes(services: Services): Router {
 
   router.get('/', async (_req, res, next) => {
     try {
-      const crn = res.locals.user?.registeredUserDetails?.personReference
+      const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
       const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)

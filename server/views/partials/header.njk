@@ -3,7 +3,12 @@
 
 {{ govukHeader() }}
 
-{% if user %}
+{# On /admin pages, a citizen app session cookie left over from unrelated
+   testing/browsing in the same browser must not drive the nav - only a
+   session this admin actually started via /admin/search (previewedByAdmin)
+   should. Off /admin pages (adminUser unset) any citizen session counts, as
+   before. #}
+{% if user and (not adminUser or user.previewedByAdmin) %}
   {{ govukServiceNavigation({
     serviceName: "Check your probation account",
     serviceUrl: "/",
@@ -30,7 +35,19 @@
         active: currentPage === "requirements"
       },
       {
-        href: "/sign-out",
+        href: "/admin/sign-out" if user.previewedByAdmin else "/sign-out",
+        text: "Sign out",
+        active: false
+      }
+    ]
+  }) }}
+{% elif adminUser %}
+  {{ govukServiceNavigation({
+    serviceName: "Check your probation account",
+    serviceUrl: "/admin/search",
+    navigation: [
+      {
+        href: "/admin/sign-out",
         text: "Sign out",
         active: false
       }

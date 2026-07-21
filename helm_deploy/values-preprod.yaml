@@ -18,6 +18,8 @@ generic-service:
     ENVIRONMENT_NAME: PRE-PRODUCTION
     AUDIT_ENABLED: "true"
     FEEDBACK_BANNER_ENABLED: "true"
+    FEATURE_ADMIN_PREVIEW: "true"
+    ADMIN_RESTRICT_BY_USERNAME: "true"
     # The old Railway URL was retired 2026-07. The chatbot backend is
     # currently only deployed to `probationchatbot-dev` on MoJ Cloud
     # Platform — there's no preprod-specific chatbot namespace yet. Left

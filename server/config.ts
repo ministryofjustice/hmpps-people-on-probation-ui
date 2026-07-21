@@ -65,6 +65,12 @@ export default {
   apis: {
     hmppsAuth: {
       url: get('HMPPS_AUTH_URL', 'http://localhost:9090/auth', requiredInProduction),
+      // Browser-facing URL for the OAuth2 authorize redirect used by the admin
+      // sign-in flow (server/middleware/setUpAdminAuthentication.ts). Some HMPPS
+      // environments use an internal cluster-DNS URL for `url` (token exchange)
+      // and a separate public URL here for the redirect; defaults to the same
+      // value as `url` when not set explicitly.
+      externalUrl: get('HMPPS_AUTH_EXTERNAL_URL', get('HMPPS_AUTH_URL', 'http://localhost:9090/auth')),
       healthPath: '/health/ping',
       timeout: {
         response: Number(get('HMPPS_AUTH_TIMEOUT_RESPONSE', 10000)),
@@ -73,6 +79,10 @@ export default {
       agent: new AgentConfig(Number(get('HMPPS_AUTH_TIMEOUT_RESPONSE', 10000))),
       systemClientId: get('CLIENT_CREDS_CLIENT_ID', 'clientid', requiredInProduction),
       systemClientSecret: get('CLIENT_CREDS_CLIENT_SECRET', 'clientsecret', requiredInProduction),
+      // Used only by the admin preview sign-in flow (OAuth2 authorization code
+      // grant, distinct from the system client-credentials grant above).
+      authClientId: get('AUTH_CODE_CLIENT_ID', 'clientid', requiredInProduction),
+      authClientSecret: get('AUTH_CODE_CLIENT_SECRET', 'clientsecret', requiredInProduction),
     },
     peopleOnProbationApi: {
       url: get('PEOPLE_ON_PROBATION_API_URL', 'http://localhost:8080', requiredInProduction),
@@ -107,6 +117,26 @@ export default {
     publicKeyBase64: process.env.ONE_LOGIN_PUBLIC_KEY_BASE64,
   },
   localAuth,
+  // HMPPS Auth roles (without the ROLE_ prefix, which is added automatically)
+  // permitted to use the admin preview feature. Empty means nobody is
+  // authorised even if the flag below is on — must be set explicitly per
+  // environment once the admin cohort/role is agreed with the auth team.
+  adminAuthorisedRoles: (get('ADMIN_AUTHORISED_ROLES', '') as string)
+    .split(',')
+    .map(role => role.trim())
+    .filter(Boolean),
+  // TEMPORARY: lets the admin preview gate be switched from role-based
+  // (requireAdminRole) to a fixed list of HMPPS usernames
+  // (requireAdminUsername) while the admin cohort's role is still being
+  // agreed with the auth team. Off by default (role-based); each
+  // environment that wants the username gate must opt in explicitly with
+  // ADMIN_RESTRICT_BY_USERNAME=true. Flip back to false to return to
+  // role-based access once a role exists — no code changes needed elsewhere.
+  adminRestrictByUsername: get('ADMIN_RESTRICT_BY_USERNAME', 'false') === 'true',
+  adminAuthorisedUsernames: (get('ADMIN_AUTHORISED_USERNAMES', '') as string)
+    .split(',')
+    .map(username => username.trim().toUpperCase())
+    .filter(Boolean),
   popChatbot: {
     // Both vars are optional so the chatbot can be switched off in any env
     // (including production) without a redeploy — leave POP_CHATBOT_API_URL
@@ -144,5 +174,13 @@ export default {
     // killed (flag off, creds untouched) without a redeploy.
     chatbot: get('FEATURE_CHATBOT', 'true') === 'true',
     analytics: get('FEATURE_ANALYTICS', 'true') === 'true',
+    // Master switch for the /admin HMPPS-Auth-based "preview as user" feature.
+    // Off by default: it's new and security-sensitive, and depends on an
+    // AUTH_CODE_CLIENT_ID/SECRET HMPPS Auth client having been provisioned
+    // for this service before it can work in any environment. Each
+    // environment that's ready for it sets FEATURE_ADMIN_PREVIEW=true
+    // explicitly in its helm values (.env.example does the same for local
+    // dev, preconfigured against the docker-compose hmpps-auth container).
+    adminPreview: get('FEATURE_ADMIN_PREVIEW', 'false') === 'true',
   },
 }

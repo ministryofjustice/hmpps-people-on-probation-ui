@@ -39,6 +39,13 @@
   text-decoration: underline;
 }
 
+// A lone nav item (e.g. "Sign out" on /admin pages before a preview starts)
+// would otherwise sit flush left, as if there were other items before it -
+// the list is a flex row from tablet up, so push it to the right instead.
+.govuk-service-navigation__item:only-child {
+  margin-left: auto;
+}
+
 // Phase banner: constrain to page width
 .govuk-phase-banner {
   @include govuk-width-container;

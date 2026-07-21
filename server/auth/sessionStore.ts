@@ -3,6 +3,14 @@ import { getRedisClient } from '../data/redisClient'
 import config from '../config'
 import type { RegisteredUserResponse } from '../data/peopleOnProbationApiClient'
 
+// Details of the CRN being previewed, minted by the admin "preview as user"
+// feature (server/routes/admin.ts) — deliberately its own type, not
+// RegisteredUserResponse, since this never came from a real registration.
+export interface AdminPreviewSubjectDetails {
+  personReference: string
+  startedAt: string
+}
+
 export type AuthenticatedUserSession = {
   id: string
   userId: string
@@ -13,6 +21,25 @@ export type AuthenticatedUserSession = {
   registeredUserDetails?: RegisteredUserResponse
   authenticatedAt: number
   expiresAt: number
+  // Set only on synthetic sessions minted by the admin "preview as user"
+  // feature (server/routes/admin.ts) — the HMPPS Auth username of the admin
+  // who started the preview. Absent on every real citizen One Login session.
+  previewedByAdmin?: string
+  // Set only alongside previewedByAdmin — the CRN being previewed. Kept
+  // separate from registeredUserDetails (a real registration record) rather
+  // than faked into that field. Use getSessionCrn() to read "the CRN for
+  // this session" regardless of whether it's a citizen or admin-preview one.
+  adminPreviewSubject?: AdminPreviewSubjectDetails
+}
+
+// The single place that resolves "what CRN is this session for" — a real
+// citizen session (registeredUserDetails) or an admin preview session
+// (adminPreviewSubject). Every route that needs the current CRN should go
+// through this rather than reading either field directly.
+export function getSessionCrn(
+  session: Pick<AuthenticatedUserSession, 'registeredUserDetails' | 'adminPreviewSubject'> | undefined | null,
+): string | undefined {
+  return session?.registeredUserDetails?.personReference ?? session?.adminPreviewSubject?.personReference
 }
 
 const redisKeyPrefix = 'app:session'
@@ -38,7 +65,14 @@ function pruneExpiredInMemorySessions() {
 export function createAuthenticatedUserSession(
   user: Pick<
     AuthenticatedUserSession,
-    'userId' | 'email' | 'phoneNumber' | 'displayName' | 'idToken' | 'registeredUserDetails'
+    | 'userId'
+    | 'email'
+    | 'phoneNumber'
+    | 'displayName'
+    | 'idToken'
+    | 'registeredUserDetails'
+    | 'previewedByAdmin'
+    | 'adminPreviewSubject'
   >,
 ): AuthenticatedUserSession {
   const now = Date.now()
