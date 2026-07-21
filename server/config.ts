@@ -128,9 +128,11 @@ export default {
   // TEMPORARY: lets the admin preview gate be switched from role-based
   // (requireAdminRole) to a fixed list of HMPPS usernames
   // (requireAdminUsername) while the admin cohort's role is still being
-  // agreed with the auth team. Flip back to false (the default) to return to
+  // agreed with the auth team. Off by default (role-based); each
+  // environment that wants the username gate must opt in explicitly with
+  // ADMIN_RESTRICT_BY_USERNAME=true. Flip back to false to return to
   // role-based access once a role exists — no code changes needed elsewhere.
-  adminRestrictByUsername: get('ADMIN_RESTRICT_BY_USERNAME', 'true') === 'true',
+  adminRestrictByUsername: get('ADMIN_RESTRICT_BY_USERNAME', 'false') === 'true',
   adminAuthorisedUsernames: (get('ADMIN_AUTHORISED_USERNAMES', '') as string)
     .split(',')
     .map(username => username.trim().toUpperCase())
@@ -173,9 +175,12 @@ export default {
     chatbot: get('FEATURE_CHATBOT', 'true') === 'true',
     analytics: get('FEATURE_ANALYTICS', 'true') === 'true',
     // Master switch for the /admin HMPPS-Auth-based "preview as user" feature.
-    // Off by default: it's new, security-sensitive, and depends on an
+    // Off by default: it's new and security-sensitive, and depends on an
     // AUTH_CODE_CLIENT_ID/SECRET HMPPS Auth client having been provisioned
-    // for this service before it can work in any environment.
-    adminPreview: get('FEATURE_ADMIN_PREVIEW', 'true') === 'true',
+    // for this service before it can work in any environment. Each
+    // environment that's ready for it sets FEATURE_ADMIN_PREVIEW=true
+    // explicitly in its helm values (.env.example does the same for local
+    // dev, preconfigured against the docker-compose hmpps-auth container).
+    adminPreview: get('FEATURE_ADMIN_PREVIEW', 'false') === 'true',
   },
 }
