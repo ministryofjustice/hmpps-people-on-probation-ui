@@ -26,10 +26,16 @@ export async function loadCurrentUser(req: Request, res: Response, next: NextFun
     if (session) {
       setSessionCookie(res, session.id, getAuthenticatedUserSessionTtlSeconds())
       res.locals.user = session
-      const sessionExpiresInSeconds = Math.floor((session.expiresAt - Date.now()) / 1000)
-      res.locals.sessionTimeoutWarning = {
-        warningAfterSeconds: Math.max(sessionExpiresInSeconds - 5 * 60, 0),
-        countdownSeconds: Math.min(5 * 60, sessionExpiresInSeconds),
+
+      // The countdown/keep-alive popup only exists for the citizen session
+      // (/session/keep-alive and /session-timeout only handle the citizen
+      // cookie) - not showing it for an admin preview.
+      if (!isPreviewSession) {
+        const sessionExpiresInSeconds = Math.floor((session.expiresAt - Date.now()) / 1000)
+        res.locals.sessionTimeoutWarning = {
+          warningAfterSeconds: Math.max(sessionExpiresInSeconds - 5 * 60, 0),
+          countdownSeconds: Math.min(5 * 60, sessionExpiresInSeconds),
+        }
       }
     } else {
       clearSessionCookie(res)

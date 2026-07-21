@@ -56,9 +56,10 @@ describe('loadCurrentUser', () => {
 
     expect(res.locals.user?.registeredUserDetails?.personReference).toBe('X123456')
     expect(res.cookie).toHaveBeenCalledWith(appSessionCookieName, session.id, expect.anything())
+    expect(res.locals.sessionTimeoutWarning).toBeDefined()
   })
 
-  it('loads an admin preview session from the admin-preview cookie', async () => {
+  it('loads an admin preview session from the admin-preview cookie, without a session-timeout warning', async () => {
     const session = createAuthenticatedUserSession({
       userId: 'admin-preview:admin1',
       adminPreviewSubject: { personReference: 'X999999', startedAt: '2026-01-01T00:00:00Z' },
@@ -72,6 +73,10 @@ describe('loadCurrentUser', () => {
 
     expect(res.locals.user?.previewedByAdmin).toBe('admin1')
     expect(res.cookie).toHaveBeenCalledWith(adminPreviewSessionCookieName, session.id, expect.anything())
+    // /session/keep-alive and /session-timeout only handle the citizen
+    // cookie, so the countdown/keep-alive popup must never show during an
+    // admin preview.
+    expect(res.locals.sessionTimeoutWarning).toBeUndefined()
   })
 
   it('prefers the admin-preview session over an unrelated citizen session sharing the same browser', async () => {
@@ -99,6 +104,7 @@ describe('loadCurrentUser', () => {
     // admin-preview session takes precedence - the two must coexist rather
     // than one clobbering the other.
     expect(res.cookie).not.toHaveBeenCalledWith(appSessionCookieName, expect.anything(), expect.anything())
+    expect(res.locals.sessionTimeoutWarning).toBeUndefined()
   })
 
   it('clears only the admin-preview cookie when that session has expired, leaving any citizen cookie alone', async () => {

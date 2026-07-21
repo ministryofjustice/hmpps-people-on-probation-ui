@@ -73,23 +73,26 @@ export default function setUpAdminAuthentication(services: Services): Router {
 
   router.use('/sign-out', async (req, res, next) => {
     const authSignOutUrl = `${authUrl}/sign-out?${authParameters}`
-    try {
-      // A full sign-out must also drop any active preview session tied to
-      // this browser (server/routes/admin.ts) - otherwise it would outlive
-      // the admin's own HMPPS Auth session.
-      await endActiveAdminPreviewSession(req, res, services)
 
-      if (req.user) {
-        const { username } = req.user as Express.User
-        logger.info({ correlationId: req.id, username }, 'Admin sign-out initiated')
-        req.logout(err => {
-          if (err) return next(err)
-          return req.session.destroy(() => res.redirect(authSignOutUrl))
-        })
-      } else res.redirect(authSignOutUrl)
+    // A full sign-out must also drop any active preview session tied to
+    // this browser (server/routes/admin.ts) - otherwise it would outlive
+    // the admin's own HMPPS Auth session. Best-effort only: signing the
+    // admin out of HMPPS Auth is the primary action here and must still
+    // happen even if this secondary cleanup fails.
+    try {
+      await endActiveAdminPreviewSession(req, res, services)
     } catch (err) {
-      next(err)
+      logger.warn({ err, correlationId: req.id }, 'Failed to end active admin preview session during sign-out')
     }
+
+    if (req.user) {
+      const { username } = req.user as Express.User
+      logger.info({ correlationId: req.id, username }, 'Admin sign-out initiated')
+      req.logout(err => {
+        if (err) return next(err)
+        return req.session.destroy(() => res.redirect(authSignOutUrl))
+      })
+    } else res.redirect(authSignOutUrl)
   })
 
   router.use((req, res, next) => {

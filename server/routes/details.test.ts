@@ -102,7 +102,7 @@ describe('GET /details', () => {
     expect(response.text).toContain('John Smith')
   })
 
-  it('renders an admin preview session exactly like a real citizen session, with the exit-preview banner', async () => {
+  it('renders an admin preview session like a real citizen session, with the exit-preview banner but no session-timeout warning', async () => {
     peopleOnProbationService.getPersonalDetails.mockResolvedValue({
       name: { forename: 'John', surname: 'Smith' },
       emergencyContacts: [],
@@ -136,6 +136,11 @@ describe('GET /details', () => {
     expect(response.text).toContain('action="/admin/preview/end"')
     expect(response.text).toContain('href="/admin/sign-out"')
     expect(response.text).not.toContain('href="/sign-out"')
+
+    // /session/keep-alive and /session-timeout only handle the citizen
+    // session cookie, so the countdown/keep-alive popup must never render
+    // during an admin preview (see server/auth/currentUser.ts).
+    expect(response.text).not.toContain('pop-timeout-warning__dialog')
   })
 
   it('should pass errors to the next error handler', async () => {
