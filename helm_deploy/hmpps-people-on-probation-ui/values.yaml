@@ -71,6 +71,11 @@ generic-service:
     hmpps-people-on-probation-ui-auth-code:
       AUTH_CODE_CLIENT_ID: 'AUTH_CODE_CLIENT_ID'
       AUTH_CODE_CLIENT_SECRET: 'AUTH_CODE_CLIENT_SECRET'
+    # TEMPORARY: backs the temporary admin username allowlist
+    # (requireAdminUsername, see config.ts adminRestrictByUsername) - this
+    # secret key holds a comma-separated list of HMPPS usernames.
+    hmpps-people-on-probation-ui-admin-allowlist:
+      ADMIN_AUTHORISED_USERNAMES: 'ADMIN_AUTHORISED_USERNAMES'
 
 generic-prometheus-alerts:
   targetApplication: hmpps-people-on-probation-ui
