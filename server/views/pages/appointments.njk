@@ -64,7 +64,7 @@
     {% call govukInsetText({ classes: "guidance-panel" }) %}
       {% if hasTagAppointments or hasOtherChannelAppointments %}
         <p class="govuk-body govuk-!-margin-bottom-4">This list might not show all appointments and activities</p>
-        {{ govukDetails({ summaryText: "Why this might happen", html: whyDetailsHtml }) }}
+        {{ govukDetails({ summaryText: "Why this might happen", html: whyDetailsHtml, attributes: { "data-tracking-id": "appointments_why_list_may_not_be_up_to_date" } }) }}
       {% else %}
         <p class="govuk-body govuk-!-margin-bottom-0">This list might not be up to date yet.{% if lastUpdatedAt %} Last update: {{ lastUpdatedAt }}{% endif %}</p>
       {% endif %}
@@ -79,11 +79,11 @@
             </span>
             <div class="pop-summary-card__actions">
               {% if appointment.address.length %}
-                <a class="govuk-link govuk-link--no-visited-state" href="{{ appointment.mapUrl }}" target="_blank" rel="noopener noreferrer">View on map</a>
+                <a class="govuk-link govuk-link--no-visited-state" href="{{ appointment.mapUrl }}" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
                 <span class="pop-summary-card__separator" aria-hidden="true">|</span>
               {% endif %}
               {% if appointment.calendarUrl %}
-                <a class="govuk-link govuk-link--no-visited-state" href="{{ appointment.calendarUrl }}">Add to calendar</a>
+                <a class="govuk-link govuk-link--no-visited-state" href="{{ appointment.calendarUrl }}" data-tracking-id="add_to_calendar">Add to calendar</a>
               {% endif %}
             </div>
             {% if appointment.nationalStandards %}
@@ -116,7 +116,7 @@
                 <dd class="pop-summary-card__value">
                   {% for line in appointment.pickUpAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
                   {% if appointment.pickUpMapUrl %}
-                    <br><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer">View on map</a>
+                    <br><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
                   {% endif %}
                 </dd>
               </div>
@@ -127,7 +127,7 @@
                 <dd class="pop-summary-card__value">
                   {% for line in appointment.workAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
                   {% if appointment.workMapUrl %}
-                    <br><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer">View on map</a>
+                    <br><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
                   {% endif %}
                 </dd>
               </div>
@@ -184,7 +184,7 @@
                 <dd class="pop-summary-card__value">
                   {% for line in appointment.pickUpAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
                   {% if appointment.pickUpMapUrl %}
-                    <br><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer">View on map</a>
+                    <br><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
                   {% endif %}
                 </dd>
               </div>
@@ -195,7 +195,7 @@
                 <dd class="pop-summary-card__value">
                   {% for line in appointment.workAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
                   {% if appointment.workMapUrl %}
-                    <br><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer">View on map</a>
+                    <br><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
                   {% endif %}
                 </dd>
               </div>

@@ -1,5 +1,7 @@
 import { AnalyticsClient } from './lib/analytics/client'
 import { createEvent, type CreateEventContext } from './lib/analytics/events'
+import { resolveInteractionElementId } from './lib/analytics/interactions'
+import { computeScrollDepthPercent } from './lib/analytics/scrollDepth'
 
 const APPLICATION = 'hmpps-people-on-probation-ui'
 const ENDPOINT = '/analytics/events'
@@ -35,6 +37,11 @@ try {
     userAgent: window.navigator.userAgent,
     pagePath: window.location.pathname,
     application: APPLICATION,
+    // document.referrer is fixed for the lifetime of the document, so
+    // reusing it on the pageshow/bfcache-restore re-fire below is correct —
+    // it's still the page the user originally navigated from.
+    referrer: window.document.referrer,
+    origin: window.location.origin,
   })
 
   // This app has no client-side router — every route/page change is a
@@ -47,6 +54,36 @@ try {
   let pageLoadedAt = Date.now()
   let pageExitTracked = false
 
+  const currentScrollDepthPercent = () =>
+    computeScrollDepthPercent({
+      scrollTop: window.scrollY,
+      viewportHeight: window.innerHeight,
+      documentHeight: document.documentElement.scrollHeight,
+    })
+
+  // Tracks the deepest point reached during the view, not just the depth at
+  // exit — a user who scrolls to the bottom then scrolls back up before
+  // leaving still "read the whole page." Seeded from the initial viewport
+  // (not 0) so a page the user never scrolls, because it already fits
+  // entirely on screen, correctly reads as fully seen rather than
+  // "unengaged."
+  let maxScrollDepthPercent = currentScrollDepthPercent()
+  let scrollUpdateQueued = false
+  window.addEventListener(
+    'scroll',
+    () => {
+      // rAF-coalesced: scroll can fire dozens of times per second, and only
+      // the latest position by the next paint matters for a running max.
+      if (scrollUpdateQueued) return
+      scrollUpdateQueued = true
+      window.requestAnimationFrame(() => {
+        scrollUpdateQueued = false
+        maxScrollDepthPercent = Math.max(maxScrollDepthPercent, currentScrollDepthPercent())
+      })
+    },
+    { passive: true },
+  )
+
   // visibilitychange (→ hidden) is the primary signal: on mobile the OS can
   // freeze/kill a backgrounded tab without ever firing pagehide/unload, so
   // this is the only reliable "last chance to send analytics" point there.
@@ -58,7 +95,7 @@ try {
     if (pageExitTracked) return
     pageExitTracked = true
     const durationSeconds = Math.round((Date.now() - pageLoadedAt) / 1000)
-    client.send(createEvent(eventContext(), 'page_exited', { durationSeconds }), true)
+    client.send(createEvent(eventContext(), 'page_exited', { durationSeconds, maxScrollDepthPercent }), true)
   }
 
   document.addEventListener('visibilitychange', () => {
@@ -80,8 +117,40 @@ try {
     if (!event.persisted) return
     pageExitTracked = false
     pageLoadedAt = Date.now()
+    // Same reasoning as pageLoadedAt above: scope the next page_exited's
+    // scroll depth to the restored viewing period, re-seeded from wherever
+    // the restored scroll position happens to be, not the pre-bfcache max.
+    maxScrollDepthPercent = currentScrollDepthPercent()
     client.send(createEvent(eventContext(), 'page_viewed'))
   })
+
+  // Delegated rather than bound per-element so newly rendered/dynamic
+  // elements (e.g. appointment cards) are covered without re-wiring
+  // listeners. useBeacon (true) matches page_exited above — a click can
+  // trigger navigation before a normal fetch resolves. Checked against
+  // Element, not HTMLElement — the chat icon's clickable area includes
+  // inline <svg>/<path> markup, whose click targets are SVGElement.
+  document.addEventListener('click', event => {
+    if (!(event.target instanceof Element)) return
+    const elementId = resolveInteractionElementId(event.target)
+    if (!elementId) return
+    client.send(createEvent(eventContext(), 'interaction_clicked', { elementId }), true)
+  })
+
+  // 'toggle' doesn't bubble, but a capturing listener on an ancestor still
+  // intercepts it on the way down to the target, so this still works as
+  // delegation. Only the open transition counts as the tracked interaction —
+  // collapsing a details element isn't "expanding" it.
+  document.addEventListener(
+    'toggle',
+    event => {
+      if (!(event.target instanceof HTMLDetailsElement) || !event.target.open) return
+      const elementId = resolveInteractionElementId(event.target)
+      if (!elementId) return
+      client.send(createEvent(eventContext(), 'interaction_clicked', { elementId }), true)
+    },
+    true,
+  )
 } catch {
   // Analytics must never break the page it's running on.
 }

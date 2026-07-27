@@ -16,21 +16,21 @@
             title: "Next mandatory appointment",
             showTitleAsHeading: true,
             variant: "information",
-            html: '<p class="govuk-body govuk-!-margin-bottom-0">' + nextAppointment.date + (', ' + nextAppointment.timeRange if nextAppointment.timeRange else '') + '<br><a class="govuk-link govuk-link--no-visited-state" href="/appointments">See appointment</a>.</p>'
+            html: '<p class="govuk-body govuk-!-margin-bottom-0">' + nextAppointment.date + (', ' + nextAppointment.timeRange if nextAppointment.timeRange else '') + '<br><a class="govuk-link govuk-link--no-visited-state" href="/appointments" data-tracking-id="home_banner_appointments_link">See appointment</a>.</p>'
           }) }}
         {% elif nextAppointment.variant === "activity" %}
           {{ mojAlert({
             title: "Next activity",
             showTitleAsHeading: true,
             variant: "information",
-            html: '<p class="govuk-body govuk-!-margin-bottom-0">' + nextAppointment.date + (', ' + nextAppointment.timeRange if nextAppointment.timeRange else '') + '<br><a class="govuk-link govuk-link--no-visited-state" href="/appointments">See activity</a>.</p>'
+            html: '<p class="govuk-body govuk-!-margin-bottom-0">' + nextAppointment.date + (', ' + nextAppointment.timeRange if nextAppointment.timeRange else '') + '<br><a class="govuk-link govuk-link--no-visited-state" href="/appointments" data-tracking-id="home_banner_appointments_link">See activity</a>.</p>'
           }) }}
         {% else %}
           {{ mojAlert({
             title: "Next appointment",
             showTitleAsHeading: true,
             variant: "information",
-            html: '<p class="govuk-body govuk-!-margin-bottom-0">' + nextAppointment.date + (', ' + nextAppointment.timeRange if nextAppointment.timeRange else '') + '<br><a class="govuk-link govuk-link--no-visited-state" href="/appointments">See appointment</a>.</p>'
+            html: '<p class="govuk-body govuk-!-margin-bottom-0">' + nextAppointment.date + (', ' + nextAppointment.timeRange if nextAppointment.timeRange else '') + '<br><a class="govuk-link govuk-link--no-visited-state" href="/appointments" data-tracking-id="home_banner_appointments_link">See appointment</a>.</p>'
           }) }}
         {% endif %}
       {% endif %}
@@ -40,7 +40,7 @@
           variant: "error",
           title: missedAppointmentsCount + " missed mandatory appointments or activities",
           showTitleAsHeading: true,
-          html: '<p class="govuk-body govuk-!-margin-bottom-0"><a class="govuk-link govuk-link--no-visited-state" href="/appointments">See appointments or activities</a>.</p>',
+          html: '<p class="govuk-body govuk-!-margin-bottom-0"><a class="govuk-link govuk-link--no-visited-state" href="/appointments" data-tracking-id="home_banner_appointments_link">See appointments or activities</a>.</p>',
           dismissible: true
         }) }}
       {% elif missedAppointment %}
@@ -48,7 +48,7 @@
           variant: "error",
           title: "Missed mandatory appointment or activity",
           showTitleAsHeading: true,
-          html: '<p class="govuk-body govuk-!-margin-bottom-0">' + missedAppointment.date + (', ' + missedAppointment.timeRange if missedAppointment.timeRange else '') + '<br><a class="govuk-link govuk-link--no-visited-state" href="/appointments">See appointment or activity</a>.</p>',
+          html: '<p class="govuk-body govuk-!-margin-bottom-0">' + missedAppointment.date + (', ' + missedAppointment.timeRange if missedAppointment.timeRange else '') + '<br><a class="govuk-link govuk-link--no-visited-state" href="/appointments" data-tracking-id="home_banner_appointments_link">See appointment or activity</a>.</p>',
           dismissible: true
         }) }}
       {% endif %}

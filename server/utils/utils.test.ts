@@ -14,6 +14,7 @@ import {
   formatMapUrl,
   formatPersonName,
   formatPractitionerName,
+  shouldIncludeMissedAppointmentInAlert,
 } from './utils'
 
 describe('convertToTitleCase', () => {
@@ -91,6 +92,37 @@ describe('formatTimeRange', () => {
     ['with minutes', '09:30', '10:45', '9:30am to 10:45am'],
   ])('%s', (_: string, start: string | undefined, end: string | undefined, expected: string | undefined) => {
     expect(formatTimeRange(start, end)).toEqual(expected)
+  })
+})
+
+describe('shouldIncludeMissedAppointmentInAlert', () => {
+  const registeredAt = '2026-01-10T10:00:00Z'
+
+  it('includes every missed appointment during the registration session', () => {
+    expect(shouldIncludeMissedAppointmentInAlert({ lastUpdatedAt: '2025-12-01T10:00:00Z' }, registeredAt, true)).toBe(
+      true,
+    )
+  })
+
+  it('includes an appointment updated after registration for a returning user', () => {
+    expect(shouldIncludeMissedAppointmentInAlert({ lastUpdatedAt: '2026-01-10T10:00:01Z' }, registeredAt)).toBe(true)
+  })
+
+  it.each([
+    ['before registration', '2026-01-10T09:59:59Z'],
+    ['at the registration time', '2026-01-10T10:00:00Z'],
+    ['with an invalid update time', 'not-a-date'],
+    ['without an update time', undefined],
+  ])('excludes an appointment updated %s for a returning user', (_description, lastUpdatedAt) => {
+    expect(shouldIncludeMissedAppointmentInAlert({ lastUpdatedAt }, registeredAt)).toBe(false)
+  })
+
+  it('excludes timestamped appointments when the registration time is invalid', () => {
+    expect(shouldIncludeMissedAppointmentInAlert({ lastUpdatedAt: '2026-01-11T10:00:00Z' }, 'not-a-date')).toBe(false)
+  })
+
+  it('preserves missed alerts for an admin preview session without a registration timestamp', () => {
+    expect(shouldIncludeMissedAppointmentInAlert({ lastUpdatedAt: '2025-12-01T10:00:00Z' })).toBe(true)
   })
 })
 

@@ -200,6 +200,7 @@ export type AnalyticsEventName =
   | 'registration_failed'
   | 'login_succeeded'
   | 'login_failed'
+  | 'interaction_clicked'
 
 export type AnalyticsEvent = {
   eventId: string

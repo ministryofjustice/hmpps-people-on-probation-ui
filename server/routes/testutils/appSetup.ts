@@ -57,10 +57,15 @@ function appSetup(services: Services, production: boolean): Express {
   return app
 }
 
-export async function createAppSessionCookie(personReference?: string, lastSignedInAt?: string) {
+export async function createAppSessionCookie(
+  personReference?: string,
+  lastSignedInAt?: string,
+  isRegistrationSession = false,
+) {
   const session = createAuthenticatedUserSession({
     userId: 'one-login-subject',
     email: 'user@example.com',
+    isRegistrationSession,
     registeredUserDetails: personReference
       ? {
           id: 'registered-user-id',

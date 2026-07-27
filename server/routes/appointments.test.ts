@@ -353,6 +353,7 @@ describe('GET /appointments', () => {
       content: [
         {
           date: '2026-06-10',
+          lastUpdatedAt: '2026-06-10T10:00:00Z',
           startTime: '09:00',
           endTime: '10:00',
           type: 'Office appointment',
@@ -379,11 +380,67 @@ describe('GET /appointments', () => {
     expect(response.text).toContain('your probation officer')
   })
 
+  it('counts all missed appointments during the first registration session', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2025-12-20',
+          lastUpdatedAt: '2025-12-20T10:00:00Z',
+          nationalStandards: true,
+          attended: false,
+        },
+        {
+          date: '2026-06-10',
+          lastUpdatedAt: '2026-06-10T10:00:00Z',
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456', undefined, true))
+      .expect(200)
+
+    expect(response.text).toContain('2 missed mandatory appointments or activities')
+  })
+
+  it('only counts appointments updated after registration for returning users', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2025-12-20',
+          lastUpdatedAt: '2025-12-20T10:00:00Z',
+          nationalStandards: true,
+          attended: false,
+        },
+        {
+          date: '2026-06-10',
+          lastUpdatedAt: '2026-06-10T10:00:00Z',
+          type: 'Newly missed appointment',
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Missed mandatory appointment or activity')
+    expect(response.text).toContain('‘Newly missed appointment’.')
+    expect(response.text).not.toContain('2 missed mandatory appointments or activities')
+  })
+
   it('does not render unallocated practitioner names in missed appointment alerts', async () => {
     peopleOnProbationService.getPastAppointments.mockResolvedValue({
       content: [
         {
           date: '2026-06-10',
+          lastUpdatedAt: '2026-06-10T10:00:00Z',
           startTime: '09:00',
           endTime: '10:00',
           type: 'Office appointment',
@@ -441,11 +498,13 @@ describe('GET /appointments', () => {
       content: [
         {
           date: '2026-06-10',
+          lastUpdatedAt: '2026-06-10T10:00:00Z',
           nationalStandards: true,
           attended: false,
         },
         {
           date: '2026-06-11',
+          lastUpdatedAt: '2026-06-11T10:00:00Z',
           nationalStandards: true,
           attended: false,
         },
@@ -466,11 +525,13 @@ describe('GET /appointments', () => {
       content: [
         {
           date: '2026-06-10',
+          lastUpdatedAt: '2026-06-10T10:00:00Z',
           nationalStandards: true,
           attended: false,
         },
         {
           date: '2026-06-11',
+          lastUpdatedAt: '2026-06-11T10:00:00Z',
           nationalStandards: false,
           attended: false,
           unpaidWork: {},
@@ -491,6 +552,7 @@ describe('GET /appointments', () => {
       content: [
         {
           date: '2026-06-12',
+          lastUpdatedAt: '2026-06-12T10:00:00Z',
           startTime: '09:00',
           endTime: '12:00',
           type: 'Community service hours',

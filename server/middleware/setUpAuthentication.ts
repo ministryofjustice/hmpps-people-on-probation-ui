@@ -461,6 +461,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
         'Registered user details resolved',
       )
 
+      const isRegistration = Boolean(transaction.registrationInviteToken)
       const session = createAuthenticatedUserSession({
         userId: oneLoginUser.userId,
         email: oneLoginUser.email,
@@ -468,6 +469,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
         displayName: oneLoginUser.displayName,
         idToken: oneLoginUser.idToken,
         registeredUserDetails,
+        isRegistrationSession: isRegistration,
       })
 
       await saveAuthenticatedUserSession(session)
@@ -478,7 +480,6 @@ export default function setUpAuthentication(auditService?: AuditService): Router
 
       await logSuccessfulAuthentication(auditService, req, transaction, oneLoginUser, registeredUserDetails)
 
-      const isRegistration = Boolean(transaction.registrationInviteToken)
       logger.info(
         {
           correlationId: req.id,

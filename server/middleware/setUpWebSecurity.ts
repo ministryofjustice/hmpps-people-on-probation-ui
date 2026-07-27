@@ -45,6 +45,13 @@ export default function setUpWebSecurity(): Router {
       },
       // COEP is applied below so it can be relaxed only where SmartSurvey is embedded.
       crossOriginEmbedderPolicy: false,
+      // helmet defaults to 'no-referrer', which strips document.referrer on
+      // every navigation, including same-origin ones — that's what the
+      // analytics referrerPath property (assets/js/lib/analytics/events.ts)
+      // relies on to answer "what page did this page view come from".
+      // 'same-origin' keeps that working while still sending nothing at all
+      // to external sites when a user navigates away from this app.
+      referrerPolicy: { policy: 'same-origin' },
     }),
   )
   router.use((req: Request, res: Response, next: NextFunction) => {

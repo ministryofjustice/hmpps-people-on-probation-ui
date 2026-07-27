@@ -96,6 +96,19 @@ describe('POST /analytics/events', () => {
     await request(app).post('/analytics/events').send({ eventName: 'page_viewed' }).expect(400)
   })
 
+  it('accepts an interaction_clicked event with an elementId property and forwards it upstream', async () => {
+    const app = buildApp()
+
+    await request(app)
+      .post('/analytics/events')
+      .send(buildEvent({ eventName: 'interaction_clicked', properties: { elementId: 'add_to_calendar' } }))
+      .expect(202)
+
+    const [sentEvent] = postAnalyticsEventMock.mock.calls[0]
+    expect(sentEvent.eventName).toBe('interaction_clicked')
+    expect(sentEvent.properties).toEqual({ elementId: 'add_to_calendar' })
+  })
+
   it('returns 400 when eventName is not one of the allowed values', async () => {
     const app = buildApp()
 

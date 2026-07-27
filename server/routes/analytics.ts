@@ -20,6 +20,7 @@ const VALID_EVENT_NAMES: ReadonlySet<AnalyticsEventName> = new Set([
   'registration_failed',
   'login_succeeded',
   'login_failed',
+  'interaction_clicked',
 ])
 
 function isValidEventName(value: unknown): value is AnalyticsEventName {

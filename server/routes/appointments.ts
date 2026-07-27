@@ -12,6 +12,7 @@ import {
   formatPractitionerName,
   formatDateTime,
   isMissedMandatoryAppointmentOrActivity,
+  shouldIncludeMissedAppointmentInAlert,
 } from '../utils/utils'
 import type { AppointmentResponse } from '../data/peopleOnProbationApiClient'
 
@@ -332,7 +333,15 @@ export default function appointmentsRoutes(services: Services): Router {
 
       const futureAppointmentsToShow = futureAppointments.content.filter(shouldShowAppointment)
       const pastAppointmentsToShow = pastAppointments.content.filter(shouldShowAppointment)
-      const missedAppointments = pastAppointmentsToShow.filter(isMissedMandatoryAppointmentOrActivity)
+      const missedAppointments = pastAppointmentsToShow
+        .filter(isMissedMandatoryAppointmentOrActivity)
+        .filter(appointment =>
+          shouldIncludeMissedAppointmentInAlert(
+            appointment,
+            res.locals.user.registeredUserDetails?.createdAt,
+            res.locals.user.isRegistrationSession,
+          ),
+        )
       const missedAlertEnabled = config.features.missedAppointmentAlert
 
       const firstMissedAppointment = missedAlertEnabled ? missedAppointments[0] : undefined
