@@ -36,4 +36,10 @@ describe('setUpWebSecurity', () => {
 
     expect(response.headers['cross-origin-embedder-policy']).toEqual('require-corp')
   })
+
+  it('sends a same-origin referrer policy so analytics can capture document.referrer on internal navigation', async () => {
+    const response = await request(testApp()).get('/other').expect(200)
+
+    expect(response.headers['referrer-policy']).toEqual('same-origin')
+  })
 })

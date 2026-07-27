@@ -14,6 +14,7 @@ import {
   formatIntervalDuration,
   formatRemainingDuration,
   isMissedMandatoryAppointmentOrActivity,
+  shouldIncludeMissedAppointmentInAlert,
   parseLocalDate,
 } from '../utils/utils'
 import appointmentsRoutes, { shouldShowAppointment } from './appointments'
@@ -151,6 +152,13 @@ export default function routes(services: Services): Router {
         const missedAppointments = pastAppointments.content
           .filter(shouldShowAppointment)
           .filter(isMissedMandatoryAppointmentOrActivity)
+          .filter(appointment =>
+            shouldIncludeMissedAppointmentInAlert(
+              appointment,
+              res.locals.user.registeredUserDetails?.createdAt,
+              res.locals.user.isRegistrationSession,
+            ),
+          )
         const missedAlertEnabled = config.features.missedAppointmentAlert
 
         return res.render('pages/index', {

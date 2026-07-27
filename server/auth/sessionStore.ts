@@ -19,6 +19,10 @@ export type AuthenticatedUserSession = {
   displayName?: string
   idToken?: string
   registeredUserDetails?: RegisteredUserResponse
+  // True only for the authenticated session created by completing a
+  // registration invite. This avoids inferring the first registration
+  // session from timestamps that the API updates during later sign-ins.
+  isRegistrationSession?: boolean
   authenticatedAt: number
   expiresAt: number
   // Set only on synthetic sessions minted by the admin "preview as user"
@@ -71,6 +75,7 @@ export function createAuthenticatedUserSession(
     | 'displayName'
     | 'idToken'
     | 'registeredUserDetails'
+    | 'isRegistrationSession'
     | 'previewedByAdmin'
     | 'adminPreviewSubject'
   >,

@@ -38,6 +38,13 @@ describe('createEvent', () => {
     expect(event.properties).toEqual({ durationSeconds: 42 })
   })
 
+  it('builds an interaction_clicked event with an elementId property', () => {
+    const event = createEvent(baseContext(), 'interaction_clicked', { elementId: 'add_to_calendar' })
+
+    expect(event.eventName).toBe('interaction_clicked')
+    expect(event.properties).toEqual({ elementId: 'add_to_calendar' })
+  })
+
   it('classifies device type from the injected user agent', () => {
     const event = createEvent(
       baseContext({
@@ -70,5 +77,57 @@ describe('createEvent', () => {
 
     expect(first.eventId).toBe('event-1')
     expect(second.eventId).toBe('event-2')
+  })
+
+  describe('referrerPath', () => {
+    it('adds referrerPath to a page_viewed event when the referrer is same-origin', () => {
+      const event = createEvent(
+        baseContext({ referrer: 'https://example.com/', origin: 'https://example.com' }),
+        'page_viewed',
+      )
+
+      expect(event.properties).toEqual({ referrerPath: '/' })
+    })
+
+    it('omits referrerPath when the referrer is cross-origin', () => {
+      const event = createEvent(
+        baseContext({ referrer: 'https://google.com/search', origin: 'https://example.com' }),
+        'page_viewed',
+      )
+
+      expect(event.properties).toBeUndefined()
+    })
+
+    it('omits referrerPath when there is no referrer', () => {
+      const event = createEvent(baseContext({ referrer: '', origin: 'https://example.com' }), 'page_viewed')
+
+      expect(event.properties).toBeUndefined()
+    })
+
+    it('omits referrerPath when the referrer is unparseable', () => {
+      const event = createEvent(baseContext({ referrer: 'not-a-url', origin: 'https://example.com' }), 'page_viewed')
+
+      expect(event.properties).toBeUndefined()
+    })
+
+    it('never adds referrerPath to a non-page_viewed event', () => {
+      const event = createEvent(
+        baseContext({ referrer: 'https://example.com/', origin: 'https://example.com' }),
+        'page_exited',
+        { durationSeconds: 42 },
+      )
+
+      expect(event.properties).toEqual({ durationSeconds: 42 })
+    })
+
+    it('merges referrerPath alongside explicitly passed properties', () => {
+      const event = createEvent(
+        baseContext({ referrer: 'https://example.com/', origin: 'https://example.com' }),
+        'page_viewed',
+        { extra: 'value' },
+      )
+
+      expect(event.properties).toEqual({ extra: 'value', referrerPath: '/' })
+    })
   })
 })

@@ -33,8 +33,10 @@ import config from '../config'
 import normaliseReturnTo from '../auth/returnTo'
 import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
 import AuditService from '../services/auditService'
-import type { RegisteredUserResponse } from '../data/peopleOnProbationApiClient'
+import type { RegisteredUserResponse, PeopleOnProbationApiErrorResponse } from '../data/peopleOnProbationApiClient'
 import { trackServerAnalyticsEvent } from '../services/analyticsService'
+
+const ALREADY_REGISTERED_ERROR_CODE = 'USER_ALREADY_REGISTERED'
 
 const toError = (err: unknown): Error => {
   if (err instanceof Error) return err
@@ -48,6 +50,11 @@ const toError = (err: unknown): Error => {
 
 function normaliseToken(token?: string | null): string | null {
   return typeof token === 'string' && token.trim() ? token.trim() : null
+}
+
+function isAlreadyRegisteredError(err: unknown): boolean {
+  const data = (err as SanitisedError<PeopleOnProbationApiErrorResponse> | null | undefined)?.data
+  return data?.errorCode === ALREADY_REGISTERED_ERROR_CODE
 }
 
 function authErrorRedirect(err: unknown): string | null {
@@ -294,8 +301,8 @@ export default function setUpAuthentication(auditService?: AuditService): Router
     try {
       const returnTo = typeof req.query.returnTo === 'string' ? req.query.returnTo : null
       const rawToken = typeof req.query.token === 'string' ? req.query.token : null
-      const registrationInviteToken = normaliseToken(rawToken)
-      const flow = registrationInviteToken ? 'registration' : 'login'
+      let registrationInviteToken = normaliseToken(rawToken)
+      let flow = registrationInviteToken ? 'registration' : 'login'
 
       logger.info({ correlationId: req.id, flow }, 'Sign-in flow started')
 
@@ -304,17 +311,29 @@ export default function setUpAuthentication(auditService?: AuditService): Router
         try {
           const invite = await getPeopleOnProbationService().validateRegistrationInvite(registrationInviteToken)
           registrationInviteId = invite.id
+          logger.info({ correlationId: req.id, registrationInviteId }, 'Registration invite token validated')
         } catch (err: unknown) {
-          logger.warn({ correlationId: req.id, err }, 'Registration invite token validation failed')
-          trackServerAnalyticsEvent({
-            eventName: 'registration_failed',
-            pagePath: req.path,
-            properties: { failureReason: 'invite_invalid_or_expired' },
-          })
-          const redirect = authErrorRedirect(err)
-          return redirect ? res.redirect(redirect) : next(err)
+          if (isAlreadyRegisteredError(err)) {
+            // The CRN behind this invite is already registered - most likely the user is
+            // re-using an old invite link after completing registration. Treat this the
+            // same as a normal sign-in instead of showing an expired/invalid invite error.
+            logger.info(
+              { correlationId: req.id },
+              'Registration invite belongs to an already registered CRN; continuing as a sign-in',
+            )
+            registrationInviteToken = null
+            flow = 'login'
+          } else {
+            logger.warn({ correlationId: req.id, err }, 'Registration invite token validation failed')
+            trackServerAnalyticsEvent({
+              eventName: 'registration_failed',
+              pagePath: req.path,
+              properties: { failureReason: 'invite_invalid_or_expired' },
+            })
+            const redirect = authErrorRedirect(err)
+            return redirect ? res.redirect(redirect) : next(err)
+          }
         }
-        logger.info({ correlationId: req.id, registrationInviteId }, 'Registration invite token validated')
       }
 
       const transaction = createOneLoginTransaction(
@@ -461,6 +480,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
         'Registered user details resolved',
       )
 
+      const isRegistration = Boolean(transaction.registrationInviteToken)
       const session = createAuthenticatedUserSession({
         userId: oneLoginUser.userId,
         email: oneLoginUser.email,
@@ -468,6 +488,7 @@ export default function setUpAuthentication(auditService?: AuditService): Router
         displayName: oneLoginUser.displayName,
         idToken: oneLoginUser.idToken,
         registeredUserDetails,
+        isRegistrationSession: isRegistration,
       })
 
       await saveAuthenticatedUserSession(session)
@@ -478,7 +499,6 @@ export default function setUpAuthentication(auditService?: AuditService): Router
 
       await logSuccessfulAuthentication(auditService, req, transaction, oneLoginUser, registeredUserDetails)
 
-      const isRegistration = Boolean(transaction.registrationInviteToken)
       logger.info(
         {
           correlationId: req.id,

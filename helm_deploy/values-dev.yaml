@@ -17,8 +17,11 @@ generic-service:
     ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: "https://probation-account-dev.hmpps.service.justice.gov.uk"
     ENVIRONMENT_NAME: DEV
     AUDIT_ENABLED: "true"
-    FEEDBACK_BANNER_ENABLED: "true"
     FEATURE_ADMIN_PREVIEW: "true"
+    FEATURE_MISSED_APPOINTMENT_ALERT: "true"
+    FEATURE_CHATBOT: "true"
+    FEATURE_ANALYTICS: "true"
+    FEEDBACK_BANNER_ENABLED: "true"
     ADMIN_RESTRICT_BY_USERNAME: "true"
     # Points at the streaming endpoint on the MoJ Cloud Platform chatbot
     # (via its Next.js proxy which forwards SSE frames through unchanged).

@@ -70,6 +70,7 @@ describe('GET /', () => {
       content: [
         {
           date: '2026-06-01',
+          lastUpdatedAt: '2026-06-01T10:00:00Z',
           nationalStandards: true,
           attended: false,
         },
@@ -169,6 +170,7 @@ describe('GET /', () => {
       content: [
         {
           date: '2026-06-12',
+          lastUpdatedAt: '2026-06-12T10:00:00Z',
           startTime: '09:00',
           endTime: '12:00',
           nationalStandards: false,
@@ -188,6 +190,59 @@ describe('GET /', () => {
     expect(response.text).toContain('Missed mandatory appointment or activity')
     expect(response.text).toContain('Friday 12 June 2026')
     expect(response.text).not.toContain('9am to 12pm')
+  })
+
+  it('shows all missed appointments during the first registration session', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [] })
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2025-12-20',
+          lastUpdatedAt: '2025-12-20T10:00:00Z',
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [] })
+
+    const response = await request(app)
+      .get('/')
+      .set('Cookie', await createAppSessionCookie('X123456', undefined, true))
+      .expect(200)
+
+    expect(response.text).toContain('Missed mandatory appointment or activity')
+    expect(response.text).toContain('Saturday 20 December 2025')
+  })
+
+  it('only alerts returning users about missed appointments updated after registration', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [] })
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2025-12-20',
+          lastUpdatedAt: '2025-12-20T10:00:00Z',
+          nationalStandards: true,
+          attended: false,
+        },
+        {
+          date: '2026-06-12',
+          lastUpdatedAt: '2026-06-12T10:00:00Z',
+          nationalStandards: true,
+          attended: false,
+        },
+      ],
+    })
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [] })
+
+    const response = await request(app)
+      .get('/')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Missed mandatory appointment or activity')
+    expect(response.text).toContain('Friday 12 June 2026')
+    expect(response.text).not.toContain('Saturday 20 December 2025')
   })
 })
 

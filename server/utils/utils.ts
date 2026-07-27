@@ -1,4 +1,4 @@
-import { format, parse, isValid, parseISO, startOfDay, isBefore, addDays, intervalToDuration } from 'date-fns'
+import { format, parse, isValid, parseISO, startOfDay, isBefore, isAfter, addDays, intervalToDuration } from 'date-fns'
 import type { AddressResponse, AppointmentResponse, PersonNameResponse } from '../data/peopleOnProbationApiClient'
 
 const properCase = (word: string): string =>
@@ -128,3 +128,18 @@ export const formatPractitionerName = (name?: PersonNameResponse): string | unde
 
 export const isMissedMandatoryAppointmentOrActivity = (appointment: AppointmentResponse): boolean =>
   appointment.attended === false && (appointment.nationalStandards === true || Boolean(appointment.unpaidWork))
+
+export const shouldIncludeMissedAppointmentInAlert = (
+  appointment: AppointmentResponse,
+  registeredAt?: string,
+  isRegistrationSession = false,
+): boolean => {
+  // Admin preview sessions have no citizen registration timestamp. Preserve
+  // their existing all-missed view.
+  if (isRegistrationSession || !registeredAt) return true
+  if (!appointment.lastUpdatedAt) return false
+
+  const registrationTime = parseISO(registeredAt)
+  const appointmentUpdateTime = parseISO(appointment.lastUpdatedAt)
+  return isValid(registrationTime) && isValid(appointmentUpdateTime) && isAfter(appointmentUpdateTime, registrationTime)
+}

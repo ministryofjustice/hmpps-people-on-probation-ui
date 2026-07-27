@@ -9,6 +9,7 @@ export type AnalyticsEventName =
   | 'registration_failed'
   | 'login_succeeded'
   | 'login_failed'
+  | 'interaction_clicked'
 
 export type AnalyticsEvent = {
   eventId: string
@@ -33,6 +34,30 @@ export type CreateEventContext = {
   userAgent: string | undefined | null
   pagePath: string
   application: string
+  // Used only to derive referrerPath on page_viewed events (see
+  // resolveReferrerPath below) — answers "where did this page view come
+  // from," which lets forward-path-from-X metrics be queried straight out
+  // of properties, the same way durationSeconds already is.
+  referrer?: string | undefined | null
+  origin?: string
+}
+
+/**
+ * Resolves document.referrer down to a same-origin pathname, or undefined
+ * if the referrer is missing, cross-origin (e.g. a search engine or the One
+ * Login redirect) or unparseable. Cross-origin referrers are deliberately
+ * dropped rather than stored: forward-path analysis only cares about
+ * internal navigation, and storing arbitrary external URLs would be an
+ * unbounded, unreviewed input landing in properties.
+ */
+function resolveReferrerPath(referrer: string | undefined | null, origin: string | undefined): string | undefined {
+  if (!referrer || !origin) return undefined
+  try {
+    const referrerUrl = new URL(referrer)
+    return referrerUrl.origin === origin ? referrerUrl.pathname : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -48,6 +73,9 @@ export function createEvent(
   eventName: AnalyticsEventName,
   properties?: Record<string, unknown>,
 ): AnalyticsEvent {
+  const referrerPath = eventName === 'page_viewed' ? resolveReferrerPath(context.referrer, context.origin) : undefined
+  const mergedProperties = referrerPath ? { ...properties, referrerPath } : properties
+
   return {
     eventId: context.generateId(),
     eventName,
@@ -55,6 +83,6 @@ export function createEvent(
     application: context.application,
     deviceType: detectDeviceType(context.userAgent),
     pagePath: context.pagePath,
-    properties,
+    properties: mergedProperties,
   }
 }
