@@ -2,6 +2,7 @@ import express from 'express'
 import request from 'supertest'
 import cookieParser from 'cookie-parser'
 import setUpAuthentication from './setUpAuthentication'
+import buildOneLoginAuthorizeUrl from '../auth/oneLoginAuthorize'
 import { getOneLoginPublicJwk } from '../auth/oneLoginKeys'
 import { getPeopleOnProbationService } from '../services/peopleOnProbationService'
 import { trackServerAnalyticsEvent } from '../services/analyticsService'
@@ -27,6 +28,9 @@ jest.mock('../services/analyticsService', () => ({
   trackServerAnalyticsEvent: jest.fn(),
 }))
 
+const mockedBuildOneLoginAuthorizeUrl = buildOneLoginAuthorizeUrl as jest.MockedFunction<
+  typeof buildOneLoginAuthorizeUrl
+>
 const mockedGetOneLoginPublicJwk = getOneLoginPublicJwk as jest.MockedFunction<typeof getOneLoginPublicJwk>
 const mockedGetPeopleOnProbationService = getPeopleOnProbationService as jest.MockedFunction<
   typeof getPeopleOnProbationService
@@ -195,6 +199,43 @@ describe('setUpAuthentication', () => {
       await request(buildApp()).get('/sign-out').expect(302).expect('Location', '/')
 
       expect(mockedTrackServerAnalyticsEvent).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /sign-in/start', () => {
+    it('redirects to /invite-expired when the invite is invalid or genuinely expired', async () => {
+      mockedGetPeopleOnProbationService.mockReturnValue({
+        validateRegistrationInvite: jest.fn().mockRejectedValue({ responseStatus: 410 }),
+      } as unknown as ReturnType<typeof getPeopleOnProbationService>)
+
+      await request(buildApp()).get('/sign-in/start?token=old-token').expect(302).expect('Location', '/invite-expired')
+
+      expect(mockedTrackServerAnalyticsEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ eventName: 'registration_failed' }),
+      )
+      expect(mockedBuildOneLoginAuthorizeUrl).not.toHaveBeenCalled()
+    })
+
+    it('continues to One Login instead of showing invite-expired when the CRN is already registered', async () => {
+      mockedGetPeopleOnProbationService.mockReturnValue({
+        validateRegistrationInvite: jest.fn().mockRejectedValue({
+          responseStatus: 409,
+          data: { errorCode: 'USER_ALREADY_REGISTERED' },
+        }),
+      } as unknown as ReturnType<typeof getPeopleOnProbationService>)
+      mockedBuildOneLoginAuthorizeUrl.mockResolvedValue(new URL('https://one-login.example/authorize'))
+
+      await request(buildApp())
+        .get('/sign-in/start?token=old-token')
+        .expect(302)
+        .expect('Location', 'https://one-login.example/authorize')
+
+      expect(mockedTrackServerAnalyticsEvent).not.toHaveBeenCalledWith(
+        expect.objectContaining({ eventName: 'registration_failed' }),
+      )
+      expect(mockedBuildOneLoginAuthorizeUrl).toHaveBeenCalledWith(
+        expect.objectContaining({ registrationInviteToken: undefined }),
+      )
     })
   })
 
