@@ -12,9 +12,19 @@
  * includes inline <svg>/<path> markup, whose click targets are SVGElement,
  * not HTMLElement — narrowing to HTMLElement would silently drop those clicks.
  */
-// eslint-disable-next-line import/prefer-default-export -- named exports are this codebase's convention (see events.ts, client.ts); this module just doesn't have a second thing to export yet.
 export function resolveInteractionElementId(target: Element): string | undefined {
   const tracked = target.closest<HTMLElement>('[data-tracking-id]')
   if (tracked) return tracked.dataset.trackingId
   return target.closest('.chatbot-button') ? 'chat_icon' : undefined
+}
+
+/**
+ * True when the click originated from a <summary> that's the disclosure
+ * trigger of a <details> element (e.g. a tracked govukDetails). Those clicks
+ * are tracked exclusively via the native 'toggle' event (see
+ * assets/js/analytics.ts) — counting them here too would double-count a
+ * single details expansion as two interaction_clicked events.
+ */
+export function isDetailsToggleClick(target: Element): boolean {
+  return Boolean(target.closest('summary')?.closest('details'))
 }

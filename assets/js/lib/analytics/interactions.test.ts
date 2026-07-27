@@ -1,4 +1,4 @@
-import { resolveInteractionElementId } from './interactions'
+import { resolveInteractionElementId, isDetailsToggleClick } from './interactions'
 
 // No jsdom in this project's test environment (jest.config.mjs runs
 // testEnvironment: 'node'), so these fakes implement just the `closest`
@@ -42,5 +42,37 @@ describe('resolveInteractionElementId', () => {
     const target = fakeElement({})
 
     expect(resolveInteractionElementId(target)).toBeUndefined()
+  })
+})
+
+describe('isDetailsToggleClick', () => {
+  // isDetailsToggleClick chains two closest() calls (summary, then details
+  // from that summary), so - unlike fakeElement above - the fake returned
+  // for 'summary' needs its own closest() method too.
+  function fakeChainElement(closestResults: Record<string, Element | null>): Element {
+    return {
+      closest: (selector: string) => closestResults[selector] ?? null,
+    } as unknown as Element
+  }
+
+  it('returns true when the click target is inside a <summary> that is inside a <details>', () => {
+    const details = fakeChainElement({})
+    const summary = fakeChainElement({ details })
+    const target = fakeChainElement({ summary })
+
+    expect(isDetailsToggleClick(target)).toBe(true)
+  })
+
+  it('returns false when the <summary> ancestor has no <details> ancestor of its own', () => {
+    const summary = fakeChainElement({ details: null })
+    const target = fakeChainElement({ summary })
+
+    expect(isDetailsToggleClick(target)).toBe(false)
+  })
+
+  it('returns false when the click target has no <summary> ancestor at all', () => {
+    const target = fakeChainElement({ summary: null })
+
+    expect(isDetailsToggleClick(target)).toBe(false)
   })
 })

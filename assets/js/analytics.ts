@@ -1,6 +1,6 @@
 import { AnalyticsClient } from './lib/analytics/client'
 import { createEvent, type CreateEventContext } from './lib/analytics/events'
-import { resolveInteractionElementId } from './lib/analytics/interactions'
+import { resolveInteractionElementId, isDetailsToggleClick } from './lib/analytics/interactions'
 import { computeScrollDepthPercent } from './lib/analytics/scrollDepth'
 
 const APPLICATION = 'hmpps-people-on-probation-ui'
@@ -132,6 +132,11 @@ try {
   // inline <svg>/<path> markup, whose click targets are SVGElement.
   document.addEventListener('click', event => {
     if (!(event.target instanceof Element)) return
+    // <summary> clicks that open/close a <details> are tracked exclusively
+    // via the 'toggle' listener below - counting them here too would
+    // double-count a single details expansion as two interaction_clicked
+    // events.
+    if (isDetailsToggleClick(event.target)) return
     const elementId = resolveInteractionElementId(event.target)
     if (!elementId) return
     client.send(createEvent(eventContext(), 'interaction_clicked', { elementId }), true)
