@@ -85,6 +85,7 @@ describe('GET /details', () => {
     expect(response.text).toContain('Spouse')
     expect(response.text).toContain('07700900001')
     expect(peopleOnProbationService.getPersonalDetails).toHaveBeenCalledWith('X123456')
+    expect(response.text).toContain('/assets/js/analytics.js')
   })
 
   it('should render without emergency contacts when none are present', async () => {
@@ -141,6 +142,11 @@ describe('GET /details', () => {
     // session cookie, so the countdown/keep-alive popup must never render
     // during an admin preview (see server/auth/currentUser.ts).
     expect(response.text).not.toContain('pop-timeout-warning__dialog')
+
+    // The analytics client script must not load at all during a preview
+    // session, so no page/interaction events are ever captured for the CRN
+    // being previewed (see server/views/partials/layout.njk).
+    expect(response.text).not.toContain('/assets/js/analytics.js')
   })
 
   it('should pass errors to the next error handler', async () => {

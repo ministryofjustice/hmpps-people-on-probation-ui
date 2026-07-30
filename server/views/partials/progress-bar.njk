@@ -1,5 +1,6 @@
 {% macro progressBar(params) %}
 {% set ariaLabel = params.label if params.label else (params.percentComplete + "% complete") %}
+{% set percentRemaining = 100 - params.percentComplete %}
 <div
   class="pop-progress__bar-area"
   data-percent="{{ params.percentComplete }}"
@@ -18,10 +19,10 @@
     </svg>
   </div>
   {% if params.completedDuration %}
-    <p class="pop-progress__completed">{{ params.completedDuration }} completed</p>
+    <p class="pop-progress__completed">Completed: {{ params.completedDuration }} ({{ params.percentComplete }}%)</p>
   {% endif %}
 </div>
 {% if params.remainingDuration %}
-  <p class="pop-progress__remaining">{{ params.remainingDuration }} left</p>
+  <p class="pop-progress__remaining">Remaining: <br class="pop-progress__remaining-break">{{ params.remainingDuration }} ({{ percentRemaining }}%)</p>
 {% endif %}
 {% endmacro %}

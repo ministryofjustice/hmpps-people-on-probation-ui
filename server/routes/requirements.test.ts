@@ -93,8 +93,8 @@ describe('GET /requirements', () => {
 
       // 366 completed out of 732 total days = 50%
       expect(res.text).toContain('aria-valuenow="50"')
-      expect(res.text).toContain('1 year completed')
-      expect(res.text).not.toContain('2 years completed')
+      expect(res.text).toContain('Completed: 1 year (50%)')
+      expect(res.text).not.toContain('Completed: 2 years')
     })
 
     it('shows 100% progress when today is after the end date', async () => {
@@ -171,6 +171,39 @@ describe('GET /requirements', () => {
       expect(res.text).toContain('100')
       expect(res.text).toContain('40')
       expect(res.text).toContain('60')
+    })
+
+    it('labels a non-RAR count-based requirement with generic "Time" row labels, not the specific unit', async () => {
+      fakeDate('2025-06-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            requirements: [
+              {
+                mainCategory: { code: 'W', description: 'Unpaid Work' },
+                required: 100,
+                completed: 40,
+                unit: 'HOURS',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Time required')
+      expect(res.text).toContain('Time completed')
+      expect(res.text).toContain('Time remaining')
+      expect(res.text).not.toContain('Hours required')
+      expect(res.text).not.toContain('Hours completed')
+      expect(res.text).not.toContain('Hours remaining')
+      expect(res.text).not.toContain('Total hours on order')
     })
 
     it('labels an unpaid work requirement (mainCategory.code = W) as Community payback, with "(unpaid work)" on the progress heading only', async () => {
@@ -268,6 +301,50 @@ describe('GET /requirements', () => {
 
       expect(res.text).not.toContain('id="requirements-last-updated"')
       expect(res.text).not.toContain('Your requirements were last updated on')
+    })
+  })
+
+  describe('overall order', () => {
+    it('labels the total length row as "Total order length"', async () => {
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Total order length')
+      expect(res.text).not.toContain('Total length of time')
+    })
+  })
+
+  describe('date-based requirements', () => {
+    it('labels the total length row as "Time required"', async () => {
+      fakeDate('2025-06-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            requirements: [
+              {
+                mainCategory: { code: 'SUP', description: 'Supervision' },
+                expectedStartDate: '2025-01-01',
+                expectedEndDate: '2025-12-31',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Time required')
+      expect(res.text).not.toContain('Total length of time')
     })
   })
 

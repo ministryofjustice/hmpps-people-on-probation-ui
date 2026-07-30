@@ -35,7 +35,7 @@
 {% endblock %}
 
 {% block bodyStart %}
-  {% if user and analyticsEnabled %}
+  {% if user and analyticsEnabled and not user.previewedByAdmin %}
     <script type="module" src="{{ '/assets/js/analytics.js' | assetMap }}"></script>
   {% endif %}
 {% endblock %}

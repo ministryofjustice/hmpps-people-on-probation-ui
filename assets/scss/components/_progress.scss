@@ -9,7 +9,7 @@
     @include govuk-font($size: 19, $weight: bold);
     margin-bottom: govuk-spacing(2);
   }
-  
+
   &__bar-area {
     position: relative;
     flex: 1;
@@ -57,7 +57,7 @@
     flex-shrink: 0;
     margin: 0;
     padding-top: 5px;
-    text-align: right;
+    text-align: left;
     white-space: nowrap;
   }
 
@@ -76,16 +76,20 @@
       right: 0;
       top: 44px;
       transform: none;
-      text-align: center;
+      text-align: left;
       white-space: normal;
       width: auto;
     }
 
     &__remaining {
       display: block;
-      text-align: center;
+      text-align: left;
       white-space: normal;
       padding-top: govuk-spacing(2);
+    }
+
+    &__remaining-break {
+      display: none;
     }
   }
 }

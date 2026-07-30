@@ -77,6 +77,8 @@ describe('formatTime', () => {
     ['afternoon whole hour', '13:00', '1pm'],
     ['afternoon with minutes', '13:15', '1:15pm'],
     ['midnight', '00:00', '12am'],
+    ['with seconds, whole hour', '10:00:00', '10am'],
+    ['with seconds and minutes', '12:30:00', '12:30pm'],
     ['invalid', 'not-a-time', 'not-a-time'],
   ])('%s', (_: string, input: string | undefined, expected: string | undefined) => {
     expect(formatTime(input)).toEqual(expected)
@@ -90,6 +92,7 @@ describe('formatTimeRange', () => {
     ['end only', undefined, '10:00', '10am'],
     ['neither', undefined, undefined, undefined],
     ['with minutes', '09:30', '10:45', '9:30am to 10:45am'],
+    ['with seconds', '10:00:00', '12:00:00', '10am to 12pm'],
   ])('%s', (_: string, start: string | undefined, end: string | undefined, expected: string | undefined) => {
     expect(formatTimeRange(start, end)).toEqual(expected)
   })
