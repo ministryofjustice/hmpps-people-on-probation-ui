@@ -5,7 +5,7 @@
 
 {% block content %}
   <div class="govuk-grid-row govuk-!-margin-top-0">
-    <div class="govuk-grid-column-two-thirds pop-welcome">
+    <div class="govuk-grid-column-two-thirds">
 
       <h1 class="govuk-heading-l">Start using your probation account</h1>
 
@@ -23,14 +23,11 @@
         To start using your probation account, <strong>sign in or register</strong> with GOV.UK One Login.
       </p>
 
-      <div class="pop-welcome__action">
-        {{ govukButton({
-          text: "Start now",
-          href: signInStartUrl,
-          isStartButton: true,
-          classes: "govuk-!-margin-bottom-0"
-        }) }}
-      </div>
+      {{ govukButton({
+        text: "Start now",
+        href: signInStartUrl,
+        isStartButton: true
+      }) }}
 
     </div>
   </div>
