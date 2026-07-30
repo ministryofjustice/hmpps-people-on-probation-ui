@@ -99,7 +99,7 @@ describe('GET /', () => {
     expect(response.text).toContain('Wednesday 10 June 2026, 9am to 10am')
     expect(response.text).toContain('Missed mandatory appointment or activity')
     expect(response.text).toContain('Monday 1 June 2026')
-    expect(response.text).toContain('Overall order')
+    expect(response.text).toContain('Progress in overall order')
     expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 50)
     expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 0, 50)
     expect(peopleOnProbationService.getSentences).toHaveBeenCalledWith('X123456')
@@ -161,7 +161,7 @@ describe('GET /', () => {
       .expect('Content-Type', /html/)
       .expect(200)
 
-    expect(response.text).not.toContain('Overall order')
+    expect(response.text).not.toContain('Progress in overall order')
   })
 
   it('should treat missed unpaid work as a mandatory activity', async () => {

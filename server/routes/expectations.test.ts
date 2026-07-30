@@ -12,10 +12,10 @@ afterEach(() => {
   jest.resetAllMocks()
 })
 
-describe('GET /expectations', () => {
+describe('GET /probation-agreement', () => {
   describe('authentication', () => {
     it('redirects unauthenticated users to the sign-in page', async () => {
-      const res = await request(app).get('/expectations')
+      const res = await request(app).get('/probation-agreement')
 
       expect(res.status).toBe(302)
       expect(res.headers.location).toMatch(/^\/$|returnTo/)
@@ -24,7 +24,7 @@ describe('GET /expectations', () => {
     it('renders the page for authenticated users', async () => {
       const cookie = await createAppSessionCookie()
 
-      const res = await request(app).get('/expectations').set('Cookie', cookie)
+      const res = await request(app).get('/probation-agreement').set('Cookie', cookie)
 
       expect(res.status).toBe(200)
     })
@@ -34,7 +34,7 @@ describe('GET /expectations', () => {
     it('defaults to the you tab when no tab param is given', async () => {
       const cookie = await createAppSessionCookie()
 
-      const res = await request(app).get('/expectations').set('Cookie', cookie)
+      const res = await request(app).get('/probation-agreement').set('Cookie', cookie)
 
       expect(res.status).toBe(200)
       expect(res.text).toContain('id="panel-you"')
@@ -45,7 +45,7 @@ describe('GET /expectations', () => {
     it('defaults to the you tab for an unrecognised tab param', async () => {
       const cookie = await createAppSessionCookie()
 
-      const res = await request(app).get('/expectations?tab=unknown').set('Cookie', cookie)
+      const res = await request(app).get('/probation-agreement?tab=unknown').set('Cookie', cookie)
 
       expect(res.status).toBe(200)
       expect(res.text).not.toContain('id="panel-you" hidden')
@@ -55,7 +55,7 @@ describe('GET /expectations', () => {
     it('shows the probation-service tab when tab=probation-service', async () => {
       const cookie = await createAppSessionCookie()
 
-      const res = await request(app).get('/expectations?tab=probation-service').set('Cookie', cookie)
+      const res = await request(app).get('/probation-agreement?tab=probation-service').set('Cookie', cookie)
 
       expect(res.status).toBe(200)
       expect(res.text).toContain('id="panel-you" hidden')
@@ -68,7 +68,7 @@ describe('GET /expectations', () => {
     it('renders the page heading', async () => {
       const cookie = await createAppSessionCookie()
 
-      const res = await request(app).get('/expectations').set('Cookie', cookie)
+      const res = await request(app).get('/probation-agreement').set('Cookie', cookie)
 
       expect(res.text).toContain('Probation agreement')
     })
@@ -76,7 +76,7 @@ describe('GET /expectations', () => {
     it('renders both tab navigation links', async () => {
       const cookie = await createAppSessionCookie()
 
-      const res = await request(app).get('/expectations').set('Cookie', cookie)
+      const res = await request(app).get('/probation-agreement').set('Cookie', cookie)
 
       expect(res.text).toContain('What we expect from you')
       expect(res.text).toContain('What to expect from the Probation Service')

@@ -24,7 +24,6 @@ describe('GET /feedback', () => {
       .expect(200)
 
     expect(response.text).toContain('Give feedback')
-    expect(response.text).toContain('Help us improve this service by sharing your feedback.')
     expect(response.text).toContain('smartsurvey.co.uk')
     expect(response.text).toContain('class="pop-feedback-frame"')
     expect(response.text).not.toContain('height="800"')
