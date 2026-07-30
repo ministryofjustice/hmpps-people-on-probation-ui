@@ -1,3 +1,20 @@
+// The SmartSurvey embed applies its own internal left padding to the survey
+// content that we can't control (it's cross-origin). These values nudge our
+// heading to line up with where that content visually starts at common
+// viewport widths - tuned against the current SmartSurvey theme, so re-check
+// alignment if the embedded survey's theme changes.
+.pop-feedback-heading {
+  padding-left: 30px;
+
+  @include govuk-media-query($from: tablet) {
+    padding-left: 40px;
+  }
+
+  @include govuk-media-query($from: desktop) {
+    padding-left: 113px;
+  }
+}
+
 .pop-feedback-frame {
   border: 0;
   display: block;

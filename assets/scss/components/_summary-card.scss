@@ -18,9 +18,25 @@
 
   &__type {
     @include govuk-font($size: 19, $weight: bold);
-    flex: 1 0 0;
+    // Fixed one-third share on desktop (paired with __actions at two-thirds
+    // below) - reverts to an equal 50/50 split on mobile, matching __key.
+    // __header has a gap between its two children, which sits on top of a
+    // plain 33.33%/66.66% split and pushes the total past 100%, forcing an
+    // early wrap - subtract half the gap from each side so the two, plus
+    // the gap between them, sum to exactly the container width.
+    flex: 0 0 calc(33.33% - #{govuk-spacing(5)} / 2);
     min-width: 0;
+    // Used on both <span> (no default margin) and <h3>/<h4> (browser UA
+    // default top+bottom margin, since GOV.UK Frontend only resets margins
+    // via its own govuk-heading-* classes, not bare heading tags) - reset
+    // both explicitly so the layout is identical regardless of which
+    // element this class is applied to.
+    margin-top: 0;
     margin-bottom: 0;
+
+    @include govuk-media-query($until: tablet) {
+      flex: 1 0 0;
+    }
   }
 
 
@@ -28,15 +44,53 @@
     display: flex;
     align-items: center;
     gap: govuk-spacing(2);
-    flex-shrink: 0;
+    // Natural (content) width, not a fixed share - __tag is now a sibling
+    // (not nested in here), and needs to sit on the same line as these
+    // links on desktop without either of them needing to add up to a hard
+    // percentage. margin-left: auto pushes this - and __tag right after it,
+    // since order places it next - to the row's end as a cluster.
+    flex: 0 0 auto;
+    order: 2;
+    margin-left: auto;
 
     a {
       @include govuk-font($size: 19, $weight: bold);
     }
 
     @include govuk-media-query($until: tablet) {
+      // On mobile __tag (order 2) sits next to __type instead, so these
+      // links drop to their own row after it.
       order: 3;
       flex-basis: 100%;
+      margin-left: 0;
+    }
+  }
+
+  // A lone sibling of __type (and, for appointments with actions, of
+  // __actions too) - never nested inside __actions, so it can be
+  // repositioned per breakpoint independently of it via order.
+  &__tag {
+    // Desktop: after __type (order 0, default) and __actions (order 2) -
+    // sits at the row's end, right next to the action links.
+    order: 3;
+    // Default: past appointments have no __actions sibling, so __tag is the
+    // only thing that can push itself to the row's end.
+    margin-left: auto;
+
+    // Future appointments: __actions precedes __tag and already has its own
+    // margin-left: auto claiming all the free space - if __tag also set
+    // auto here, flexbox would split that free space between the two,
+    // opening an unwanted gap between the actions links and the tag. Sit
+    // flush against __actions instead.
+    .pop-summary-card__actions + & {
+      margin-left: 0;
+    }
+
+    @include govuk-media-query($until: tablet) {
+      // Mobile: right after __type, before __actions (order 3 on mobile) -
+      // same line as the appointment type/title, not pushed to the row's end.
+      order: 2;
+      margin-left: 0;
     }
   }
 
@@ -62,29 +116,45 @@
 
   &__key {
     @include govuk-font($size: 19, $weight: bold);
-    flex: 1 0 0;
+    // Fixed one-third share on desktop (paired with __value at two-thirds
+    // below) - reverts to an equal 50/50 split on mobile.
+    flex: 0 0 33.33%;
     min-width: 0;
     padding: govuk-spacing(2) govuk-spacing(4) govuk-spacing(2) 0;
     margin: 0;
+
+    @include govuk-media-query($until: tablet) {
+      flex: 1 0 0;
+    }
   }
 
   &__value {
     @include govuk-font($size: 19);
-    flex: 1 0 0;
+    // Fixed two-thirds share on desktop, paired with __key at one-third
+    // above - reverts to an equal 50/50 split on mobile.
+    flex: 0 0 66.66%;
     min-width: 0;
     padding: govuk-spacing(2) 0;
     margin: 0;
     word-break: break-word;
     overflow-wrap: break-word;
 
+    @include govuk-media-query($until: tablet) {
+      flex: 1 0 0;
+    }
+
     // govuk-tag caps itself at max-width: 160px (with overflow-wrap: break-word)
     // to handle a single very long word — but our outcome labels are short
     // phrases (e.g. "Attended but failed to comply"), which hit that cap and
-    // wrap mid-phrase even though the row has plenty of room. Let the tag
-    // size to its content instead.
+    // wrap mid-word even though the row has plenty of room. Remove the cap so
+    // the tag sizes to its content, but don't force single-line (no
+    // white-space: nowrap) - __value is a fixed 66.66% width on desktop
+    // (doesn't grow), so a longer outcome phrase than that needs to wrap at
+    // its own word boundaries rather than overflow the card. GOV.UK
+    // Frontend's own overflow-wrap: break-word still applies as a fallback
+    // for a single word too long to fit on its own line.
     .govuk-tag {
       max-width: none;
-      white-space: nowrap;
     }
   }
 }

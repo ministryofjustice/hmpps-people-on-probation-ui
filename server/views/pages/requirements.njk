@@ -13,11 +13,11 @@
     Make sure you follow the requirements included in your order. If you don’t, you could breach your probation, and could go back to court.
   </p>
   <p class="govuk-body">
-    See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/expectations">probation agreement</a>.
+    See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/probation-agreement">probation agreement</a>.
   </p>
 
   {% if overallOrder %}
-    <h2 class="govuk-heading-l">Overall order</h2>
+    <h2 class="govuk-heading-m">Progress in overall order</h2>
 
     <div class="pop-progress__row govuk-!-margin-bottom-4">
       {{ progressBar({
@@ -29,7 +29,7 @@
 
     <div class="pop-summary-card govuk-!-margin-bottom-9">
       <div class="pop-summary-card__header">
-        <span class="pop-summary-card__type">Order details</span>
+        <h3 class="pop-summary-card__type">Order details</h3>
       </div>
       <dl class="pop-summary-card__details">
         {% if overallOrder.charge %}
@@ -69,7 +69,7 @@
   {% endif %}
 
   {% if requirements.length %}
-    <h3 class="govuk-heading-m pop-requirements__section-heading">What is included in your order requirements</h3>
+    <h2 class="govuk-heading-l pop-requirements__section-heading">Requirements in your order</h2>
 
     {% if lastUpdatedAt %}
       <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6" id="requirements-last-updated">
@@ -79,9 +79,9 @@
 
     {% for requirement in requirements %}
       <div class="govuk-!-margin-bottom-2">
-        <h4 class="govuk-heading-s">{{ requirement.label }}</h4>
+        <h3 class="govuk-heading-m">{{ requirement.label }}</h3>
         {% if not requirement.isRAR %}
-          <h4 class="pop-progress__title">{{ requirement.label }} progress</h4>
+          <h4 class="pop-progress__title">Progress in {{ requirement.label }}{{ " (unpaid work)" if requirement.isUnpaidWork }}</h4>
           <div class="pop-progress__row govuk-!-margin-bottom-4">
             {{ progressBar({
               percentComplete: requirement.percentComplete,
@@ -94,7 +94,7 @@
 
       <div class="pop-summary-card govuk-!-margin-bottom-6">
         <div class="pop-summary-card__header">
-          <span class="pop-summary-card__type">{{ requirement.label }} details</span>
+          <h4 class="pop-summary-card__type">{{ requirement.label }} details</h4>
         </div>
         <dl class="pop-summary-card__details">
           {% if requirement.required %}

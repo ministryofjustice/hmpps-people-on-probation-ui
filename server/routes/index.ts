@@ -121,7 +121,7 @@ export default function routes(services: Services): Router {
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
   router.use('/api/chatbot', chatbotRoutes(services))
-  router.use('/expectations', expectationsRoutes(services))
+  router.use('/probation-agreement', expectationsRoutes(services))
   router.use('/feedback', feedbackRoutes(services))
 
   // Admin "preview as user" feature — independent HMPPS Auth identity

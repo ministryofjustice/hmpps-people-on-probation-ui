@@ -77,7 +77,7 @@ export const formatIntervalDuration = (start: Date, end: Date): string => {
   if (years > 0) parts.push(pluralise(years, 'year'))
   if (months > 0) parts.push(pluralise(months, 'month'))
   if (days > 0) parts.push(pluralise(days, 'day'))
-  return parts.join(' ') || '0 days'
+  return parts.join(', ') || '0 days'
 }
 
 export const formatRemainingDuration = (endDateStr: string): string => {

@@ -23,8 +23,10 @@
       }) }}
     {% elif missedAlert %}
       {% set missedAlertHtml %}
+        <p class="govuk-body govuk-!-margin-bottom-0">
+          {{ missedAlert.date }}{% if missedAlert.timeRange %}, {{ missedAlert.timeRange }}{% endif %}.
+        </p>
         <p class="govuk-body">
-          {{ missedAlert.date }}{% if missedAlert.timeRange %}, {{ missedAlert.timeRange }}{% endif %}.<br>
           ‘{{ missedAlert.type }}’{% if missedAlert.practitionerName %} with {{ missedAlert.practitionerName }}{% endif %}.
         </p>
         <p class="govuk-body govuk-!-margin-bottom-0">
@@ -79,7 +81,7 @@
             </span>
             <div class="pop-summary-card__actions">
               {% if appointment.address.length %}
-                <a class="govuk-link govuk-link--no-visited-state" href="{{ appointment.mapUrl }}" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
+                <a class="govuk-link govuk-link--no-visited-state" href="{{ appointment.mapUrl }}" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map<span class="govuk-visually-hidden"> (opens in new tab)</span></a>
                 <span class="pop-summary-card__separator" aria-hidden="true">|</span>
               {% endif %}
               {% if appointment.calendarUrl %}
@@ -87,7 +89,7 @@
               {% endif %}
             </div>
             {% if appointment.nationalStandards %}
-              {{ govukTag({ text: "Mandatory", classes: "govuk-tag--black" }) }}
+              {{ govukTag({ text: "Mandatory", classes: "govuk-tag--black pop-summary-card__tag" }) }}
             {% endif %}
           </div>
 
@@ -116,7 +118,7 @@
                 <dd class="pop-summary-card__value">
                   {% for line in appointment.pickUpAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
                   {% if appointment.pickUpMapUrl %}
-                    <br><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
+                    <div class="govuk-!-margin-top-1"><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map<span class="govuk-visually-hidden"> (opens in new tab)</span></a></div>
                   {% endif %}
                 </dd>
               </div>
@@ -127,7 +129,7 @@
                 <dd class="pop-summary-card__value">
                   {% for line in appointment.workAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
                   {% if appointment.workMapUrl %}
-                    <br><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
+                    <div class="govuk-!-margin-top-1"><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map<span class="govuk-visually-hidden"> (opens in new tab)</span></a></div>
                   {% endif %}
                 </dd>
               </div>
@@ -155,7 +157,7 @@
               {{ appointment.type }}
             </span>
             {% if appointment.nationalStandards %}
-              {{ govukTag({ text: "Mandatory", classes: "govuk-tag--black" }) }}
+              {{ govukTag({ text: "Mandatory", classes: "govuk-tag--black pop-summary-card__tag" }) }}
             {% endif %}
           </div>
 
@@ -184,7 +186,7 @@
                 <dd class="pop-summary-card__value">
                   {% for line in appointment.pickUpAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
                   {% if appointment.pickUpMapUrl %}
-                    <br><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
+                    <div class="govuk-!-margin-top-1"><a href="{{ appointment.pickUpMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map<span class="govuk-visually-hidden"> (opens in new tab)</span></a></div>
                   {% endif %}
                 </dd>
               </div>
@@ -195,7 +197,7 @@
                 <dd class="pop-summary-card__value">
                   {% for line in appointment.workAddress %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
                   {% if appointment.workMapUrl %}
-                    <br><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map</a>
+                    <div class="govuk-!-margin-top-1"><a href="{{ appointment.workMapUrl }}" class="govuk-link" target="_blank" rel="noopener noreferrer" data-tracking-id="view_on_map">View on map<span class="govuk-visually-hidden"> (opens in new tab)</span></a></div>
                   {% endif %}
                 </dd>
               </div>

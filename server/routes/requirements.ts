@@ -54,6 +54,7 @@ type OverallOrderView = {
 export type RequirementView = {
   label: string
   isRAR: boolean
+  isUnpaidWork: boolean
   percentComplete: number
   completedDuration?: string
   required?: number
@@ -67,7 +68,10 @@ export type RequirementView = {
 }
 
 export function toRequirementView(requirement: RequirementResponse): RequirementView | null {
-  const label = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
+  const isUnpaidWork = requirement.mainCategory?.code === 'W'
+  const label = isUnpaidWork
+    ? 'Community payback'
+    : requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
   const isRAR = requirement.mainCategory?.code === 'F'
 
   if (requirement.required && requirement.required > 0) {
@@ -79,6 +83,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     return {
       label,
       isRAR,
+      isUnpaidWork,
       required: requirement.required,
       completed,
       remaining,
@@ -102,6 +107,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     return {
       label,
       isRAR,
+      isUnpaidWork,
       percentComplete,
       completedDuration,
       totalLength,
