@@ -94,7 +94,7 @@
 
       <div class="pop-summary-card govuk-!-margin-bottom-6">
         <div class="pop-summary-card__header">
-          <h4 class="pop-summary-card__type">{{ requirement.label }} details</h4>
+          <h4 class="pop-summary-card__type">{{ "RAR" if requirement.isRAR else requirement.label }} details</h4>
         </div>
         <dl class="pop-summary-card__details">
           {% if requirement.required %}
