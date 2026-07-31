@@ -33,10 +33,11 @@ export const formatDate = (dateStr?: string): string | undefined => {
 
 export const formatTime = (time?: string): string | undefined => {
   if (!time) return undefined
-  const parsed = parse(time, 'HH:mm', new Date())
+  const pattern = /^\d{2}:\d{2}:\d{2}$/.test(time) ? 'HH:mm:ss' : 'HH:mm'
+  const parsed = parse(time, pattern, new Date())
   if (!isValid(parsed)) return time
-  const pattern = parsed.getMinutes() === 0 ? 'haaa' : 'h:mmaaa'
-  return format(parsed, pattern).toLowerCase()
+  const outputPattern = parsed.getMinutes() === 0 ? 'haaa' : 'h:mmaaa'
+  return format(parsed, outputPattern).toLowerCase()
 }
 
 export const formatTimeRange = (startTime?: string, endTime?: string): string | undefined => {

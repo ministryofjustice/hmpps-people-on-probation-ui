@@ -15,7 +15,7 @@ generic-service:
     ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: "https://probation-account.hmpps.service.justice.gov.uk"
     AUDIT_ENABLED: "true"
     FEATURE_ADMIN_PREVIEW: "true"
-    FEATURE_MISSED_APPOINTMENT_ALERT: "true"
+    FEATURE_MISSED_APPOINTMENT_ALERT: "false"
     FEATURE_CHATBOT: "true"
     FEATURE_ANALYTICS: "true"
     FEEDBACK_BANNER_ENABLED: "true"
