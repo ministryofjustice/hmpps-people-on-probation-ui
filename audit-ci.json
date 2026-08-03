@@ -2,5 +2,21 @@
   "low": true,
   "package-manager": "auto",
   "registry": "https://registry.npmjs.org",
-  "allowlist": []
+  "allowlist": [
+    // brace-expansion DoS (CVE-2026-14257) — devDependencies only.
+    // Patched in 5.0.8+; the 1.x/2.x lines were never fixed. Reaches us via
+    // minimatch@3.1.5 and minimatch@9.0.9, neither of which can consume v5
+    // (it exports { expand }, not a callable default), so no override is possible.
+    // Blocked on @eslint/eslintrc, eslint-plugin-import, babel-plugin-istanbul
+    // and jest moving to minimatch ^10. Remove this entry once they have.
+    "GHSA-mh99-v99m-4gvg",
+
+    // @opentelemetry/core <2.8.0 unbounded memory in W3C Baggage propagation.
+    // Pulled in by applicationinsights@2.9.8, the final 2.x release, whose
+    // @opentelemetry/sdk-trace-base@1.30.1 pins core to exactly 1.30.1 — an
+    // override cannot satisfy it. Fixing this requires the applicationinsights
+    // 3.x migration, which rewrites server/utils/azureAppInsights.ts.
+    // Remove this entry once that migration lands.
+    "GHSA-8988-4f7v-96qf"
+  ]
 }
