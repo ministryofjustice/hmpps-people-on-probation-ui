@@ -142,8 +142,8 @@ export default function routes(services: Services): Router {
         }
 
         const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
-          services.peopleOnProbationService.getFutureAppointments(crn, 0, 50),
-          services.peopleOnProbationService.getPastAppointments(crn, 0, 50),
+          services.peopleOnProbationService.getFutureAppointments(crn, 0, 100),
+          services.peopleOnProbationService.getPastAppointments(crn, 0, 100),
           services.peopleOnProbationService.getSentences(crn),
         ])
 

@@ -22,7 +22,7 @@
               <p class="govuk-body govuk-!-margin-bottom-0">Aim to achieve this by {{ goal.targetDate }}.</p>
             {% endif %}
             {% if goal.totalSteps > 0 %}
-              <p class="govuk-body govuk-!-margin-bottom-0">{{ goal.completedSteps }} out of {{ goal.totalSteps }} step{{ "s" if goal.totalSteps !== 1 }} completed.</p>
+              <p class="govuk-body govuk-!-margin-bottom-0">{{ goal.completedSteps }} out of {{ goal.totalSteps }} task{{ "s" if goal.totalSteps !== 1 }} completed.</p>
             {% endif %}
           </div>
         {% endif %}

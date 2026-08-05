@@ -632,6 +632,69 @@ describe('GET /appointments', () => {
     expect(response.text).not.toContain('Jane Doe')
   })
 
+  it.each([['COPT'], ['COVC']])(
+    'hides Location, View on map and Add to calendar for phone/video appointments (typeCode %s)',
+    async typeCode => {
+      peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+        content: [
+          {
+            date: '2026-06-12',
+            startTime: '09:00',
+            endTime: '10:00',
+            type: 'Planned appointment',
+            typeCode,
+            location: {
+              buildingName: 'Probation Office',
+              street: 'Office Street',
+              town: 'Leeds',
+            },
+          },
+        ],
+      })
+
+      const response = await request(app)
+        .get('/appointments')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(response.text).toContain('Friday 12 June 2026')
+      expect(response.text).not.toContain('View on map')
+      expect(response.text).not.toContain('Add to calendar')
+      expect(response.text).not.toContain('<dt class="pop-summary-card__key">Location</dt>')
+      expect(response.text).not.toContain('Probation Office')
+      expect(response.text).not.toContain('/appointments/calendar')
+    },
+  )
+
+  it('still shows Location, View on map and Add to calendar for an in-person appointment', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-12',
+          startTime: '09:00',
+          endTime: '10:00',
+          type: 'Planned appointment',
+          typeCode: 'COAP',
+          location: {
+            buildingName: 'Probation Office',
+            street: 'Office Street',
+            town: 'Leeds',
+          },
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('View on map')
+    expect(response.text).toContain('Add to calendar')
+    expect(response.text).toContain('<dt class="pop-summary-card__key">Location</dt>')
+    expect(response.text).toContain('Probation Office')
+  })
+
   it('does not show time for unpaid work appointments', async () => {
     peopleOnProbationService.getFutureAppointments.mockResolvedValue({
       content: [
