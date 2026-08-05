@@ -55,6 +55,16 @@ function hasInvalidQueryValue(value: unknown): boolean {
 
 const HIDDEN_PROJECT_CODES = ['N07TTA2']
 
+// Appointment type codes with no physical location (phone/video contact) —
+// suppress the Location detail row, "View on map" link, and "Add to
+// calendar" link for these, since there's nowhere to travel to and no
+// meaningful location to add to a calendar entry.
+const NO_LOCATION_TYPE_CODES = ['COPT', 'COVC']
+
+function hasNoLocation(appointment: AppointmentResponse): boolean {
+  return Boolean(appointment.typeCode && NO_LOCATION_TYPE_CODES.includes(appointment.typeCode.toUpperCase()))
+}
+
 // Main category codes (RequirementResponse/LicenceConditionResponse.mainCategory.code) that
 // determine which "why this might happen" guidance applies on the appointments page.
 // Codes not in either list (e.g. F = RAR, W = unpaid work) get the plain inset text with no
@@ -255,7 +265,8 @@ export function generateIcs(params: {
 }
 
 export function toAppointmentCardView(appointment: AppointmentResponse): AppointmentCardView {
-  const address = appointment.unpaidWork ? [] : formatAddress(appointment.location)
+  const noLocation = appointment.unpaidWork ? false : hasNoLocation(appointment)
+  const address = appointment.unpaidWork || noLocation ? [] : formatAddress(appointment.location)
   const pickUpAddress = appointment.unpaidWork ? formatAddress(appointment.unpaidWork.pickUpLocation) : undefined
   const workAddress = appointment.unpaidWork ? formatAddress(appointment.unpaidWork.project?.address) : undefined
   const outcomeTag = resolveOutcomeTag(appointment.outcome)
@@ -267,7 +278,7 @@ export function toAppointmentCardView(appointment: AppointmentResponse): Appoint
     nationalStandards: appointment.nationalStandards,
     address,
     mapUrl: formatMapUrl(address),
-    calendarUrl: buildCalendarUrl(appointment),
+    calendarUrl: noLocation ? undefined : buildCalendarUrl(appointment),
     practitionerName: appointment.unpaidWork ? undefined : formatPractitionerName(appointment.practitioner?.name),
     attended: appointment.attended,
     outcome: outcomeTag?.text,
@@ -317,8 +328,8 @@ export default function appointmentsRoutes(services: Services): Router {
       if (!crn) return res.redirect('/autherror')
 
       const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
-        services.peopleOnProbationService.getFutureAppointments(crn, 0, 50),
-        services.peopleOnProbationService.getPastAppointments(crn, 0, 50),
+        services.peopleOnProbationService.getFutureAppointments(crn, 0, 100),
+        services.peopleOnProbationService.getPastAppointments(crn, 0, 100),
         services.peopleOnProbationService.getSentences(crn),
       ])
 
