@@ -10,6 +10,7 @@ import { toRequirementView } from './requirements'
 import type { RequirementView } from './requirements'
 import { toGoalView } from './goals'
 import type { GoalView } from './goals'
+import { formatPractitionerName } from '../utils/utils'
 import type {
   AddressResponse,
   PersonalDetailsResponse,
@@ -123,7 +124,12 @@ function sanitizePersonalDetails(personalDetails: PersonalDetailsResponse): Reco
   })
 
   const sanitizePractitioner = (mgr: ManagerResponse) => ({
-    name: mgr.name,
+    // formatPractitionerName is what /probation-officer uses to render the
+    // officer's name — it returns undefined when the name is "unallocated"
+    // so the page hides it entirely. Mirror the same filter here so the
+    // chatbot doesn't see a raw name (e.g. { forename: "Unallocated" })
+    // that the user's own /probation-officer page has intentionally hidden.
+    name: formatPractitionerName(mgr.name) ? mgr.name : undefined,
     // Only the first office address is ever shown (see probationOfficer.ts).
     team: mgr.team
       ? {
