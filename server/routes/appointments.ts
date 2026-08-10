@@ -136,7 +136,7 @@ const OUTCOME_TAGS: Record<string, OutcomeTag> = {
   'failed to comply with other instruction': { text: 'Did not comply with instructions', classes: 'govuk-tag--red' },
   'rescheduled pop request': { text: 'Rescheduled at your request', classes: 'govuk-tag--grey' },
   'rescheduled service request': { text: 'Rescheduled by Probation Service', classes: 'govuk-tag--grey' },
-  suspended: { text: 'Sentence suspended', classes: 'govuk-tag--green' },
+  suspended: { text: 'Suspended', classes: 'govuk-tag--green' },
   'unacceptable absence': { text: 'Missed – absence reason rejected', classes: 'govuk-tag--red' },
   'yot breach not enforceable': { text: 'Breach – not enforceable', classes: 'govuk-tag--grey' },
 }

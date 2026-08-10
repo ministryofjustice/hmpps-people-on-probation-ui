@@ -93,7 +93,7 @@ describe('resolveOutcomeTag', () => {
       text: 'Rescheduled by Probation Service',
       classes: 'govuk-tag--grey',
     })
-    expect(resolveOutcomeTag('Suspended')).toEqual({ text: 'Sentence suspended', classes: 'govuk-tag--green' })
+    expect(resolveOutcomeTag('Suspended')).toEqual({ text: 'Suspended', classes: 'govuk-tag--green' })
     expect(resolveOutcomeTag('Unacceptable Absence')).toEqual({
       text: 'Missed – absence reason rejected',
       classes: 'govuk-tag--red',

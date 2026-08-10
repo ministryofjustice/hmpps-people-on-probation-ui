@@ -46,8 +46,7 @@
     @include govuk-font($size: 16);
     position: absolute;
     top: 36px;
-    left: clamp(4.5rem, var(--pop-progress-pct, 0%), calc(100% - 4.5rem));
-    transform: translateX(-50%);
+    left: 0;
     margin: 0;
     white-space: nowrap;
   }
@@ -72,11 +71,8 @@
     }
 
     &__completed {
-      left: 0;
       right: 0;
       top: 44px;
-      transform: none;
-      text-align: left;
       white-space: normal;
       width: auto;
     }

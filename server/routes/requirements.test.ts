@@ -63,7 +63,7 @@ describe('GET /requirements', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(res.text).toContain('Charge')
+    expect(res.text).toContain('Offence')
     expect(res.text).toContain('Test main offence')
     expect(res.text).not.toContain('Dummy charge')
   })
