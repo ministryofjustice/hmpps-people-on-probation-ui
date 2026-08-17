@@ -14,7 +14,18 @@ import {
   isMissedMandatoryAppointmentOrActivity,
   shouldIncludeMissedAppointmentInAlert,
 } from '../utils/utils'
-import type { AppointmentResponse } from '../data/peopleOnProbationApiClient'
+import type { AppointmentResponse, PageMetadataResponse } from '../data/peopleOnProbationApiClient'
+
+export type AppointmentsTab = 'upcoming' | 'past'
+
+export type PaginationItemView = { number: number; href: string; current: boolean } | { ellipsis: true }
+
+export type PaginationView = {
+  items: PaginationItemView[]
+  previous?: { href: string }
+  next?: { href: string }
+  results: { from: number; to: number; count: number }
+}
 
 export type AppointmentCardView = {
   date?: string
@@ -53,8 +64,6 @@ function hasInvalidQueryValue(value: unknown): boolean {
   return value !== undefined && typeof value !== 'string'
 }
 
-const HIDDEN_PROJECT_CODES = ['N07TTA2']
-
 // Appointment type codes with no physical location (phone/video contact) —
 // suppress the Location detail row, "View on map" link, and "Add to
 // calendar" link for these, since there's nowhere to travel to and no
@@ -72,8 +81,47 @@ function hasNoLocation(appointment: AppointmentResponse): boolean {
 const TAG_APPOINTMENT_CATEGORY_CODES = ['RM49', 'RM59', 'T']
 const OTHER_CHANNEL_APPOINTMENT_CATEGORY_CODES = ['Q', 'G', 'H', 'P', 'E', 'I', 'RM38', 'RM37']
 
-export function shouldShowAppointment(appointment: AppointmentResponse): boolean {
-  return !appointment.unpaidWork?.project?.code || !HIDDEN_PROJECT_CODES.includes(appointment.unpaidWork.project.code)
+export const APPOINTMENTS_PAGE_SIZE = 15
+
+// Broader than the display page size — used only to look back for missed mandatory
+// appointments to show in the alert banner, independent of which tab/page is displayed.
+const MISSED_ALERT_LOOKBACK_SIZE = 50
+
+function buildAppointmentsUrl(tab: AppointmentsTab, page: number): string {
+  return `/appointments?tab=${tab}${page > 1 ? `&page=${page}` : ''}`
+}
+
+export function buildPaginationView(
+  tab: AppointmentsTab,
+  page: PageMetadataResponse | undefined,
+): PaginationView | null {
+  if (!page || page.totalElements <= 0) return null
+
+  const { totalPages, totalElements, size } = page
+  const currentPage = page.number + 1
+
+  const pageNumbers = [...new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1])]
+    .filter(n => n >= 1 && n <= totalPages)
+    .sort((a, b) => a - b)
+
+  const items: PaginationItemView[] = []
+  pageNumbers.forEach((pageNumber, index) => {
+    if (index > 0 && pageNumber - pageNumbers[index - 1] > 1) {
+      items.push({ ellipsis: true })
+    }
+    items.push({ number: pageNumber, href: buildAppointmentsUrl(tab, pageNumber), current: pageNumber === currentPage })
+  })
+
+  return {
+    items,
+    previous: currentPage > 1 ? { href: buildAppointmentsUrl(tab, currentPage - 1) } : undefined,
+    next: currentPage < totalPages ? { href: buildAppointmentsUrl(tab, currentPage + 1) } : undefined,
+    results: {
+      from: page.number * size + 1,
+      to: Math.min((page.number + 1) * size, totalElements),
+      count: totalElements,
+    },
+  }
 }
 
 function formatAppointmentType(type?: string): string | undefined {
@@ -136,7 +184,7 @@ const OUTCOME_TAGS: Record<string, OutcomeTag> = {
   'failed to comply with other instruction': { text: 'Did not comply with instructions', classes: 'govuk-tag--red' },
   'rescheduled pop request': { text: 'Rescheduled at your request', classes: 'govuk-tag--grey' },
   'rescheduled service request': { text: 'Rescheduled by Probation Service', classes: 'govuk-tag--grey' },
-  suspended: { text: 'Suspended', classes: 'govuk-tag--green' },
+  suspended: { text: 'Suspended', classes: 'govuk-tag--grey' },
   'unacceptable absence': { text: 'Missed – absence reason rejected', classes: 'govuk-tag--red' },
   'yot breach not enforceable': { text: 'Breach – not enforceable', classes: 'govuk-tag--grey' },
 }
@@ -322,14 +370,21 @@ export default function appointmentsRoutes(services: Services): Router {
     return res.send(ics)
   })
 
-  router.get('/', async (_req, res, next) => {
+  router.get('/', async (req, res, next) => {
     try {
       const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
-      const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
-        services.peopleOnProbationService.getFutureAppointments(crn, 0, 100),
-        services.peopleOnProbationService.getPastAppointments(crn, 0, 100),
+      const tab: AppointmentsTab = req.query.tab === 'past' ? 'past' : 'upcoming'
+      const requestedPage = Number(req.query.page)
+      const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
+      const apiPage = page - 1
+
+      const [activeTabAppointments, pastAppointmentsForAlert, sentenceProgress] = await Promise.all([
+        tab === 'past'
+          ? services.peopleOnProbationService.getPastAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE)
+          : services.peopleOnProbationService.getFutureAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE),
+        services.peopleOnProbationService.getPastAppointments(crn, 0, MISSED_ALERT_LOOKBACK_SIZE),
         services.peopleOnProbationService.getSentences(crn),
       ])
 
@@ -342,9 +397,8 @@ export default function appointmentsRoutes(services: Services): Router {
         OTHER_CHANNEL_APPOINTMENT_CATEGORY_CODES.includes(code),
       )
 
-      const futureAppointmentsToShow = futureAppointments.content.filter(shouldShowAppointment)
-      const pastAppointmentsToShow = pastAppointments.content.filter(shouldShowAppointment)
-      const missedAppointments = pastAppointmentsToShow
+      const appointmentsToShow = activeTabAppointments.content
+      const missedAppointments = pastAppointmentsForAlert.content
         .filter(isMissedMandatoryAppointmentOrActivity)
         .filter(appointment =>
           shouldIncludeMissedAppointmentInAlert(
@@ -367,20 +421,21 @@ export default function appointmentsRoutes(services: Services): Router {
           }
         : null
 
-      const mostRecentUpdate = [...futureAppointmentsToShow, ...pastAppointmentsToShow]
+      const mostRecentUpdate = appointmentsToShow
         .map(a => a.lastUpdatedAt)
         .filter(Boolean)
         .sort()
         .reverse()[0]
 
       return res.render('pages/appointments', {
+        tab,
         missedAlert,
         missedAppointmentsCount: missedAlertEnabled ? missedAppointments.length : 0,
         lastUpdatedAt: formatDateTime(mostRecentUpdate),
         hasTagAppointments,
         hasOtherChannelAppointments,
-        futureAppointments: futureAppointmentsToShow.map(toAppointmentCardView),
-        pastAppointments: pastAppointmentsToShow.map(toAppointmentCardView),
+        appointments: appointmentsToShow.map(toAppointmentCardView),
+        pagination: buildPaginationView(tab, activeTabAppointments.page),
       })
     } catch (error) {
       return next(error)

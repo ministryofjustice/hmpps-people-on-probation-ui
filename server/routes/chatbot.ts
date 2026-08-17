@@ -4,7 +4,7 @@ import config from '../config'
 import logger from '../../logger'
 import type { Services } from '../services'
 import { getSessionCrn } from '../auth/sessionStore'
-import { shouldShowAppointment, toAppointmentCardView } from './appointments'
+import { toAppointmentCardView } from './appointments'
 import type { AppointmentCardView } from './appointments'
 import { toRequirementView } from './requirements'
 import type { RequirementView } from './requirements'
@@ -187,10 +187,7 @@ function sanitizeAppointment(appointment: AppointmentResponse): SanitizedAppoint
 }
 
 function sanitizeAppointments(appointments: AppointmentResponse[]): SanitizedAppointment[] {
-  // Same visibility filter the appointments page applies (hides certain
-  // unpaid-work project codes entirely) — an appointment the user can't see
-  // on their own appointments page shouldn't be known to the chatbot either.
-  return appointments.filter(shouldShowAppointment).map(sanitizeAppointment)
+  return appointments.map(sanitizeAppointment)
 }
 
 // The goals screen only ever renders these three tabs (see goals.ts, which

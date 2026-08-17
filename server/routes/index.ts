@@ -17,7 +17,7 @@ import {
   shouldIncludeMissedAppointmentInAlert,
   parseLocalDate,
 } from '../utils/utils'
-import appointmentsRoutes, { shouldShowAppointment } from './appointments'
+import appointmentsRoutes from './appointments'
 import goalsRoutes from './goals'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
@@ -147,10 +147,9 @@ export default function routes(services: Services): Router {
           services.peopleOnProbationService.getSentences(crn),
         ])
 
-        const nextAppointment = futureAppointments.content.find(shouldShowAppointment)
+        const [nextAppointment] = futureAppointments.content
 
         const missedAppointments = pastAppointments.content
-          .filter(shouldShowAppointment)
           .filter(isMissedMandatoryAppointmentOrActivity)
           .filter(appointment =>
             shouldIncludeMissedAppointmentInAlert(

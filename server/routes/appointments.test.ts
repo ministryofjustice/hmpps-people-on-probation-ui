@@ -93,7 +93,7 @@ describe('resolveOutcomeTag', () => {
       text: 'Rescheduled by Probation Service',
       classes: 'govuk-tag--grey',
     })
-    expect(resolveOutcomeTag('Suspended')).toEqual({ text: 'Suspended', classes: 'govuk-tag--green' })
+    expect(resolveOutcomeTag('Suspended')).toEqual({ text: 'Suspended', classes: 'govuk-tag--grey' })
     expect(resolveOutcomeTag('Unacceptable Absence')).toEqual({
       text: 'Missed – absence reason rejected',
       classes: 'govuk-tag--red',
@@ -729,7 +729,7 @@ describe('GET /appointments', () => {
     })
 
     const response = await request(app)
-      .get('/appointments')
+      .get('/appointments?tab=past')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -750,62 +750,12 @@ describe('GET /appointments', () => {
     })
 
     const response = await request(app)
-      .get('/appointments')
+      .get('/appointments?tab=past')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
     expect(response.text).toContain('Attended')
     expect(response.text).toContain('Status')
-  })
-
-  it('hides future appointments with the hidden project code N07TTA2', async () => {
-    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
-      content: [
-        {
-          date: '2026-06-20',
-          type: 'Community Payback',
-          unpaidWork: { project: { code: 'N07TTA2' } },
-        },
-        {
-          date: '2026-06-21',
-          type: 'Office visit',
-        },
-      ],
-    })
-
-    const response = await request(app)
-      .get('/appointments')
-      .set('Cookie', await createAppSessionCookie('X123456'))
-      .expect(200)
-
-    expect(response.text).not.toContain('Community payback')
-    expect(response.text).toContain('Office visit')
-  })
-
-  it('hides past appointments with the hidden project code N07TTA2', async () => {
-    peopleOnProbationService.getPastAppointments.mockResolvedValue({
-      content: [
-        {
-          date: '2026-06-01',
-          type: 'Community Payback',
-          unpaidWork: { project: { code: 'N07TTA2' } },
-          attended: true,
-        },
-        {
-          date: '2026-06-02',
-          type: 'Office visit',
-          attended: true,
-        },
-      ],
-    })
-
-    const response = await request(app)
-      .get('/appointments')
-      .set('Cookie', await createAppSessionCookie('X123456'))
-      .expect(200)
-
-    expect(response.text).not.toContain('Community payback')
-    expect(response.text).toContain('Office visit')
   })
 
   it('shows the tag appointments guidance when a requirement main category is a tag code', async () => {
@@ -868,5 +818,93 @@ describe('GET /appointments', () => {
     expect(response.text).not.toContain('Why this might happen')
     expect(response.text).not.toContain('This list might not show all appointments')
     expect(response.text).toContain('This list might not be up to date yet.')
+  })
+
+  it('defaults to the upcoming tab, fetching from the future-appointments endpoint at a page size of 15', async () => {
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 15)
+    expect(response.text).toContain('Upcoming appointments and activities')
+    expect(response.text).toMatch(/moj-sub-navigation__link" aria-current="page" href="\/appointments\?tab=upcoming"/)
+    expect(response.text).not.toMatch(/moj-sub-navigation__link" aria-current="page" href="\/appointments\?tab=past"/)
+  })
+
+  it('switches to the past tab, fetching from the past-appointments endpoint at a page size of 15', async () => {
+    const response = await request(app)
+      .get('/appointments?tab=past')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 0, 15)
+    expect(response.text).toContain('Past appointments and activities')
+    expect(response.text).toMatch(/moj-sub-navigation__link" aria-current="page" href="\/appointments\?tab=past"/)
+    expect(response.text).not.toMatch(
+      /moj-sub-navigation__link" aria-current="page" href="\/appointments\?tab=upcoming"/,
+    )
+  })
+
+  it('requests the zero-indexed API page for the requested page query value', async () => {
+    await request(app)
+      .get('/appointments?tab=past&page=3')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 2, 15)
+  })
+
+  it.each([['0'], ['-1'], ['not-a-number'], ['']])(
+    'defaults to page 1 for an invalid page query value (%s)',
+    async pageValue => {
+      await request(app)
+        .get(`/appointments?page=${pageValue}`)
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 15)
+    },
+  )
+
+  it('renders pagination with page links, next link, and results count when there is more than one page', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [],
+      page: { number: 0, size: 15, totalElements: 30, totalPages: 2 },
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Showing 1 to 15 of 30 total results')
+    expect(response.text).toContain('/appointments?tab=upcoming&amp;page=2')
+    expect(response.text).toContain('govuk-pagination__next')
+  })
+
+  it('does not render pagination when there is only one page', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [],
+      page: { number: 0, size: 15, totalElements: 3, totalPages: 1 },
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('govuk-pagination__list')
+    expect(response.text).toContain('Showing 1 to 3 of 3 total results')
+  })
+
+  it('renders the back to top link', async () => {
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Back to top')
+    expect(response.text).toContain('href="#main-content"')
   })
 })

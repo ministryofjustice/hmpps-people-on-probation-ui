@@ -367,32 +367,6 @@ describe('POST /api/chatbot/chat', () => {
     expect(ctx.sentencePlan.goals[0].steps[0].statusDate).toBeUndefined()
   })
 
-  it('drops appointments hidden from the appointments screen (matching shouldShowAppointment)', async () => {
-    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
-      ok: true,
-      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-hidden"}\n\n']),
-    } as unknown as Response)
-
-    const app = buildApp({
-      services: {
-        peopleOnProbationService: {
-          getFutureAppointments: jest.fn().mockResolvedValue({
-            content: [
-              { date: '2026-07-01', type: 'Community Payback', unpaidWork: { project: { code: 'N07TTA2' } } },
-              { date: '2026-07-02', type: 'Office Visit' },
-            ],
-          }),
-        },
-      },
-    })
-
-    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
-
-    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
-    expect(ctx.futureAppointments).toHaveLength(1)
-    expect(ctx.futureAppointments[0].date).toBe(formatDateWithDay('2026-07-02'))
-  })
-
   it('resolves unpaid work appointment type and hides the time/location/practitioner the appointments screen also hides for them', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,

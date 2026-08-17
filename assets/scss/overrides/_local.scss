@@ -34,6 +34,21 @@
   }
 }
 
+// "Back to top" link — icon size/gap from Figma
+.pop-back-to-top {
+  &__link {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: govuk-spacing(2);
+  }
+
+  &__icon {
+    width: 15px;
+    height: 19px;
+    flex-shrink: 0;
+  }
+}
+
 // Back link: 60px from phase banner above (GOV.UK default margin-bottom 30px is kept)
 .govuk-back-link {
   margin-top: govuk-spacing(9);
