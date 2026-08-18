@@ -83,9 +83,11 @@ const OTHER_CHANNEL_APPOINTMENT_CATEGORY_CODES = ['Q', 'G', 'H', 'P', 'E', 'I', 
 
 export const APPOINTMENTS_PAGE_SIZE = 15
 
-// Broader than the display page size — used only to look back for missed mandatory
-// appointments to show in the alert banner, independent of which tab/page is displayed.
-const MISSED_ALERT_LOOKBACK_SIZE = 50
+// Broader than the display page size — used to look back for missed mandatory appointments
+// (past only) and to compute the "Last update" timestamp (past and future), independent of
+// which tab/page is displayed. Shared with server/routes/index.ts, which shows the same
+// missed-appointment alert on the homepage.
+export const MISSED_ALERT_LOOKBACK_SIZE = 50
 
 function buildAppointmentsUrl(tab: AppointmentsTab, page: number): string {
   return `/appointments?tab=${tab}${page > 1 ? `&page=${page}` : ''}`
@@ -380,13 +382,20 @@ export default function appointmentsRoutes(services: Services): Router {
       const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
       const apiPage = page - 1
 
-      const [activeTabAppointments, pastAppointmentsForAlert, sentenceProgress] = await Promise.all([
-        tab === 'past'
-          ? services.peopleOnProbationService.getPastAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE)
-          : services.peopleOnProbationService.getFutureAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE),
-        services.peopleOnProbationService.getPastAppointments(crn, 0, MISSED_ALERT_LOOKBACK_SIZE),
-        services.peopleOnProbationService.getSentences(crn),
-      ])
+      const [activeTabAppointments, pastAppointmentsForAlert, futureAppointmentsForLastUpdated, sentenceProgress] =
+        await Promise.all([
+          tab === 'past'
+            ? services.peopleOnProbationService.getPastAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE)
+            : services.peopleOnProbationService.getFutureAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE),
+          services.peopleOnProbationService.getPastAppointments(crn, 0, MISSED_ALERT_LOOKBACK_SIZE),
+          services.peopleOnProbationService.getFutureAppointments(crn, 0, MISSED_ALERT_LOOKBACK_SIZE),
+          services.peopleOnProbationService.getSentences(crn),
+        ])
+
+      const totalPages = activeTabAppointments.page?.totalPages
+      if (totalPages && page > totalPages) {
+        return res.redirect(buildAppointmentsUrl(tab, totalPages))
+      }
 
       const mainCategoryCodes = sentenceProgress.sentences.flatMap(sentence => [
         ...sentence.requirements.map(r => r.mainCategory?.code),
@@ -421,7 +430,10 @@ export default function appointmentsRoutes(services: Services): Router {
           }
         : null
 
-      const mostRecentUpdate = appointmentsToShow
+      // Derived from the past/future lookback fetches rather than appointmentsToShow, so it stays
+      // stable as the user pages through or switches tabs — those only change which slice of
+      // data is displayed, not when the underlying data was last updated.
+      const mostRecentUpdate = [...pastAppointmentsForAlert.content, ...futureAppointmentsForLastUpdated.content]
         .map(a => a.lastUpdatedAt)
         .filter(Boolean)
         .sort()

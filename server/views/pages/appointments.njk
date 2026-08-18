@@ -152,7 +152,7 @@
                 <dd class="pop-summary-card__value">{{ appointment.practitionerName }}</dd>
               </div>
             {% endif %}
-            {% if appointment.outcome %}
+            {% if tab === "past" and appointment.outcome %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Status</dt>
                 <dd class="pop-summary-card__value">

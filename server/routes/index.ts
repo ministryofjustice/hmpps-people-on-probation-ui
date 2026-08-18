@@ -17,7 +17,7 @@ import {
   shouldIncludeMissedAppointmentInAlert,
   parseLocalDate,
 } from '../utils/utils'
-import appointmentsRoutes from './appointments'
+import appointmentsRoutes, { MISSED_ALERT_LOOKBACK_SIZE } from './appointments'
 import goalsRoutes from './goals'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
@@ -143,7 +143,7 @@ export default function routes(services: Services): Router {
 
         const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
           services.peopleOnProbationService.getFutureAppointments(crn, 0, 100),
-          services.peopleOnProbationService.getPastAppointments(crn, 0, 100),
+          services.peopleOnProbationService.getPastAppointments(crn, 0, MISSED_ALERT_LOOKBACK_SIZE),
           services.peopleOnProbationService.getSentences(crn),
         ])
 
