@@ -13,6 +13,7 @@ import {
   formatDateTime,
   isMissedMandatoryAppointmentOrActivity,
   shouldIncludeMissedAppointmentInAlert,
+  APPOINTMENTS_OVERVIEW_SIZE,
 } from '../utils/utils'
 import type { AppointmentResponse, PageMetadataResponse } from '../data/peopleOnProbationApiClient'
 
@@ -82,12 +83,6 @@ const TAG_APPOINTMENT_CATEGORY_CODES = ['RM49', 'RM59', 'T']
 const OTHER_CHANNEL_APPOINTMENT_CATEGORY_CODES = ['Q', 'G', 'H', 'P', 'E', 'I', 'RM38', 'RM37']
 
 export const APPOINTMENTS_PAGE_SIZE = 15
-
-// Broader than the display page size — used to look back for missed mandatory appointments
-// (past only) and to compute the "Last update" timestamp (past and future), independent of
-// which tab/page is displayed. Shared with server/routes/index.ts, which shows the same
-// missed-appointment alert on the homepage.
-export const MISSED_ALERT_LOOKBACK_SIZE = 50
 
 function buildAppointmentsUrl(tab: AppointmentsTab, page: number): string {
   return `/appointments?tab=${tab}${page > 1 ? `&page=${page}` : ''}`
@@ -387,8 +382,8 @@ export default function appointmentsRoutes(services: Services): Router {
           tab === 'past'
             ? services.peopleOnProbationService.getPastAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE)
             : services.peopleOnProbationService.getFutureAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE),
-          services.peopleOnProbationService.getPastAppointments(crn, 0, MISSED_ALERT_LOOKBACK_SIZE),
-          services.peopleOnProbationService.getFutureAppointments(crn, 0, MISSED_ALERT_LOOKBACK_SIZE),
+          services.peopleOnProbationService.getPastAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
+          services.peopleOnProbationService.getFutureAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
           services.peopleOnProbationService.getSentences(crn),
         ])
 
