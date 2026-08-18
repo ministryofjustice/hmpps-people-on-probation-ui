@@ -736,6 +736,25 @@ describe('GET /appointments', () => {
     expect(response.text).not.toContain('Some unexpected value')
   })
 
+  it('never shows a Mandatory tag, even for national standards appointments or titles containing "NS"', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-20',
+          type: 'Planned Office Visit (NS)',
+          nationalStandards: true,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Mandatory')
+  })
+
   it('maps a known outcome to its friendly label and colour', async () => {
     peopleOnProbationService.getPastAppointments.mockResolvedValue({
       content: [
