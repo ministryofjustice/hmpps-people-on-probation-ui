@@ -59,6 +59,9 @@
       ]
     }) }}
 
+    {% if pagination and pagination.totalPages > 1 %}
+      <span class="govuk-caption-l">Page {{ pagination.currentPage }} of {{ pagination.totalPages }}</span>
+    {% endif %}
     <h2 class="govuk-heading-l">{{ "Past appointments and activities" if tab === "past" else "Upcoming appointments and activities" }}</h2>
 
     {% set whyDetailsHtml %}
@@ -164,6 +167,15 @@
       <p class="govuk-body">{{ "You have no past appointments." if tab === "past" else "You have no upcoming appointments." }}</p>
     {% endif %}
 
+    <p class="pop-back-to-top govuk-!-margin-top-6 govuk-!-margin-bottom-6">
+      <a class="govuk-link govuk-link--no-visited-state pop-back-to-top__link" href="#main-content">
+        <svg class="pop-back-to-top__icon" xmlns="http://www.w3.org/2000/svg" width="14.8683" height="19.1" viewBox="0 0 14.8683 19.1" fill="none" aria-hidden="true" focusable="false">
+          <path d="M7.43413 0L0 7.43413L1.6012 9.1497L6.17605 4.57485V19.1H8.46347V4.57485L13.3814 9.1497L14.8683 7.31976L7.43413 0Z" fill="currentColor"/>
+        </svg>
+        Back to top
+      </a>
+    </p>
+
     {% if pagination %}
       {{ mojPagination({
         items: pagination.items,
@@ -178,15 +190,6 @@
         landmarkLabel: "Appointments pagination"
       }) }}
     {% endif %}
-
-    <p class="pop-back-to-top govuk-!-margin-top-6">
-      <a class="govuk-link govuk-link--no-visited-state pop-back-to-top__link" href="#main-content">
-        <svg class="pop-back-to-top__icon" xmlns="http://www.w3.org/2000/svg" width="14.8683" height="19.1" viewBox="0 0 14.8683 19.1" fill="none" aria-hidden="true" focusable="false">
-          <path d="M7.43413 0L0 7.43413L1.6012 9.1497L6.17605 4.57485V19.1H8.46347V4.57485L13.3814 9.1497L14.8683 7.31976L7.43413 0Z" fill="currentColor"/>
-        </svg>
-        Back to top
-      </a>
-    </p>
 
   </div>
 
