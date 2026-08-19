@@ -93,7 +93,7 @@ describe('resolveOutcomeTag', () => {
       text: 'Rescheduled by Probation Service',
       classes: 'govuk-tag--grey',
     })
-    expect(resolveOutcomeTag('Suspended')).toEqual({ text: 'Suspended', classes: 'govuk-tag--green' })
+    expect(resolveOutcomeTag('Suspended')).toEqual({ text: 'Suspended', classes: 'govuk-tag--grey' })
     expect(resolveOutcomeTag('Unacceptable Absence')).toEqual({
       text: 'Missed – absence reason rejected',
       classes: 'govuk-tag--red',
@@ -716,6 +716,45 @@ describe('GET /appointments', () => {
     expect(response.text).not.toContain('9am to 12pm')
   })
 
+  it('does not show a Status row on the upcoming tab, even if a future appointment carries a stray outcome value', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-20',
+          type: 'Office appointment',
+          outcome: 'Some unexpected value',
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('<dt class="pop-summary-card__key">Status</dt>')
+    expect(response.text).not.toContain('Some unexpected value')
+  })
+
+  it('never shows a Mandatory tag, even for national standards appointments or titles containing "NS"', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [
+        {
+          date: '2026-06-20',
+          type: 'Planned Office Visit (NS)',
+          nationalStandards: true,
+        },
+      ],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Mandatory')
+  })
+
   it('maps a known outcome to its friendly label and colour', async () => {
     peopleOnProbationService.getPastAppointments.mockResolvedValue({
       content: [
@@ -729,7 +768,7 @@ describe('GET /appointments', () => {
     })
 
     const response = await request(app)
-      .get('/appointments')
+      .get('/appointments?tab=past')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -750,62 +789,12 @@ describe('GET /appointments', () => {
     })
 
     const response = await request(app)
-      .get('/appointments')
+      .get('/appointments?tab=past')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
     expect(response.text).toContain('Attended')
     expect(response.text).toContain('Status')
-  })
-
-  it('hides future appointments with the hidden project code N07TTA2', async () => {
-    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
-      content: [
-        {
-          date: '2026-06-20',
-          type: 'Community Payback',
-          unpaidWork: { project: { code: 'N07TTA2' } },
-        },
-        {
-          date: '2026-06-21',
-          type: 'Office visit',
-        },
-      ],
-    })
-
-    const response = await request(app)
-      .get('/appointments')
-      .set('Cookie', await createAppSessionCookie('X123456'))
-      .expect(200)
-
-    expect(response.text).not.toContain('Community payback')
-    expect(response.text).toContain('Office visit')
-  })
-
-  it('hides past appointments with the hidden project code N07TTA2', async () => {
-    peopleOnProbationService.getPastAppointments.mockResolvedValue({
-      content: [
-        {
-          date: '2026-06-01',
-          type: 'Community Payback',
-          unpaidWork: { project: { code: 'N07TTA2' } },
-          attended: true,
-        },
-        {
-          date: '2026-06-02',
-          type: 'Office visit',
-          attended: true,
-        },
-      ],
-    })
-
-    const response = await request(app)
-      .get('/appointments')
-      .set('Cookie', await createAppSessionCookie('X123456'))
-      .expect(200)
-
-    expect(response.text).not.toContain('Community payback')
-    expect(response.text).toContain('Office visit')
   })
 
   it('shows the tag appointments guidance when a requirement main category is a tag code', async () => {
@@ -868,5 +857,146 @@ describe('GET /appointments', () => {
     expect(response.text).not.toContain('Why this might happen')
     expect(response.text).not.toContain('This list might not show all appointments')
     expect(response.text).toContain('This list might not be up to date yet.')
+  })
+
+  it('keeps "Last update" stable across tabs and pages, taking the most recent of the past and future lookback fetches', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [{ date: '2026-06-01', lastUpdatedAt: '2026-06-15T10:00:00Z' }],
+      page: { number: 0, size: 50, totalElements: 30, totalPages: 2 },
+    })
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [{ date: '2026-07-01', lastUpdatedAt: '2026-07-20T10:00:00Z' }],
+    })
+
+    const upcomingResponse = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+    const pastPage2Response = await request(app)
+      .get('/appointments?tab=past&page=2')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    // Both responses should show the same "Last update" — derived from the always-fetched
+    // past and future lookbacks, not from whichever page/tab is currently displayed — and it
+    // should reflect the most recent update across both, not just the past lookback.
+    expect(upcomingResponse.text).toContain('Last update: 20 July 2026')
+    expect(pastPage2Response.text).toContain('Last update: 20 July 2026')
+  })
+
+  it('defaults to the upcoming tab, fetching from the future-appointments endpoint at a page size of 15', async () => {
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 15)
+    expect(response.text).toContain('Upcoming appointments and activities')
+    expect(response.text).toMatch(/moj-sub-navigation__link" aria-current="page" href="\/appointments\?tab=upcoming"/)
+    expect(response.text).not.toMatch(/moj-sub-navigation__link" aria-current="page" href="\/appointments\?tab=past"/)
+  })
+
+  it('switches to the past tab, fetching from the past-appointments endpoint at a page size of 15', async () => {
+    const response = await request(app)
+      .get('/appointments?tab=past')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 0, 15)
+    expect(response.text).toContain('Past appointments and activities')
+    expect(response.text).toMatch(/moj-sub-navigation__link" aria-current="page" href="\/appointments\?tab=past"/)
+    expect(response.text).not.toMatch(
+      /moj-sub-navigation__link" aria-current="page" href="\/appointments\?tab=upcoming"/,
+    )
+  })
+
+  it('requests the zero-indexed API page for the requested page query value', async () => {
+    await request(app)
+      .get('/appointments?tab=past&page=3')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 2, 15)
+  })
+
+  it.each([['0'], ['-1'], ['not-a-number'], ['']])(
+    'defaults to page 1 for an invalid page query value (%s)',
+    async pageValue => {
+      await request(app)
+        .get(`/appointments?page=${pageValue}`)
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 15)
+    },
+  )
+
+  it('renders pagination with page links, next link, and results count when there is more than one page', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [],
+      page: { number: 0, size: 15, totalElements: 30, totalPages: 2 },
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Showing 1 to 15 of 30 total results')
+    expect(response.text).toContain('/appointments?tab=upcoming&amp;page=2')
+    expect(response.text).toContain('govuk-pagination__next')
+  })
+
+  it('does not render pagination when there is only one page', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [],
+      page: { number: 0, size: 15, totalElements: 3, totalPages: 1 },
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('govuk-pagination__list')
+    expect(response.text).toContain('Showing 1 to 3 of 3 total results')
+  })
+
+  it('renders the back to top link', async () => {
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Back to top')
+    expect(response.text).toContain('href="#main-content"')
+  })
+
+  it('redirects to the last valid page when the requested page is beyond totalPages', async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({
+      content: [],
+      page: { number: 0, size: 15, totalElements: 3, totalPages: 1 },
+    })
+
+    const response = await request(app)
+      .get('/appointments?page=999')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(302)
+
+    expect(response.headers.location).toBe('/appointments?tab=upcoming')
+  })
+
+  it('redirects to the last valid page for the past tab, preserving tab=past', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [],
+      page: { number: 0, size: 15, totalElements: 30, totalPages: 2 },
+    })
+
+    const response = await request(app)
+      .get('/appointments?tab=past&page=999')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(302)
+
+    expect(response.headers.location).toBe('/appointments?tab=past&page=2')
   })
 })

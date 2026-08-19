@@ -44,11 +44,8 @@
     display: flex;
     align-items: center;
     gap: govuk-spacing(2);
-    // Natural (content) width, not a fixed share - __tag is now a sibling
-    // (not nested in here), and needs to sit on the same line as these
-    // links on desktop without either of them needing to add up to a hard
-    // percentage. margin-left: auto pushes this - and __tag right after it,
-    // since order places it next - to the row's end as a cluster.
+    // Natural (content) width, not a fixed share - pushes this to the row's
+    // end regardless of __type's width.
     flex: 0 0 auto;
     order: 2;
     margin-left: auto;
@@ -58,38 +55,8 @@
     }
 
     @include govuk-media-query($until: tablet) {
-      // On mobile __tag (order 2) sits next to __type instead, so these
-      // links drop to their own row after it.
       order: 3;
       flex-basis: 100%;
-      margin-left: 0;
-    }
-  }
-
-  // A lone sibling of __type (and, for appointments with actions, of
-  // __actions too) - never nested inside __actions, so it can be
-  // repositioned per breakpoint independently of it via order.
-  &__tag {
-    // Desktop: after __type (order 0, default) and __actions (order 2) -
-    // sits at the row's end, right next to the action links.
-    order: 3;
-    // Default: past appointments have no __actions sibling, so __tag is the
-    // only thing that can push itself to the row's end.
-    margin-left: auto;
-
-    // Future appointments: __actions precedes __tag and already has its own
-    // margin-left: auto claiming all the free space - if __tag also set
-    // auto here, flexbox would split that free space between the two,
-    // opening an unwanted gap between the actions links and the tag. Sit
-    // flush against __actions instead.
-    .pop-summary-card__actions + & {
-      margin-left: 0;
-    }
-
-    @include govuk-media-query($until: tablet) {
-      // Mobile: right after __type, before __actions (order 3 on mobile) -
-      // same line as the appointment type/title, not pushed to the row's end.
-      order: 2;
       margin-left: 0;
     }
   }
@@ -162,10 +129,4 @@
 .pop-requirements__section-heading {
   margin-top: govuk-spacing(6);
   margin-bottom: govuk-spacing(6);
-}
-
-// Black tag variant for Mandatory appointments
-.govuk-tag--black {
-  background: govuk-colour('black');
-  color: govuk-colour('white');
 }

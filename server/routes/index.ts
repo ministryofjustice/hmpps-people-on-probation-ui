@@ -16,8 +16,9 @@ import {
   isMissedMandatoryAppointmentOrActivity,
   shouldIncludeMissedAppointmentInAlert,
   parseLocalDate,
+  APPOINTMENTS_OVERVIEW_SIZE,
 } from '../utils/utils'
-import appointmentsRoutes, { shouldShowAppointment } from './appointments'
+import appointmentsRoutes from './appointments'
 import goalsRoutes from './goals'
 import requirementsRoutes from './requirements'
 import probationOfficerRoutes from './probationOfficer'
@@ -142,15 +143,14 @@ export default function routes(services: Services): Router {
         }
 
         const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
-          services.peopleOnProbationService.getFutureAppointments(crn, 0, 100),
-          services.peopleOnProbationService.getPastAppointments(crn, 0, 100),
+          services.peopleOnProbationService.getFutureAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
+          services.peopleOnProbationService.getPastAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
           services.peopleOnProbationService.getSentences(crn),
         ])
 
-        const nextAppointment = futureAppointments.content.find(shouldShowAppointment)
+        const [nextAppointment] = futureAppointments.content
 
         const missedAppointments = pastAppointments.content
-          .filter(shouldShowAppointment)
           .filter(isMissedMandatoryAppointmentOrActivity)
           .filter(appointment =>
             shouldIncludeMissedAppointmentInAlert(

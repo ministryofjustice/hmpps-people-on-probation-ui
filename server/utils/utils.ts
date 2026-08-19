@@ -127,6 +127,12 @@ export const formatPractitionerName = (name?: PersonNameResponse): string | unde
   return formattedName && /\bunallocated\b/i.test(formattedName) ? undefined : formattedName
 }
 
+// Broader than the appointments page's display page size — used by both the appointments page
+// and the homepage as a general-purpose sample size when fetching past or future appointments
+// for cross-cutting concerns (detecting missed mandatory appointments, computing the "Last
+// update" timestamp), independent of which tab/page is displayed.
+export const APPOINTMENTS_OVERVIEW_SIZE = 50
+
 export const isMissedMandatoryAppointmentOrActivity = (appointment: AppointmentResponse): boolean =>
   appointment.attended === false && (appointment.nationalStandards === true || Boolean(appointment.unpaidWork))
 

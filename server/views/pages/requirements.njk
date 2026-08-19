@@ -1,6 +1,7 @@
 {% extends "../partials/layout.njk" %}
 {% from "../macros/showDetails.njk" import showDetails %}
 {% from "partials/progress-bar.njk" import progressBar %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 
 {% set pageTitle = "Order requirements – Check your probation account – GOV.UK" %}
 {% set currentPage = "requirements" %}
@@ -130,6 +131,15 @@
           {% endif %}
         </dl>
       </div>
+
+      {% if requirement.isUnpaidWork %}
+        {% call govukInsetText({ classes: "guidance-panel" }) %}
+          <p class="govuk-body govuk-!-margin-bottom-0">
+            You can complete up to 30% of your community payback hours online through
+            <a class="govuk-link govuk-link--no-visited-state" href="https://www.communitycampus.online/#/sign-in" target="_blank" rel="noopener noreferrer" data-tracking-id="community_campus_link">Community Campus<span class="govuk-visually-hidden"> (opens in new tab)</span></a>
+          </p>
+        {% endcall %}
+      {% endif %}
     {% endfor %}
   {% endif %}
 
