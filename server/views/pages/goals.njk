@@ -22,7 +22,7 @@
               <p class="govuk-body govuk-!-margin-bottom-0">Aim to achieve this by {{ goal.targetDate }}.</p>
             {% endif %}
             {% if goal.totalSteps > 0 %}
-              <p class="govuk-body govuk-!-margin-bottom-0">{{ goal.completedSteps }} out of {{ goal.totalSteps }} task{{ "s" if goal.totalSteps !== 1 }} completed.</p>
+              <p class="govuk-body govuk-!-margin-bottom-0">{{ goal.completedSteps }} of {{ goal.totalSteps }} step{{ "s" if goal.totalSteps !== 1 }} completed.</p>
             {% endif %}
           </div>
         {% endif %}
@@ -34,7 +34,7 @@
                 <thead class="govuk-table__head">
                   <tr class="govuk-table__row">
                     <th scope="col" class="govuk-table__header pop-goal-card__col--who">Who will do this</th>
-                    <th scope="col" class="govuk-table__header">Tasks</th>
+                    <th scope="col" class="govuk-table__header">Steps</th>
                     <th scope="col" class="govuk-table__header pop-goal-card__col--status">Status</th>
                   </tr>
                 </thead>
@@ -42,7 +42,7 @@
                   {% for step in goal.steps %}
                     <tr class="govuk-table__row">
                       <td class="govuk-table__cell" data-label="Who will do this">{{ step.actor }}</td>
-                      <td class="govuk-table__cell" data-label="Tasks">{{ step.description }}</td>
+                      <td class="govuk-table__cell" data-label="Steps">{{ step.description }}</td>
                       <td class="govuk-table__cell" data-label="Status">
                         {{ govukTag({ text: step.tag.text, classes: step.tag.classes }) }}
                       </td>
@@ -74,7 +74,7 @@
              href="/goals?tab=current"
              data-tab-target="panel-current"
              {% if activeTab === 'current' %}aria-current="page"{% endif %}>
-            Current goals ({{ currentGoals | length }})
+            Goals to work on now ({{ currentGoals | length }})
           </a>
         </li>
         <li class="moj-sub-navigation__item">
@@ -97,7 +97,7 @@
     </nav>
 
     <p class="pop-goals-mobile-heading govuk-!-margin-bottom-4" aria-hidden="true" id="goals-mobile-heading">
-      {% if activeTab === 'current' %}Current goals ({{ currentGoals | length }})
+      {% if activeTab === 'current' %}Goals to work on now ({{ currentGoals | length }})
       {% elif activeTab === 'future' %}Future goals ({{ futureGoals | length }})
       {% else %}Achieved goals ({{ achievedGoals | length }})
       {% endif %}

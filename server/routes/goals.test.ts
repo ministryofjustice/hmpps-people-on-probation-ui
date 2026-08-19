@@ -111,7 +111,7 @@ describe('GET /goals', () => {
         .expect(200)
 
       expect(res.text).toContain('aria-current="page"')
-      expect(res.text).toContain('Current goals')
+      expect(res.text).toContain('Goals to work on now')
     })
 
     it('renders the future tab when tab=future', async () => {
@@ -138,7 +138,7 @@ describe('GET /goals', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('Current goals')
+      expect(res.text).toContain('Goals to work on now')
     })
   })
 
@@ -192,6 +192,17 @@ describe('GET /goals', () => {
 
       expect(res.text).toContain('Completed')
       expect(res.text).toContain('In progress')
+    })
+
+    it('shows the "x of y steps completed" progress line and a Steps column, not tasks', async () => {
+      const res = await request(app)
+        .get('/goals')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('1 of 2 steps completed.')
+      expect(res.text).toContain('<th scope="col" class="govuk-table__header">Steps</th>')
+      expect(res.text).not.toContain('task')
     })
 
     it('formats the target date', async () => {
@@ -299,7 +310,7 @@ describe('GET /goals', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('Current goals (0)')
+      expect(res.text).toContain('Goals to work on now (0)')
       expect(res.text).toContain('Future goals (0)')
       expect(res.text).toContain('Achieved goals (0)')
     })
@@ -315,7 +326,7 @@ describe('GET /goals', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('Current goals (0)')
+      expect(res.text).toContain('Goals to work on now (0)')
       expect(res.text).toContain('Future goals (0)')
       expect(res.text).toContain('Achieved goals (0)')
       expect(res.text).not.toContain('goals-last-updated')
