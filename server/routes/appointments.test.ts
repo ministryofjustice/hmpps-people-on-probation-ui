@@ -945,9 +945,17 @@ describe('GET /appointments', () => {
     expect(response.text).toContain('Showing 1 to 15 of 30 total results')
     expect(response.text).toContain('/appointments?tab=upcoming&amp;page=2')
     expect(response.text).toContain('govuk-pagination__next')
+    expect(response.text).toContain('<span class="govuk-caption-l">Page 1 of 2</span>')
+
+    // Back to top must appear above the pagination buttons, matching the Figma design.
+    const backToTopIndex = response.text.indexOf('Back to top')
+    const paginationIndex = response.text.indexOf('moj-pagination__pagination')
+    expect(backToTopIndex).toBeGreaterThan(-1)
+    expect(paginationIndex).toBeGreaterThan(-1)
+    expect(backToTopIndex).toBeLessThan(paginationIndex)
   })
 
-  it('does not render pagination when there is only one page', async () => {
+  it('does not render pagination, or the "Page X of Y" caption, when there is only one page', async () => {
     peopleOnProbationService.getFutureAppointments.mockResolvedValue({
       content: [],
       page: { number: 0, size: 15, totalElements: 3, totalPages: 1 },
@@ -960,6 +968,25 @@ describe('GET /appointments', () => {
 
     expect(response.text).not.toContain('govuk-pagination__list')
     expect(response.text).toContain('Showing 1 to 3 of 3 total results')
+    expect(response.text).not.toContain('govuk-caption-l')
+    expect(response.text).not.toContain('Page 1 of 1')
+  })
+
+  it('shows the "Page X of Y" caption for the currently requested page, above the tab heading', async () => {
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({
+      content: [],
+      page: { number: 2, size: 15, totalElements: 60, totalPages: 4 },
+    })
+
+    const response = await request(app)
+      .get('/appointments?tab=past&page=3')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    const captionIndex = response.text.indexOf('Page 3 of 4')
+    const headingIndex = response.text.indexOf('Past appointments and activities</h2>')
+    expect(captionIndex).toBeGreaterThan(-1)
+    expect(captionIndex).toBeLessThan(headingIndex)
   })
 
   it('renders the back to top link', async () => {

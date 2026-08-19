@@ -26,6 +26,8 @@ export type PaginationView = {
   previous?: { href: string }
   next?: { href: string }
   results: { from: number; to: number; count: number }
+  currentPage: number
+  totalPages: number
 }
 
 export type AppointmentCardView = {
@@ -118,6 +120,8 @@ export function buildPaginationView(
       to: Math.min((page.number + 1) * size, totalElements),
       count: totalElements,
     },
+    currentPage,
+    totalPages,
   }
 }
 
