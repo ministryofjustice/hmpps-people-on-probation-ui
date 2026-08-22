@@ -1,8 +1,6 @@
 .pop-progress {
   &__row {
-    display: flex;
-    align-items: flex-start;
-    gap: govuk-spacing(3);
+    display: block;
   }
 
   &__title {
@@ -12,8 +10,8 @@
 
   &__bar-area {
     position: relative;
-    flex: 1;
-    height: 55px;
+    width: 100%;
+    height: 65px;
   }
 
   &__track {
@@ -45,47 +43,23 @@
   &__completed {
     @include govuk-font($size: 16);
     position: absolute;
-    top: 36px;
+    top: 44px;
     left: 0;
+    right: 0;
     margin: 0;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   &__remaining {
     @include govuk-font($size: 16);
-    flex-shrink: 0;
+    display: block;
     margin: 0;
-    padding-top: 5px;
+    padding-top: govuk-spacing(2);
     text-align: left;
-    white-space: nowrap;
+    white-space: normal;
   }
 
-  @include govuk-media-query($until: tablet) {
-    &__row {
-      display: block;
-    }
-
-    &__bar-area {
-      width: 100%;
-      height: 65px;
-    }
-
-    &__completed {
-      right: 0;
-      top: 44px;
-      white-space: normal;
-      width: auto;
-    }
-
-    &__remaining {
-      display: block;
-      text-align: left;
-      white-space: normal;
-      padding-top: govuk-spacing(2);
-    }
-
-    &__remaining-break {
-      display: none;
-    }
+  &__remaining-break {
+    display: none;
   }
 }

@@ -1,0 +1,29 @@
+.pop-requirement-cards {
+  display: flex;
+  flex-direction: column;
+  gap: govuk-spacing(6);
+}
+
+.pop-requirement-card {
+  display: block;
+  border: 1px solid #d9dadb;
+  border-bottom-width: 5px;
+  padding: govuk-spacing(5);
+  text-decoration: none;
+
+  &__title {
+    @include govuk-font($size: 24, $weight: bold);
+    color: $govuk-link-colour;
+    text-decoration: underline;
+  }
+
+  &:hover &__title {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: $govuk-focus-width solid $govuk-focus-colour;
+    outline-offset: 0;
+    box-shadow: inset 0 0 0 4px $govuk-focus-text-colour;
+  }
+}

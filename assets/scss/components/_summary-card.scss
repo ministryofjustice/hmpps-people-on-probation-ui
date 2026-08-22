@@ -130,3 +130,44 @@
   margin-top: govuk-spacing(6);
   margin-bottom: govuk-spacing(6);
 }
+
+// Borderless variant - rows separated by dividers only, no outer box and no
+// header
+.pop-summary-card--flat {
+  border: none;
+
+  .pop-summary-card__details {
+    padding: 0;
+  }
+
+  .pop-summary-card__row:last-child {
+    border-bottom: 1px solid $govuk-border-colour;
+  }
+
+  // Key/value sit side by side on desktop but stack one above the other on
+  // mobile (Figma: node 13496-8023) - label on its own line, value below.
+  // Scoped to --flat only - the boxed card used elsewhere (appointments,
+  // personal details) keeps its side-by-side mobile layout unchanged.
+  @include govuk-media-query($until: tablet) {
+    .pop-summary-card__row {
+      flex-direction: column;
+    }
+
+    .pop-summary-card__key {
+      @include govuk-font($size: 16, $weight: bold);
+      flex: 0 0 auto;
+      width: 100%;
+      padding: govuk-spacing(2) 0 0;
+    }
+
+    .pop-summary-card__value {
+      @include govuk-font($size: 16);
+      flex: 0 0 auto;
+      width: 100%;
+      // Top padding here (not just bottom) is deliberate - Figma nests the
+      // value in its own box with a 10px top inset, which is what creates
+      // the visible gap under the label (node 13496-8020/13496-8023).
+      padding: govuk-spacing(2) 0;
+    }
+  }
+}

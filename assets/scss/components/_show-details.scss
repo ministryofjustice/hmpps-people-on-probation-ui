@@ -13,4 +13,9 @@
     color: govuk-colour('blue');
     text-decoration-thickness: 3px;
   }
+
+  // Matches the summary card's mobile scale-down (Figma: node 13496-7865).
+  @include govuk-media-query($until: tablet) {
+    @include govuk-font($size: 16);
+  }
 }
