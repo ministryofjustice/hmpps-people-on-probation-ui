@@ -1,0 +1,89 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "partials/progress-bar.njk" import progressBar %}
+
+{% set pageTitle = requirement.label + " – Check your probation account – GOV.UK" %}
+{% set currentPage = "requirements" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Back", href: "/requirements" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <span class="govuk-caption-l">Order requirements</span>
+  <h1 class="govuk-heading-xl">{{ requirement.label }}</h1>
+
+  {% if requirement.lastUpdatedAt %}
+    <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6" id="requirement-last-updated">
+      <p class="govuk-body govuk-!-margin-bottom-0">Your requirements were last updated on {{ requirement.lastUpdatedAt }}</p>
+    </div>
+  {% endif %}
+
+  {% if requirement.isRAR %}
+    <h2 class="govuk-heading-l pop-requirements__section-heading">Details</h2>
+
+    <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
+      <dl class="pop-summary-card__details">
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Days completed</dt>
+          <dd class="pop-summary-card__value">{{ requirement.completed }} {{ requirement.unitLabel }}</dd>
+        </div>
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Maximum days on order</dt>
+          <dd class="pop-summary-card__value">{{ requirement.required }} {{ requirement.unitLabel }}</dd>
+        </div>
+      </dl>
+    </div>
+  {% else %}
+    <h2 class="govuk-heading-l pop-requirements__section-heading">Progress and details</h2>
+
+    <div class="pop-progress__row govuk-!-margin-bottom-4">
+      {{ progressBar({
+        percentComplete: requirement.percentComplete,
+        completedDuration: requirement.completedDuration,
+        remainingDuration: (requirement.remaining ~ " " ~ requirement.unitLabel) if requirement.remaining is defined else requirement.remainingDuration
+      }) }}
+    </div>
+
+    <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
+      <dl class="pop-summary-card__details">
+        {% if requirement.required %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Time required</dt>
+            <dd class="pop-summary-card__value">{{ requirement.required }} {{ requirement.unitLabel }}</dd>
+          </div>
+        {% elif requirement.startDate %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Start date and time</dt>
+            <dd class="pop-summary-card__value">{{ requirement.startDate }}</dd>
+          </div>
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">End date and time</dt>
+            <dd class="pop-summary-card__value">{{ requirement.endDate }}</dd>
+          </div>
+          {% if requirement.totalLength %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Time required</dt>
+              <dd class="pop-summary-card__value">{{ requirement.totalLength }}</dd>
+            </div>
+          {% endif %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Where to find details</dt>
+            <dd class="pop-summary-card__value">You can find this information in your court order</dd>
+          </div>
+        {% endif %}
+      </dl>
+    </div>
+  {% endif %}
+
+  {% if requirement.isUnpaidWork %}
+    <div class="govuk-inset-text guidance-panel">
+      <p class="govuk-body govuk-!-margin-bottom-0">
+        You can complete up to 30% of your community payback hours online through
+        <a class="govuk-link govuk-link--no-visited-state" href="https://www.communitycampus.online/#/sign-in" target="_blank" rel="noopener noreferrer" data-tracking-id="community_campus_link">Community Campus<span class="govuk-visually-hidden"> (opens in new tab)</span></a>
+      </p>
+    </div>
+  {% endif %}
+
+{% endblock %}

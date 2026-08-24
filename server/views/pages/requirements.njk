@@ -1,7 +1,6 @@
 {% extends "../partials/layout.njk" %}
 {% from "../macros/showDetails.njk" import showDetails %}
 {% from "partials/progress-bar.njk" import progressBar %}
-{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 
 {% set pageTitle = "Order requirements – Check your probation account – GOV.UK" %}
 {% set currentPage = "requirements" %}
@@ -11,14 +10,14 @@
   <h1 class="govuk-heading-xl">Order requirements</h1>
 
   <p class="govuk-body">
-    Make sure you follow the requirements included in your order. If you don’t, you could breach your probation, and could go back to court.
+    Make sure you follow the requirements included in your order. If you don’t, you could breach your probation, and go back to court.
   </p>
   <p class="govuk-body">
     See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/probation-agreement">probation agreement</a>.
   </p>
 
   {% if overallOrder %}
-    <h2 class="govuk-heading-m">Progress in overall order</h2>
+    <h2 class="govuk-heading-l pop-requirements__section-heading">Overall order</h2>
 
     <div class="pop-progress__row govuk-!-margin-bottom-4">
       {{ progressBar({
@@ -28,10 +27,7 @@
       }) }}
     </div>
 
-    <div class="pop-summary-card govuk-!-margin-bottom-9">
-      <div class="pop-summary-card__header">
-        <h3 class="pop-summary-card__type">Order details</h3>
-      </div>
+    <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
       <dl class="pop-summary-card__details">
         {% if overallOrder.charge %}
           <div class="pop-summary-card__row">
@@ -72,75 +68,13 @@
   {% if requirements.length %}
     <h2 class="govuk-heading-l pop-requirements__section-heading">Requirements in your order</h2>
 
-    {% if lastUpdatedAt %}
-      <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6" id="requirements-last-updated">
-        <p class="govuk-body govuk-!-margin-bottom-0">Your requirements were last updated on {{ lastUpdatedAt }}</p>
-      </div>
-    {% endif %}
-
-    {% for requirement in requirements %}
-      <div class="govuk-!-margin-bottom-2">
-        <h3 class="govuk-heading-m">{{ requirement.label }}</h3>
-        {% if not requirement.isRAR %}
-          <h4 class="pop-progress__title">Progress in {{ requirement.label }}{{ " (unpaid work)" if requirement.isUnpaidWork }}</h4>
-          <div class="pop-progress__row govuk-!-margin-bottom-4">
-            {{ progressBar({
-              percentComplete: requirement.percentComplete,
-              completedDuration: requirement.completedDuration,
-              remainingDuration: (requirement.remaining ~ " " ~ requirement.unitLabel) if requirement.remaining is defined else requirement.remainingDuration
-            }) }}
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="pop-summary-card govuk-!-margin-bottom-6">
-        <div class="pop-summary-card__header">
-          <h4 class="pop-summary-card__type">{{ "RAR" if requirement.isRAR else requirement.label }} details</h4>
-        </div>
-        <dl class="pop-summary-card__details">
-          {% if requirement.required %}
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">{{ ("Maximum " ~ requirement.unitLabel ~ " on order") if requirement.isRAR else "Time required" }}</dt>
-              <dd class="pop-summary-card__value">{{ requirement.required }} {{ requirement.unitLabel }}</dd>
-            </div>
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">{{ (requirement.unitLabel | capitalize ~ " completed") if requirement.isRAR else "Time completed" }}</dt>
-              <dd class="pop-summary-card__value">{{ requirement.completed }} {{ requirement.unitLabel }}</dd>
-            </div>
-            {% if not requirement.isRAR %}
-              <div class="pop-summary-card__row">
-                <dt class="pop-summary-card__key">Time remaining</dt>
-                <dd class="pop-summary-card__value">{{ requirement.remaining }} {{ requirement.unitLabel }}</dd>
-              </div>
-            {% endif %}
-          {% elif requirement.startDate %}
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">Start date and time</dt>
-              <dd class="pop-summary-card__value">{{ requirement.startDate }}</dd>
-            </div>
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">End date and time</dt>
-              <dd class="pop-summary-card__value">{{ requirement.endDate }}</dd>
-            </div>
-            {% if requirement.totalLength %}
-              <div class="pop-summary-card__row">
-                <dt class="pop-summary-card__key">Time required</dt>
-                <dd class="pop-summary-card__value">{{ requirement.totalLength }}</dd>
-              </div>
-            {% endif %}
-          {% endif %}
-        </dl>
-      </div>
-
-      {% if requirement.isUnpaidWork %}
-        {% call govukInsetText({ classes: "guidance-panel" }) %}
-          <p class="govuk-body govuk-!-margin-bottom-0">
-            You can complete up to 30% of your community payback hours online through
-            <a class="govuk-link govuk-link--no-visited-state" href="https://www.communitycampus.online/#/sign-in" target="_blank" rel="noopener noreferrer" data-tracking-id="community_campus_link">Community Campus<span class="govuk-visually-hidden"> (opens in new tab)</span></a>
-          </p>
-        {% endcall %}
-      {% endif %}
-    {% endfor %}
+    <div class="pop-requirement-cards govuk-!-margin-bottom-9">
+      {% for requirement in requirements %}
+        <a class="pop-requirement-card" href="/requirements/{{ requirement.slug }}" data-tracking-id="requirements_view_{{ requirement.slug }}">
+          <span class="pop-requirement-card__title">{{ requirement.label }}</span>
+        </a>
+      {% endfor %}
+    </div>
   {% endif %}
 
 {% endblock %}

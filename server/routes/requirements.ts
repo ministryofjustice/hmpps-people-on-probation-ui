@@ -53,6 +53,7 @@ type OverallOrderView = {
 
 export type RequirementView = {
   label: string
+  slug: string
   isRAR: boolean
   isUnpaidWork: boolean
   percentComplete: number
@@ -65,14 +66,25 @@ export type RequirementView = {
   endDate?: string
   totalLength?: string
   remainingDuration?: string
+  lastUpdatedAt?: string
+}
+
+export function slugify(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
 }
 
 export function toRequirementView(requirement: RequirementResponse): RequirementView | null {
   const isUnpaidWork = requirement.mainCategory?.code === 'W'
-  const label = isUnpaidWork
-    ? 'Community payback'
-    : requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
   const isRAR = requirement.mainCategory?.code === 'F'
+  const defaultLabel = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
+  let label = defaultLabel
+  if (isUnpaidWork) label = 'Community payback (unpaid work)'
+  else if (isRAR) label = 'Rehabilitation Activity Requirement (RAR)'
+  const slug = slugify(label)
+  const lastUpdatedAt = formatDateTimeWithDay(requirement.lastUpdatedAt)
 
   if (requirement.required && requirement.required > 0) {
     const completed = Math.min(requirement.completed ?? 0, requirement.required)
@@ -82,6 +94,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     const completedLabel = formatUnit(requirement.unit, completed)
     return {
       label,
+      slug,
       isRAR,
       isUnpaidWork,
       required: requirement.required,
@@ -90,6 +103,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       unitLabel,
       percentComplete,
       completedDuration: `${completed} ${completedLabel}`,
+      lastUpdatedAt,
     }
   }
 
@@ -106,6 +120,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     } = calculateDateProgress(startDate, endDate)
     return {
       label,
+      slug,
       isRAR,
       isUnpaidWork,
       percentComplete,
@@ -114,6 +129,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       remainingDuration,
       startDate: fmtStart,
       endDate: fmtEnd,
+      lastUpdatedAt,
     }
   }
 
@@ -164,6 +180,27 @@ export default function requirementsRoutes(services: Services): Router {
         requirements,
         lastUpdatedAt: formatDateTimeWithDay(mostRecentUpdate),
       })
+    } catch (error) {
+      return next(error)
+    }
+  })
+
+  router.get('/:slug', async (req, res, next) => {
+    try {
+      const crn = getSessionCrn(res.locals.user)
+      if (!crn) return res.redirect('/autherror')
+
+      const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
+      const sentence = sentenceProgress.sentences[0]
+
+      const requirement = (sentence?.requirements ?? [])
+        .map(toRequirementView)
+        .filter((r): r is RequirementView => r !== null)
+        .find(r => r.slug === req.params.slug)
+
+      if (!requirement) return next()
+
+      return res.render('pages/requirement-detail', { requirement })
     } catch (error) {
       return next(error)
     }
