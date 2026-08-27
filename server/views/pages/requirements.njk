@@ -1,7 +1,7 @@
 {% extends "../partials/layout.njk" %}
 {% from "../macros/showDetails.njk" import showDetails %}
+{% from "../macros/whatDoesThisMean.njk" import whatDoesThisMean %}
 {% from "partials/progress-bar.njk" import progressBar %}
-{% from "govuk/components/details/macro.njk" import govukDetails %}
 
 {% set pageTitle = "Order requirements – Check your probation account – GOV.UK" %}
 {% set currentPage = "requirements" %}
@@ -67,11 +67,10 @@
             <dd class="pop-summary-card__value">
               {{ overallOrder.type }}
               {% if orderTypeExplanationHtml %}
-                {{ govukDetails({
-                  summaryText: "What does this mean?",
+                {{ whatDoesThisMean({
                   html: orderTypeExplanationHtml,
-                  classes: "pop-order-type-details",
-                  attributes: { "data-tracking-id": "requirements_order_type_what_does_this_mean" }
+                  trackingId: "requirements_order_type_what_does_this_mean",
+                  classes: "pop-order-type-details"
                 }) }}
               {% endif %}
             </dd>

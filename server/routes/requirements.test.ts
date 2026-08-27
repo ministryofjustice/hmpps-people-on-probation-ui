@@ -136,7 +136,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('class="pop-requirement-card" href="/requirements/unpaid-work"')
-      expect(res.text).toContain('Unpaid Work')
+      expect(res.text).toContain('pop-requirement-card__title">Unpaid Work')
     })
 
     it('labels an unpaid work requirement (mainCategory.code = W) as "Community payback (unpaid work)" and links to its slug', async () => {
@@ -164,7 +164,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('href="/requirements/community-payback-unpaid-work"')
-      expect(res.text).toContain('Community payback (unpaid work)')
+      expect(res.text).toContain('pop-requirement-card__title">Community payback (unpaid work)')
     })
 
     it('labels a RAR requirement (mainCategory.code = F) as "Rehabilitation Activity Requirement (RAR)" and links to its slug', async () => {
@@ -192,7 +192,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('href="/requirements/rehabilitation-activity-requirement-rar"')
-      expect(res.text).toContain('Rehabilitation Activity Requirement (RAR)')
+      expect(res.text).toContain('pop-requirement-card__title">Rehabilitation Activity Requirement (RAR)')
     })
 
     it('labels a GPS tag requirement (mainCategory.code = RM59) as "GPS tag" and links to its slug', async () => {
@@ -219,7 +219,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('href="/requirements/gps-tag"')
-      expect(res.text).toContain('GPS tag')
+      expect(res.text).toContain('pop-requirement-card__title">GPS tag')
     })
 
     it('labels a curfew requirement (mainCategory.code = RM49) as "Curfew" and links to its slug', async () => {
@@ -246,7 +246,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('href="/requirements/curfew"')
-      expect(res.text).toContain('Curfew')
+      expect(res.text).toContain('pop-requirement-card__title">Curfew')
     })
 
     it('renders a card for a date-based requirement using its category description as the label', async () => {
@@ -273,7 +273,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('href="/requirements/supervision"')
-      expect(res.text).toContain('Supervision')
+      expect(res.text).toContain('pop-requirement-card__title">Supervision')
     })
 
     it('does not render a card list section when there are no requirements', async () => {
@@ -404,7 +404,7 @@ describe('GET /requirements/:slug', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(res.text).toContain('<h1 class="govuk-heading-xl pop-requirement-detail__heading">Curfew</h1>')
+    expect(res.text).toContain('>Curfew</h1>')
     expect(res.text).toContain('Start date and time')
     expect(res.text).toContain('End date and time')
     expect(res.text).toContain('Where to find details')

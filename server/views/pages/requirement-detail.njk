@@ -1,6 +1,6 @@
 {% extends "../partials/layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
-{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "../macros/whatDoesThisMean.njk" import whatDoesThisMean %}
 {% from "partials/progress-bar.njk" import progressBar %}
 
 {% set pageTitle = requirement.label + " – Check your probation account – GOV.UK" %}
@@ -13,49 +13,33 @@
 {% block content %}
 
   <span class="govuk-caption-l">Order requirements</span>
-  <h1 class="govuk-heading-xl pop-requirement-detail__heading">{{ requirement.label }}</h1>
+  <h1 class="govuk-heading-xl govuk-!-margin-bottom-2">{{ requirement.label }}</h1>
 
-  {% if requirement.isGpsTag %}
-    {% set gpsTagExplanationHtml %}
+  {% if requirement.kind == "gps-tag" %}
+    {% set explanationHtml %}
       <p class="govuk-body">A GPS tag is a location tag. It tracks where you go.</p>
       <p class="govuk-body">It can record your movements all the time. It checks if you stay out of banned areas, go to required appointments, and stick to any curfew.</p>
       <p class="govuk-body">You usually wear it on your ankle. You must charge a location tag for at least 1 hour every day. If you do not follow the tag rules, you could be returned to court or prison.</p>
     {% endset %}
-    {{ govukDetails({
-      summaryText: "What does this mean?",
-      html: gpsTagExplanationHtml,
-      attributes: { "data-tracking-id": "requirement_detail_gps_tag_what_does_this_mean" }
-    }) }}
-  {% elif requirement.isUnpaidWork %}
-    {% set unpaidWorkExplanationHtml %}
+    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_gps_tag_what_does_this_mean" }) }}
+  {% elif requirement.kind == "unpaid-work" %}
+    {% set explanationHtml %}
       <p class="govuk-body">Community Payback is unpaid work in the community.</p>
       <p class="govuk-body">It can include jobs like removing graffiti or other useful local work. It is part of some community sentences. If you do not attend or take part, you could be returned to court.</p>
     {% endset %}
-    {{ govukDetails({
-      summaryText: "What does this mean?",
-      html: unpaidWorkExplanationHtml,
-      attributes: { "data-tracking-id": "requirement_detail_unpaid_work_what_does_this_mean" }
-    }) }}
-  {% elif requirement.isRAR %}
-    {% set rarExplanationHtml %}
+    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_unpaid_work_what_does_this_mean" }) }}
+  {% elif requirement.kind == "rar" %}
+    {% set explanationHtml %}
       <p class="govuk-body">RAR means Rehabilitation Activity Requirement.</p>
       <p class="govuk-body">It means you must take part in activities set by your probation officer to help reduce the chance of offending. This could include meetings, courses, or support work. If you do not take part, you could be returned to court.</p>
     {% endset %}
-    {{ govukDetails({
-      summaryText: "What does this mean?",
-      html: rarExplanationHtml,
-      attributes: { "data-tracking-id": "requirement_detail_rar_what_does_this_mean" }
-    }) }}
-  {% elif requirement.isCurfew %}
-    {% set curfewExplanationHtml %}
+    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_rar_what_does_this_mean" }) }}
+  {% elif requirement.kind == "curfew" %}
+    {% set explanationHtml %}
       <p class="govuk-body">A curfew means you must stay at a set address during set hours.</p>
       <p class="govuk-body">It is often checked with an electronic tag. Your order or licence will say the address and times. If you do not follow it, you could be returned to court or recalled to prison.</p>
     {% endset %}
-    {{ govukDetails({
-      summaryText: "What does this mean?",
-      html: curfewExplanationHtml,
-      attributes: { "data-tracking-id": "requirement_detail_curfew_what_does_this_mean" }
-    }) }}
+    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_curfew_what_does_this_mean" }) }}
   {% endif %}
 
   {% if requirement.lastUpdatedAt %}
@@ -64,7 +48,7 @@
     </div>
   {% endif %}
 
-  {% if requirement.isRAR %}
+  {% if requirement.kind == "rar" %}
     <h2 class="govuk-heading-l pop-requirements__section-heading">Details</h2>
 
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
@@ -121,7 +105,7 @@
     </div>
   {% endif %}
 
-  {% if requirement.isUnpaidWork %}
+  {% if requirement.kind == "unpaid-work" %}
     <div class="govuk-inset-text guidance-panel">
       <p class="govuk-body govuk-!-margin-bottom-0">
         You can complete up to 30% of your community payback hours online through

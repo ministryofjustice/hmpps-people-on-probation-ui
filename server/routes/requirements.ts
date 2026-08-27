@@ -57,13 +57,12 @@ type OverallOrderView = {
   percentComplete: number
 }
 
+export type RequirementKind = 'unpaid-work' | 'rar' | 'gps-tag' | 'curfew' | 'other'
+
 export type RequirementView = {
   label: string
   slug: string
-  isRAR: boolean
-  isUnpaidWork: boolean
-  isGpsTag: boolean
-  isCurfew: boolean
+  kind: RequirementKind
   percentComplete: number
   completedDuration?: string
   required?: number
@@ -84,17 +83,32 @@ export function slugify(label: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+const REQUIREMENT_KIND_LABELS: Record<Exclude<RequirementKind, 'other'>, string> = {
+  'unpaid-work': 'Community payback (unpaid work)',
+  rar: 'Rehabilitation Activity Requirement (RAR)',
+  'gps-tag': 'GPS tag',
+  curfew: 'Curfew',
+}
+
+function classifyRequirement(requirement: RequirementResponse): RequirementKind {
+  switch (requirement.mainCategory?.code) {
+    case UNPAID_WORK_CATEGORY_CODE:
+      return 'unpaid-work'
+    case RAR_CATEGORY_CODE:
+      return 'rar'
+    case GPS_TAG_CATEGORY_CODE:
+      return 'gps-tag'
+    case CURFEW_CATEGORY_CODE:
+      return 'curfew'
+    default:
+      return 'other'
+  }
+}
+
 export function toRequirementView(requirement: RequirementResponse): RequirementView | null {
-  const isUnpaidWork = requirement.mainCategory?.code === UNPAID_WORK_CATEGORY_CODE
-  const isRAR = requirement.mainCategory?.code === RAR_CATEGORY_CODE
-  const isGpsTag = requirement.mainCategory?.code === GPS_TAG_CATEGORY_CODE
-  const isCurfew = requirement.mainCategory?.code === CURFEW_CATEGORY_CODE
+  const kind = classifyRequirement(requirement)
   const defaultLabel = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
-  let label = defaultLabel
-  if (isUnpaidWork) label = 'Community payback (unpaid work)'
-  else if (isRAR) label = 'Rehabilitation Activity Requirement (RAR)'
-  else if (isGpsTag) label = 'GPS tag'
-  else if (isCurfew) label = 'Curfew'
+  const label = kind === 'other' ? defaultLabel : REQUIREMENT_KIND_LABELS[kind]
   const slug = slugify(label)
   const lastUpdatedAt = formatDateTimeWithDay(requirement.lastUpdatedAt)
 
@@ -107,10 +121,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     return {
       label,
       slug,
-      isRAR,
-      isUnpaidWork,
-      isGpsTag,
-      isCurfew,
+      kind,
       required: requirement.required,
       completed,
       remaining,
@@ -135,10 +146,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     return {
       label,
       slug,
-      isRAR,
-      isUnpaidWork,
-      isGpsTag,
-      isCurfew,
+      kind,
       percentComplete,
       completedDuration,
       totalLength,
