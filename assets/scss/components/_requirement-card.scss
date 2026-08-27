@@ -1,4 +1,7 @@
-.pop-requirement-detail__heading {
+// Combined with .govuk-heading-xl for specificity - @ministryofjustice/frontend
+// declares its own .govuk-heading-xl { margin-bottom } later in the cascade,
+// which would otherwise win over a single-class override at equal specificity.
+.govuk-heading-xl.pop-requirement-detail__heading {
   margin-bottom: govuk-spacing(2);
 }
 
