@@ -126,10 +126,6 @@
   }
 }
 
-// Order type's "What does this mean?" details (Figma: node 8496-9580) - the
-// default govuk-details responsive bottom margin (govuk-spacing(6), 20-30px)
-// leaves too big a gap to the row divider below while collapsed, and there's
-// no default top margin separating it from the order type text above it.
 .pop-order-type-details {
   margin-top: govuk-spacing(3);
   margin-bottom: govuk-spacing(2);
