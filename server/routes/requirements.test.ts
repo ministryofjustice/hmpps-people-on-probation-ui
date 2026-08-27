@@ -404,7 +404,7 @@ describe('GET /requirements/:slug', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(res.text).toContain('<h1 class="govuk-heading-xl">Curfew</h1>')
+    expect(res.text).toContain('<h1 class="govuk-heading-xl pop-requirement-detail__heading">Curfew</h1>')
     expect(res.text).toContain('Start date and time')
     expect(res.text).toContain('End date and time')
     expect(res.text).toContain('Where to find details')
