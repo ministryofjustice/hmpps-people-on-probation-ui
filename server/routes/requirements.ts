@@ -13,6 +13,12 @@ import {
   parseLocalDate,
 } from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
+import {
+  GPS_TAG_CATEGORY_CODE,
+  CURFEW_CATEGORY_CODE,
+  UNPAID_WORK_CATEGORY_CODE,
+  RAR_CATEGORY_CODE,
+} from '../utils/categoryCodes'
 
 type DateProgressResult = {
   percentComplete: number
@@ -56,6 +62,8 @@ export type RequirementView = {
   slug: string
   isRAR: boolean
   isUnpaidWork: boolean
+  isGpsTag: boolean
+  isCurfew: boolean
   percentComplete: number
   completedDuration?: string
   required?: number
@@ -77,12 +85,16 @@ export function slugify(label: string): string {
 }
 
 export function toRequirementView(requirement: RequirementResponse): RequirementView | null {
-  const isUnpaidWork = requirement.mainCategory?.code === 'W'
-  const isRAR = requirement.mainCategory?.code === 'F'
+  const isUnpaidWork = requirement.mainCategory?.code === UNPAID_WORK_CATEGORY_CODE
+  const isRAR = requirement.mainCategory?.code === RAR_CATEGORY_CODE
+  const isGpsTag = requirement.mainCategory?.code === GPS_TAG_CATEGORY_CODE
+  const isCurfew = requirement.mainCategory?.code === CURFEW_CATEGORY_CODE
   const defaultLabel = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
   let label = defaultLabel
   if (isUnpaidWork) label = 'Community payback (unpaid work)'
   else if (isRAR) label = 'Rehabilitation Activity Requirement (RAR)'
+  else if (isGpsTag) label = 'GPS tag'
+  else if (isCurfew) label = 'Curfew'
   const slug = slugify(label)
   const lastUpdatedAt = formatDateTimeWithDay(requirement.lastUpdatedAt)
 
@@ -97,6 +109,8 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       slug,
       isRAR,
       isUnpaidWork,
+      isGpsTag,
+      isCurfew,
       required: requirement.required,
       completed,
       remaining,
@@ -123,6 +137,8 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       slug,
       isRAR,
       isUnpaidWork,
+      isGpsTag,
+      isCurfew,
       percentComplete,
       completedDuration,
       totalLength,

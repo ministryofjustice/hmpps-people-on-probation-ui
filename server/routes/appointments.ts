@@ -16,6 +16,7 @@ import {
   APPOINTMENTS_OVERVIEW_SIZE,
 } from '../utils/utils'
 import type { AppointmentResponse, PageMetadataResponse } from '../data/peopleOnProbationApiClient'
+import { TAG_CATEGORY_CODES, OTHER_CHANNEL_CATEGORY_CODES } from '../utils/categoryCodes'
 
 export type AppointmentsTab = 'upcoming' | 'past'
 
@@ -76,13 +77,6 @@ const NO_LOCATION_TYPE_CODES = ['COPT', 'COVC']
 function hasNoLocation(appointment: AppointmentResponse): boolean {
   return Boolean(appointment.typeCode && NO_LOCATION_TYPE_CODES.includes(appointment.typeCode.toUpperCase()))
 }
-
-// Main category codes (RequirementResponse/LicenceConditionResponse.mainCategory.code) that
-// determine which "why this might happen" guidance applies on the appointments page.
-// Codes not in either list (e.g. F = RAR, W = unpaid work) get the plain inset text with no
-// reveal, and no extra guidance bullet is needed for them.
-const TAG_APPOINTMENT_CATEGORY_CODES = ['RM49', 'RM59', 'T']
-const OTHER_CHANNEL_APPOINTMENT_CATEGORY_CODES = ['Q', 'G', 'H', 'P', 'E', 'I', 'RM38', 'RM37']
 
 export const APPOINTMENTS_PAGE_SIZE = 15
 
@@ -400,10 +394,8 @@ export default function appointmentsRoutes(services: Services): Router {
         ...sentence.requirements.map(r => r.mainCategory?.code),
         ...sentence.licenceConditions.map(lc => lc.mainCategory?.code),
       ])
-      const hasTagAppointments = mainCategoryCodes.some(code => TAG_APPOINTMENT_CATEGORY_CODES.includes(code))
-      const hasOtherChannelAppointments = mainCategoryCodes.some(code =>
-        OTHER_CHANNEL_APPOINTMENT_CATEGORY_CODES.includes(code),
-      )
+      const hasTagAppointments = mainCategoryCodes.some(code => TAG_CATEGORY_CODES.includes(code))
+      const hasOtherChannelAppointments = mainCategoryCodes.some(code => OTHER_CHANNEL_CATEGORY_CODES.includes(code))
 
       const appointmentsToShow = activeTabAppointments.content
       const missedAppointments = pastAppointmentsForAlert.content
