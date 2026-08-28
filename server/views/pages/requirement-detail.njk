@@ -55,11 +55,11 @@
       <dl class="pop-summary-card__details">
         <div class="pop-summary-card__row">
           <dt class="pop-summary-card__key">Days completed</dt>
-          <dd class="pop-summary-card__value">{{ requirement.completed }} {{ requirement.unitLabel }}</dd>
+          <dd class="pop-summary-card__value">{{ requirement.completedDuration }}</dd>
         </div>
         <div class="pop-summary-card__row">
           <dt class="pop-summary-card__key">Maximum days on order</dt>
-          <dd class="pop-summary-card__value">{{ requirement.required }} {{ requirement.unitLabel }}</dd>
+          <dd class="pop-summary-card__value">{{ requirement.totalLength }}</dd>
         </div>
       </dl>
     </div>
@@ -70,7 +70,7 @@
       {{ progressBar({
         percentComplete: requirement.percentComplete,
         completedDuration: requirement.completedDuration,
-        remainingDuration: (requirement.remaining ~ " " ~ requirement.unitLabel) if requirement.remaining is defined else requirement.remainingDuration
+        remainingDuration: (requirement.remaining ~ " " ~ requirement.remainingUnitLabel) if requirement.remaining is defined else requirement.remainingDuration
       }) }}
     </div>
 
@@ -79,7 +79,7 @@
         {% if requirement.kind == "unpaid-work" and requirement.required %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">Time required</dt>
-            <dd class="pop-summary-card__value">{{ requirement.required }} {{ requirement.unitLabel }}</dd>
+            <dd class="pop-summary-card__value">{{ requirement.totalLength }}</dd>
           </div>
         {% else %}
           {% if requirement.startDate %}

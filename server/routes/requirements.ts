@@ -70,7 +70,7 @@ export type RequirementView = {
   required?: number
   completed?: number
   remaining?: number
-  unitLabel?: string
+  remainingUnitLabel?: string
   startDate?: string
   endDate?: string
   totalLength?: string
@@ -122,7 +122,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     const completed = Math.min(requirement.completed ?? 0, requirement.required)
     const remaining = Math.max(requirement.required - completed, 0)
     const percentComplete = Math.round((completed / requirement.required) * 100)
-    const unitLabel = formatUnit(requirement.unit, remaining)
+    const remainingUnitLabel = formatUnit(requirement.unit, remaining)
     const completedLabel = formatUnit(requirement.unit, completed)
     const totalUnitLabel = formatUnit(requirement.unit, requirement.required)
     return {
@@ -133,7 +133,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       required: requirement.required,
       completed,
       remaining,
-      unitLabel,
+      remainingUnitLabel,
       percentComplete,
       completedDuration: `${completed} ${completedLabel}`,
       startDate: formatDate(startDate) ?? startDate,

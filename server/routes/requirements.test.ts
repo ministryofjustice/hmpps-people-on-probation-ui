@@ -504,6 +504,36 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).not.toContain('pop-progress__row')
   })
 
+  it('pluralises completed and required durations independently of the remaining amount', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'F', description: 'Rehabilitation Activity Requirement (RAR)' },
+              required: 90,
+              completed: 89,
+              unit: 'DAYS',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/rehabilitation-activity-requirement-rar')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('89 days')
+    expect(res.text).toContain('90 days')
+    expect(res.text).not.toContain('89 day<')
+    expect(res.text).not.toContain('90 day<')
+  })
+
   it('shows the "What does this mean?" Community Payback explanation for an unpaid work requirement', async () => {
     fakeDate('2025-06-01')
     peopleOnProbationService.getSentences.mockResolvedValue({
