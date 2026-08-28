@@ -13,6 +13,13 @@ import {
   parseLocalDate,
 } from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
+import {
+  GPS_TAG_CATEGORY_CODE,
+  CURFEW_CATEGORY_CODE,
+  UNPAID_WORK_CATEGORY_CODE,
+  RAR_CATEGORY_CODE,
+  TAG_CATEGORY_CODES,
+} from '../utils/categoryCodes'
 
 type DateProgressResult = {
   percentComplete: number
@@ -51,17 +58,19 @@ type OverallOrderView = {
   percentComplete: number
 }
 
+export type RequirementKind = 'unpaid-work' | 'rar' | 'gps-tag' | 'curfew' | 'other'
+
 export type RequirementView = {
   label: string
   slug: string
-  isRAR: boolean
-  isUnpaidWork: boolean
+  kind: RequirementKind
+  isTag: boolean
   percentComplete: number
   completedDuration?: string
   required?: number
   completed?: number
   remaining?: number
-  unitLabel?: string
+  remainingUnitLabel?: string
   startDate?: string
   endDate?: string
   totalLength?: string
@@ -76,39 +85,64 @@ export function slugify(label: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+const REQUIREMENT_KIND_LABELS: Record<Exclude<RequirementKind, 'other'>, string> = {
+  'unpaid-work': 'Community payback (unpaid work)',
+  rar: 'Rehabilitation Activity Requirement (RAR)',
+  'gps-tag': 'GPS tag',
+  curfew: 'Curfew',
+}
+
+function classifyRequirement(requirement: RequirementResponse): RequirementKind {
+  switch (requirement.mainCategory?.code) {
+    case UNPAID_WORK_CATEGORY_CODE:
+      return 'unpaid-work'
+    case RAR_CATEGORY_CODE:
+      return 'rar'
+    case GPS_TAG_CATEGORY_CODE:
+      return 'gps-tag'
+    case CURFEW_CATEGORY_CODE:
+      return 'curfew'
+    default:
+      return 'other'
+  }
+}
+
 export function toRequirementView(requirement: RequirementResponse): RequirementView | null {
-  const isUnpaidWork = requirement.mainCategory?.code === 'W'
-  const isRAR = requirement.mainCategory?.code === 'F'
+  const kind = classifyRequirement(requirement)
   const defaultLabel = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
-  let label = defaultLabel
-  if (isUnpaidWork) label = 'Community payback (unpaid work)'
-  else if (isRAR) label = 'Rehabilitation Activity Requirement (RAR)'
+  const label = kind === 'other' ? defaultLabel : REQUIREMENT_KIND_LABELS[kind]
   const slug = slugify(label)
+  const isTag = TAG_CATEGORY_CODES.includes(requirement.mainCategory?.code)
   const lastUpdatedAt = formatDateTimeWithDay(requirement.lastUpdatedAt)
+
+  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
+  const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
 
   if (requirement.required && requirement.required > 0) {
     const completed = Math.min(requirement.completed ?? 0, requirement.required)
     const remaining = Math.max(requirement.required - completed, 0)
     const percentComplete = Math.round((completed / requirement.required) * 100)
-    const unitLabel = formatUnit(requirement.unit, remaining)
+    const remainingUnitLabel = formatUnit(requirement.unit, remaining)
     const completedLabel = formatUnit(requirement.unit, completed)
+    const totalUnitLabel = formatUnit(requirement.unit, requirement.required)
     return {
       label,
       slug,
-      isRAR,
-      isUnpaidWork,
+      kind,
+      isTag,
       required: requirement.required,
       completed,
       remaining,
-      unitLabel,
+      remainingUnitLabel,
       percentComplete,
       completedDuration: `${completed} ${completedLabel}`,
+      startDate: formatDate(startDate) ?? startDate,
+      endDate: formatDate(endDate) ?? endDate,
+      totalLength: `${requirement.required} ${totalUnitLabel}`,
       lastUpdatedAt,
     }
   }
 
-  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
-  const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
   if (startDate && endDate) {
     const {
       percentComplete,
@@ -121,8 +155,8 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     return {
       label,
       slug,
-      isRAR,
-      isUnpaidWork,
+      kind,
+      isTag,
       percentComplete,
       completedDuration,
       totalLength,

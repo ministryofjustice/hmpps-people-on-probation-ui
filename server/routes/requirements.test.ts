@@ -136,7 +136,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('class="pop-requirement-card" href="/requirements/unpaid-work"')
-      expect(res.text).toContain('Unpaid Work')
+      expect(res.text).toContain('pop-requirement-card__title">Unpaid Work')
     })
 
     it('labels an unpaid work requirement (mainCategory.code = W) as "Community payback (unpaid work)" and links to its slug', async () => {
@@ -164,7 +164,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('href="/requirements/community-payback-unpaid-work"')
-      expect(res.text).toContain('Community payback (unpaid work)')
+      expect(res.text).toContain('pop-requirement-card__title">Community payback (unpaid work)')
     })
 
     it('labels a RAR requirement (mainCategory.code = F) as "Rehabilitation Activity Requirement (RAR)" and links to its slug', async () => {
@@ -192,7 +192,61 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('href="/requirements/rehabilitation-activity-requirement-rar"')
-      expect(res.text).toContain('Rehabilitation Activity Requirement (RAR)')
+      expect(res.text).toContain('pop-requirement-card__title">Rehabilitation Activity Requirement (RAR)')
+    })
+
+    it('labels a GPS tag requirement (mainCategory.code = RM59) as "GPS tag" and links to its slug', async () => {
+      fakeDate('2025-06-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            requirements: [
+              {
+                mainCategory: { code: 'RM59', description: 'Tag' },
+                expectedStartDate: '2025-01-01',
+                expectedEndDate: '2025-12-31',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('href="/requirements/gps-tag"')
+      expect(res.text).toContain('pop-requirement-card__title">GPS tag')
+    })
+
+    it('labels a curfew requirement (mainCategory.code = RM49) as "Curfew" and links to its slug', async () => {
+      fakeDate('2025-06-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            requirements: [
+              {
+                mainCategory: { code: 'RM49', description: 'Tag' },
+                expectedStartDate: '2025-01-01',
+                expectedEndDate: '2025-12-31',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('href="/requirements/curfew"')
+      expect(res.text).toContain('pop-requirement-card__title">Curfew')
     })
 
     it('renders a card for a date-based requirement using its category description as the label', async () => {
@@ -219,7 +273,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('href="/requirements/supervision"')
-      expect(res.text).toContain('Supervision')
+      expect(res.text).toContain('pop-requirement-card__title">Supervision')
     })
 
     it('does not render a card list section when there are no requirements', async () => {
@@ -249,6 +303,69 @@ describe('GET /requirements', () => {
       expect(res.text).toContain('Total order length')
       expect(res.text).not.toContain('Total length of time')
     })
+
+    it('shows the "What does this mean?" explanation for an SA2020 Community Order', async () => {
+      fakeDate('2025-01-01')
+      const sentence = sentenceWithDates('2024-01-01', '2026-01-01')
+      sentence.sentences[0].type = 'SA2020 Community Order'
+      peopleOnProbationService.getSentences.mockResolvedValue(sentence)
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('What does this mean?')
+      expect(res.text).toContain(
+        'A community order is a sentence from court that lets you stay in the community instead of going to prison.',
+      )
+    })
+
+    it('matches the SA2020 Community Order type case-insensitively', async () => {
+      fakeDate('2025-01-01')
+      const sentence = sentenceWithDates('2024-01-01', '2026-01-01')
+      sentence.sentences[0].type = 'sa2020 community order'
+      peopleOnProbationService.getSentences.mockResolvedValue(sentence)
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('What does this mean?')
+    })
+
+    it('shows the "What does this mean?" explanation for an SA2020 Suspended Sentence Order', async () => {
+      fakeDate('2025-01-01')
+      const sentence = sentenceWithDates('2024-01-01', '2026-01-01')
+      sentence.sentences[0].type = 'SA2020 Suspended Sentence Order'
+      peopleOnProbationService.getSentences.mockResolvedValue(sentence)
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('What does this mean?')
+      expect(res.text).toContain(
+        'It means a suspended sentence order. That is a prison sentence the court has decided not to activate straight away, as long as you follow the rules set by the court.',
+      )
+      expect(res.text).toContain(
+        'If you do not follow the order, the court could bring you back and could activate the prison sentence.',
+      )
+    })
+
+    it('does not show the "What does this mean?" explanation for an order type without one', async () => {
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).not.toContain('What does this mean?')
+    })
   })
 })
 
@@ -271,7 +388,7 @@ describe('GET /requirements/:slug', () => {
           type: 'ORA Community Order',
           requirements: [
             {
-              mainCategory: { code: 'SUP', description: 'Curfew' },
+              mainCategory: { code: 'RM49', description: 'Curfew' },
               expectedStartDate: '2025-01-01',
               expectedEndDate: '2025-12-31',
               lastUpdatedAt: '2026-05-14T12:00:00.000Z',
@@ -287,13 +404,43 @@ describe('GET /requirements/:slug', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(res.text).toContain('<h1 class="govuk-heading-xl">Curfew</h1>')
+    expect(res.text).toContain('>Curfew</h1>')
     expect(res.text).toContain('Start date and time')
     expect(res.text).toContain('End date and time')
     expect(res.text).toContain('Where to find details')
     expect(res.text).toContain('You can find this information in your court order')
     expect(res.text).toContain('Your requirements were last updated on')
     expect(res.text).toContain('Thursday 14 May 2026')
+  })
+
+  it('does not show Where to find details for a date-based requirement that is not a tag type', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'SUP', description: 'Supervision' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+              lastUpdatedAt: '2026-05-14T12:00:00.000Z',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/supervision')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('>Supervision</h1>')
+    expect(res.text).toContain('Start date and time')
+    expect(res.text).toContain('End date and time')
+    expect(res.text).not.toContain('Where to find details')
   })
 
   it('shows Time required and the Community Campus note for an unpaid work requirement, without Where to find details', async () => {
@@ -355,5 +502,149 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).toContain('Maximum days on order')
     expect(res.text).toContain('90 days')
     expect(res.text).not.toContain('pop-progress__row')
+  })
+
+  it('pluralises completed and required durations independently of the remaining amount', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'F', description: 'Rehabilitation Activity Requirement (RAR)' },
+              required: 90,
+              completed: 89,
+              unit: 'DAYS',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/rehabilitation-activity-requirement-rar')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('89 days')
+    expect(res.text).toContain('90 days')
+    expect(res.text).not.toContain('89 day<')
+    expect(res.text).not.toContain('90 day<')
+  })
+
+  it('shows the "What does this mean?" Community Payback explanation for an unpaid work requirement', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'W', description: 'Unpaid Work' },
+              required: 140,
+              completed: 80,
+              unit: 'HOURS',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/community-payback-unpaid-work')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('What does this mean?')
+    expect(res.text).toContain('Community Payback is unpaid work in the community.')
+    expect(res.text).toContain('It can include jobs like removing graffiti or other useful local work.')
+  })
+
+  it('shows the "What does this mean?" RAR explanation for a RAR requirement', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'F', description: 'Rehabilitation Activity Requirement (RAR)' },
+              required: 90,
+              completed: 0,
+              unit: 'DAYS',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/rehabilitation-activity-requirement-rar')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('What does this mean?')
+    expect(res.text).toContain('RAR means Rehabilitation Activity Requirement.')
+    expect(res.text).toContain('This could include meetings, courses, or support work.')
+  })
+
+  it('shows the "What does this mean?" GPS tag explanation for a GPS tag requirement', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'RM59', description: 'Tag' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/gps-tag')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('What does this mean?')
+    expect(res.text).toContain('A GPS tag is a location tag. It tracks where you go.')
+    expect(res.text).toContain('You must charge a location tag for at least 1 hour every day.')
+  })
+
+  it('shows the "What does this mean?" curfew explanation for a curfew requirement', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'RM49', description: 'Tag' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/curfew')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('What does this mean?')
+    expect(res.text).toContain('A curfew means you must stay at a set address during set hours.')
+    expect(res.text).toContain('If you do not follow it, you could be returned to court or recalled to prison.')
   })
 })

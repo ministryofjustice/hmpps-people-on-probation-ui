@@ -1,5 +1,6 @@
 {% extends "../partials/layout.njk" %}
 {% from "../macros/showDetails.njk" import showDetails %}
+{% from "../macros/whatDoesThisMean.njk" import whatDoesThisMean %}
 {% from "partials/progress-bar.njk" import progressBar %}
 
 {% set pageTitle = "Order requirements – Check your probation account – GOV.UK" %}
@@ -38,9 +39,41 @@
           </div>
         {% endif %}
         {% if overallOrder.type %}
+          {% if overallOrder.type | lower == "sa2020 community order" %}
+            {% set orderTypeExplanationHtml %}
+              <p class="govuk-body">A community order is a sentence from court that lets you stay in the community instead of going to prison.</p>
+              <p class="govuk-body">It can include things like:</p>
+              <ul class="govuk-list govuk-list--bullet">
+                <li>unpaid work, often called Community Payback</li>
+                <li>rehabilitation activities to help you stop offending</li>
+                <li>treatment for alcohol, drugs, or mental health if the court adds that</li>
+              </ul>
+              <p class="govuk-body">If you do not follow it, you could be returned to court.</p>
+            {% endset %}
+          {% elif overallOrder.type | lower == "sa2020 suspended sentence order" %}
+            {% set orderTypeExplanationHtml %}
+              <p class="govuk-body">It means a suspended sentence order. That is a prison sentence the court has decided not to activate straight away, as long as you follow the rules set by the court.</p>
+              <p class="govuk-body">Those rules can include things like:</p>
+              <ul class="govuk-list govuk-list--bullet">
+                <li>unpaid work</li>
+                <li>appointments or activities</li>
+                <li>treatment or support work</li>
+              </ul>
+              <p class="govuk-body">If you do not follow the order, the court could bring you back and could activate the prison sentence.</p>
+            {% endset %}
+          {% endif %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">Order type</dt>
-            <dd class="pop-summary-card__value">{{ overallOrder.type }}</dd>
+            <dd class="pop-summary-card__value">
+              {{ overallOrder.type }}
+              {% if orderTypeExplanationHtml %}
+                {{ whatDoesThisMean({
+                  html: orderTypeExplanationHtml,
+                  trackingId: "requirements_order_type_what_does_this_mean",
+                  classes: "pop-order-type-details"
+                }) }}
+              {% endif %}
+            </dd>
           </div>
         {% endif %}
         {% if overallOrder.startDate %}

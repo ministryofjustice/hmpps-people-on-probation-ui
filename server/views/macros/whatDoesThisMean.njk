@@ -1,0 +1,18 @@
+{#
+  whatDoesThisMean macro — wraps the repeated govukDetails "What does this mean?" pattern.
+
+  Parameters:
+    html (string, required):     The explanation content.
+    trackingId (string, required): data-tracking-id attribute value.
+    classes (string):            Extra classes to pass through to govukDetails.
+#}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+
+{% macro whatDoesThisMean(params) %}
+  {{ govukDetails({
+    summaryText: "What does this mean?",
+    html: params.html,
+    classes: params.classes,
+    attributes: { "data-tracking-id": params.trackingId }
+  }) }}
+{% endmacro %}
