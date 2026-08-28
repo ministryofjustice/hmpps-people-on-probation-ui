@@ -18,6 +18,7 @@ import {
   CURFEW_CATEGORY_CODE,
   UNPAID_WORK_CATEGORY_CODE,
   RAR_CATEGORY_CODE,
+  TAG_CATEGORY_CODES,
 } from '../utils/categoryCodes'
 
 type DateProgressResult = {
@@ -63,6 +64,7 @@ export type RequirementView = {
   label: string
   slug: string
   kind: RequirementKind
+  isTag: boolean
   percentComplete: number
   completedDuration?: string
   required?: number
@@ -110,7 +112,11 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
   const defaultLabel = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
   const label = kind === 'other' ? defaultLabel : REQUIREMENT_KIND_LABELS[kind]
   const slug = slugify(label)
+  const isTag = TAG_CATEGORY_CODES.includes(requirement.mainCategory?.code)
   const lastUpdatedAt = formatDateTimeWithDay(requirement.lastUpdatedAt)
+
+  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
+  const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
 
   if (requirement.required && requirement.required > 0) {
     const completed = Math.min(requirement.completed ?? 0, requirement.required)
@@ -118,22 +124,25 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     const percentComplete = Math.round((completed / requirement.required) * 100)
     const unitLabel = formatUnit(requirement.unit, remaining)
     const completedLabel = formatUnit(requirement.unit, completed)
+    const totalUnitLabel = formatUnit(requirement.unit, requirement.required)
     return {
       label,
       slug,
       kind,
+      isTag,
       required: requirement.required,
       completed,
       remaining,
       unitLabel,
       percentComplete,
       completedDuration: `${completed} ${completedLabel}`,
+      startDate: formatDate(startDate) ?? startDate,
+      endDate: formatDate(endDate) ?? endDate,
+      totalLength: `${requirement.required} ${totalUnitLabel}`,
       lastUpdatedAt,
     }
   }
 
-  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
-  const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
   if (startDate && endDate) {
     const {
       percentComplete,
@@ -147,6 +156,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       label,
       slug,
       kind,
+      isTag,
       percentComplete,
       completedDuration,
       totalLength,

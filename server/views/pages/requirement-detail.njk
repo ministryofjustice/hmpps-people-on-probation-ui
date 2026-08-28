@@ -76,30 +76,36 @@
 
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
       <dl class="pop-summary-card__details">
-        {% if requirement.required %}
+        {% if requirement.kind == "unpaid-work" and requirement.required %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">Time required</dt>
             <dd class="pop-summary-card__value">{{ requirement.required }} {{ requirement.unitLabel }}</dd>
           </div>
-        {% elif requirement.startDate %}
-          <div class="pop-summary-card__row">
-            <dt class="pop-summary-card__key">Start date and time</dt>
-            <dd class="pop-summary-card__value">{{ requirement.startDate }}</dd>
-          </div>
-          <div class="pop-summary-card__row">
-            <dt class="pop-summary-card__key">End date and time</dt>
-            <dd class="pop-summary-card__value">{{ requirement.endDate }}</dd>
-          </div>
+        {% else %}
+          {% if requirement.startDate %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Start date and time</dt>
+              <dd class="pop-summary-card__value">{{ requirement.startDate }}</dd>
+            </div>
+          {% endif %}
+          {% if requirement.endDate %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">End date and time</dt>
+              <dd class="pop-summary-card__value">{{ requirement.endDate }}</dd>
+            </div>
+          {% endif %}
           {% if requirement.totalLength %}
             <div class="pop-summary-card__row">
               <dt class="pop-summary-card__key">Time required</dt>
               <dd class="pop-summary-card__value">{{ requirement.totalLength }}</dd>
             </div>
           {% endif %}
-          <div class="pop-summary-card__row">
-            <dt class="pop-summary-card__key">Where to find details</dt>
-            <dd class="pop-summary-card__value">You can find this information in your court order</dd>
-          </div>
+          {% if requirement.isTag %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Where to find details</dt>
+              <dd class="pop-summary-card__value">You can find this information in your court order</dd>
+            </div>
+          {% endif %}
         {% endif %}
       </dl>
     </div>

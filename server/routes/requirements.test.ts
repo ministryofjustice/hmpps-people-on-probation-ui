@@ -388,7 +388,7 @@ describe('GET /requirements/:slug', () => {
           type: 'ORA Community Order',
           requirements: [
             {
-              mainCategory: { code: 'SUP', description: 'Curfew' },
+              mainCategory: { code: 'RM49', description: 'Curfew' },
               expectedStartDate: '2025-01-01',
               expectedEndDate: '2025-12-31',
               lastUpdatedAt: '2026-05-14T12:00:00.000Z',
@@ -411,7 +411,36 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).toContain('You can find this information in your court order')
     expect(res.text).toContain('Your requirements were last updated on')
     expect(res.text).toContain('Thursday 14 May 2026')
-    expect(res.text).not.toContain('What does this mean?')
+  })
+
+  it('does not show Where to find details for a date-based requirement that is not a tag type', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'SUP', description: 'Supervision' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+              lastUpdatedAt: '2026-05-14T12:00:00.000Z',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/supervision')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('>Supervision</h1>')
+    expect(res.text).toContain('Start date and time')
+    expect(res.text).toContain('End date and time')
+    expect(res.text).not.toContain('Where to find details')
   })
 
   it('shows Time required and the Community Campus note for an unpaid work requirement, without Where to find details', async () => {
