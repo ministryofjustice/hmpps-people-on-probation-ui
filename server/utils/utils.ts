@@ -117,6 +117,16 @@ export const formatMapUrl = (addressLines: string[]): string | null => {
   return `https://maps.google.com/?q=${encodeURIComponent(addressLines.join(', '))}`
 }
 
+export const sanitiseOfficeLocationUrl = (url?: string | null): string | undefined => {
+  if (!url) return undefined
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'https:' && parsed.hostname === 'www.gov.uk' ? url : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export const formatPersonName = (name?: PersonNameResponse): string | undefined => {
   if (!name) return undefined
   return [name.forename, name.middleName, name.surname].filter(Boolean).join(' ')

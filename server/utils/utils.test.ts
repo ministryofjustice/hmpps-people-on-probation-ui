@@ -14,6 +14,7 @@ import {
   formatMapUrl,
   formatPersonName,
   formatPractitionerName,
+  sanitiseOfficeLocationUrl,
   shouldIncludeMissedAppointmentInAlert,
 } from './utils'
 
@@ -307,5 +308,32 @@ describe('formatPractitionerName', () => {
 
   it('formats allocated practitioner names', () => {
     expect(formatPractitionerName({ forename: 'Jane', surname: 'Doe' })).toEqual('Jane Doe')
+  })
+})
+
+describe('sanitiseOfficeLocationUrl', () => {
+  it('returns undefined when the url is missing or null', () => {
+    expect(sanitiseOfficeLocationUrl(undefined)).toBeUndefined()
+    expect(sanitiseOfficeLocationUrl(null)).toBeUndefined()
+    expect(sanitiseOfficeLocationUrl('')).toBeUndefined()
+  })
+
+  it('returns undefined for malformed urls', () => {
+    expect(sanitiseOfficeLocationUrl('not a url')).toBeUndefined()
+  })
+
+  it('returns undefined for non-https schemes', () => {
+    expect(sanitiseOfficeLocationUrl(`${'java'}script:alert(1)`)).toBeUndefined()
+    expect(sanitiseOfficeLocationUrl('http://www.gov.uk/guidance/some-office')).toBeUndefined()
+  })
+
+  it('returns undefined for urls on a different host', () => {
+    expect(sanitiseOfficeLocationUrl('https://evil.example.com/gov.uk')).toBeUndefined()
+  })
+
+  it('returns the url when it is a valid https www.gov.uk link', () => {
+    expect(sanitiseOfficeLocationUrl('https://www.gov.uk/guidance/havering-pioneer-house')).toEqual(
+      'https://www.gov.uk/guidance/havering-pioneer-house',
+    )
   })
 })
