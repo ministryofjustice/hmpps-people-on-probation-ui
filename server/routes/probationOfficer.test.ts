@@ -168,6 +168,35 @@ describe('GET /probation-officer', () => {
     expect(response.text).not.toContain('Office location')
   })
 
+  it('should not render an office location link when officeLocationUrl is null', async () => {
+    peopleOnProbationService.getPersonalDetails.mockResolvedValue({
+      name: { forename: 'John', surname: 'Smith' },
+      emergencyContacts: [],
+      practitioner: {
+        name: { forename: 'Sarah', surname: 'Jones' },
+        team: {
+          telephoneNumber: '01234567890',
+          officeAddresses: [
+            {
+              houseNumber: '10',
+              street: 'Probation Lane',
+              town: 'Manchester',
+              postcode: 'M1 1AA',
+            },
+          ],
+        },
+        officeLocationUrl: null,
+      },
+    })
+
+    const response = await request(app)
+      .get('/probation-officer')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Office location')
+  })
+
   it('should render without office address when the practitioner has no team address', async () => {
     peopleOnProbationService.getPersonalDetails.mockResolvedValue({
       name: { forename: 'John', surname: 'Smith' },
