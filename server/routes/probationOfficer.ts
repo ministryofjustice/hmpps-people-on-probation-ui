@@ -22,6 +22,7 @@ export default function probationOfficerRoutes(services: Services): Router {
             name: formatPractitionerName(practitioner.name),
             phoneNumber: practitioner.team?.telephoneNumber,
             officeAddress: formatAddress(practitioner.team?.officeAddresses?.[0]),
+            officeLocationUrl: practitioner.officeLocationUrl,
           }
         : null
 
