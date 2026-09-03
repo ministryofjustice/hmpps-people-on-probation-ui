@@ -3,7 +3,7 @@ import { Router } from 'express'
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
-import { formatPractitionerName, formatAddress } from '../utils/utils'
+import { formatPractitionerName, formatAddress, sanitiseOfficeLocationUrl } from '../utils/utils'
 
 export default function probationOfficerRoutes(services: Services): Router {
   const router = Router()
@@ -22,11 +22,15 @@ export default function probationOfficerRoutes(services: Services): Router {
             name: formatPractitionerName(practitioner.name),
             phoneNumber: practitioner.team?.telephoneNumber,
             officeAddress: formatAddress(practitioner.team?.officeAddresses?.[0]),
+            officeLocationUrl: sanitiseOfficeLocationUrl(practitioner.officeLocationUrl),
           }
         : null
 
       return res.render('pages/probation-officer', {
-        officer: officer && (officer.name || officer.phoneNumber || officer.officeAddress.length) ? officer : null,
+        officer:
+          officer && (officer.name || officer.phoneNumber || officer.officeAddress.length || officer.officeLocationUrl)
+            ? officer
+            : null,
       })
     } catch (error) {
       return next(error)

@@ -14,35 +14,52 @@
   <div class="govuk-!-margin-top-6">
 
     {% if officer %}
-      <div class="pop-summary-card">
-        <div class="pop-summary-card__header">
-          <span class="pop-summary-card__type">Probation officer details</span>
-        </div>
-        <dl class="pop-summary-card__details">
-          {% if officer.name %}
+      {% if officer.name %}
+        <div class="pop-summary-card">
+          <div class="pop-summary-card__header">
+            <span class="pop-summary-card__type">Your probation officer</span>
+          </div>
+          <dl class="pop-summary-card__details">
             <div class="pop-summary-card__row">
               <dt class="pop-summary-card__key">Name</dt>
               <dd class="pop-summary-card__value">{{ officer.name }}</dd>
             </div>
-          {% endif %}
-          {% if officer.phoneNumber %}
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">Phone number</dt>
-              <dd class="pop-summary-card__value">{{ officer.phoneNumber }}</dd>
-            </div>
-          {% endif %}
-          {% if officer.officeAddress.length %}
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">Office address</dt>
-              <dd class="pop-summary-card__value">
-                {% for line in officer.officeAddress %}
-                  {{ line }}{% if not loop.last %}<br>{% endif %}
-                {% endfor %}
-              </dd>
-            </div>
-          {% endif %}
-        </dl>
-      </div>
+          </dl>
+        </div>
+      {% endif %}
+      {% if officer.phoneNumber or officer.officeAddress.length or officer.officeLocationUrl %}
+        <div class="pop-summary-card govuk-!-margin-top-4">
+          <div class="pop-summary-card__header">
+            <span class="pop-summary-card__type">Your probation office</span>
+          </div>
+          <dl class="pop-summary-card__details">
+            {% if officer.phoneNumber %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Phone number</dt>
+                <dd class="pop-summary-card__value">{{ officer.phoneNumber }}</dd>
+              </div>
+            {% endif %}
+            {% if officer.officeAddress.length %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Address</dt>
+                <dd class="pop-summary-card__value">
+                  {% for line in officer.officeAddress %}
+                    {{ line }}{% if not loop.last %}<br>{% endif %}
+                  {% endfor %}
+                </dd>
+              </div>
+            {% endif %}
+            {% if officer.officeLocationUrl %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">More details</dt>
+                <dd class="pop-summary-card__value">
+                  <a class="govuk-link govuk-link--no-visited-state" href="{{ officer.officeLocationUrl }}" target="_blank" rel="noopener noreferrer" data-tracking-id="probation_office_location_link">Office location<span class="govuk-visually-hidden"> (opens in new tab)</span></a>
+                </dd>
+              </div>
+            {% endif %}
+          </dl>
+        </div>
+      {% endif %}
     {% else %}
       <p class="govuk-body">No probation officer details are available at this time.</p>
     {% endif %}
