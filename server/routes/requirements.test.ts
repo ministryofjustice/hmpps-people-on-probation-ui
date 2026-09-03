@@ -68,6 +68,56 @@ describe('GET /requirements', () => {
     expect(res.text).not.toContain('Dummy charge')
   })
 
+  describe('overall order type display', () => {
+    it('strips the SA2020 prefix from the order type', async () => {
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'SA2020 Community Order',
+            mainOffence: { code: '001', description: 'Test main offence' },
+            startDate: '2024-01-01',
+            expectedEndDate: '2026-01-01',
+            requirements: [],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Community Order')
+      expect(res.text).not.toContain('SA2020')
+    })
+
+    it('maps "ORA Adult Custody (not PSS)" to Licence', async () => {
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Adult Custody (not PSS)',
+            mainOffence: { code: '001', description: 'Test main offence' },
+            startDate: '2024-01-01',
+            expectedEndDate: '2026-01-01',
+            requirements: [],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Licence')
+      expect(res.text).not.toContain('ORA Adult Custody')
+    })
+  })
+
   describe('overall order completedDuration clamping', () => {
     it('does not exceed totalLength when today is after the end date', async () => {
       fakeDate('2027-06-01')

@@ -9,6 +9,7 @@ import {
   formatDateTimeWithDay,
   formatRemainingDuration,
   formatIntervalDuration,
+  formatSentenceType,
   formatUnit,
   parseLocalDate,
 } from '../utils/utils'
@@ -189,7 +190,7 @@ export default function requirementsRoutes(services: Services): Router {
           calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
         overallOrder = {
           charge: sentence.mainOffence?.description,
-          type: sentence?.type,
+          type: formatSentenceType(sentence?.type),
           startDate,
           endDate,
           totalLength,
