@@ -17,12 +17,14 @@ export default function probationOfficerRoutes(services: Services): Router {
 
       const personalDetails = await services.peopleOnProbationService.getPersonalDetails(crn)
       const { practitioner } = personalDetails
+      const officeLocationUrl = sanitiseOfficeLocationUrl(practitioner?.officeLocationUrl)
       const officer = practitioner
         ? {
             name: formatPractitionerName(practitioner.name),
             phoneNumber: practitioner.team?.telephoneNumber,
             officeAddress: formatAddress(practitioner.team?.officeAddresses?.[0]),
-            officeLocationUrl: sanitiseOfficeLocationUrl(practitioner.officeLocationUrl),
+            officeLocationUrl: officeLocationUrl && practitioner.officeName ? officeLocationUrl : undefined,
+            officeName: officeLocationUrl && practitioner.officeName ? practitioner.officeName : undefined,
           }
         : null
 

@@ -110,13 +110,14 @@ describe('GET /probation-officer', () => {
     expect(response.text).not.toContain('<dt class="pop-summary-card__key">Name</dt>')
   })
 
-  it('should still render the office location link when the practitioner is unallocated but officeLocationUrl is present', async () => {
+  it('should still render the office location link when the practitioner is unallocated but officeLocationUrl and officeName are present', async () => {
     peopleOnProbationService.getPersonalDetails.mockResolvedValue({
       name: { forename: 'John', surname: 'Smith' },
       emergencyContacts: [],
       practitioner: {
         name: { forename: 'Unallocated', surname: '' },
         officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
+        officeName: 'Havering Pioneer House',
       },
     })
 
@@ -128,10 +129,11 @@ describe('GET /probation-officer', () => {
     expect(response.text).not.toContain('No probation officer details are available at this time.')
     expect(response.text).not.toContain('Unallocated')
     expect(response.text).toContain('https://www.gov.uk/guidance/havering-pioneer-house')
-    expect(response.text).toContain('Office location')
+    expect(response.text).toContain('Havering Pioneer House')
+    expect(response.text).toContain('Learn more about')
   })
 
-  it('should render the office location link when officeLocationUrl is present', async () => {
+  it('should render the office location link, using officeName as the link text, when officeLocationUrl and officeName are present', async () => {
     peopleOnProbationService.getPersonalDetails.mockResolvedValue({
       name: { forename: 'John', surname: 'Smith' },
       emergencyContacts: [],
@@ -149,6 +151,7 @@ describe('GET /probation-officer', () => {
           ],
         },
         officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
+        officeName: 'Havering Pioneer House',
       },
     })
 
@@ -158,7 +161,8 @@ describe('GET /probation-officer', () => {
       .expect(200)
 
     expect(response.text).toContain('https://www.gov.uk/guidance/havering-pioneer-house')
-    expect(response.text).toContain('Office location')
+    expect(response.text).toContain('Learn more about')
+    expect(response.text).toContain('Havering Pioneer House')
   })
 
   it('should not render an office location link when officeLocationUrl is absent', async () => {
@@ -178,6 +182,7 @@ describe('GET /probation-officer', () => {
             },
           ],
         },
+        officeName: 'Havering Pioneer House',
       },
     })
 
@@ -186,7 +191,38 @@ describe('GET /probation-officer', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).not.toContain('Office location')
+    expect(response.text).not.toContain('Learn more about')
+    expect(response.text).not.toContain('Havering Pioneer House')
+  })
+
+  it('should not render an office location link when officeName is absent', async () => {
+    peopleOnProbationService.getPersonalDetails.mockResolvedValue({
+      name: { forename: 'John', surname: 'Smith' },
+      emergencyContacts: [],
+      practitioner: {
+        name: { forename: 'Sarah', surname: 'Jones' },
+        team: {
+          telephoneNumber: '01234567890',
+          officeAddresses: [
+            {
+              houseNumber: '10',
+              street: 'Probation Lane',
+              town: 'Manchester',
+              postcode: 'M1 1AA',
+            },
+          ],
+        },
+        officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
+      },
+    })
+
+    const response = await request(app)
+      .get('/probation-officer')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Learn more about')
+    expect(response.text).not.toContain('https://www.gov.uk/guidance/havering-pioneer-house')
   })
 
   it('should not render an office location link when officeLocationUrl is unsafe or malformed', async () => {
@@ -207,6 +243,7 @@ describe('GET /probation-officer', () => {
           ],
         },
         officeLocationUrl: `${'java'}script:alert(1)`,
+        officeName: 'Havering Pioneer House',
       },
     })
 
@@ -215,7 +252,7 @@ describe('GET /probation-officer', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).not.toContain('Office location')
+    expect(response.text).not.toContain('Learn more about')
     expect(response.text).not.toContain('script:')
   })
 
@@ -237,6 +274,7 @@ describe('GET /probation-officer', () => {
           ],
         },
         officeLocationUrl: null,
+        officeName: 'Havering Pioneer House',
       },
     })
 
@@ -245,7 +283,7 @@ describe('GET /probation-officer', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).not.toContain('Office location')
+    expect(response.text).not.toContain('Learn more about')
   })
 
   it('should render without office address when the practitioner has no team address', async () => {

@@ -49,11 +49,11 @@
                 </dd>
               </div>
             {% endif %}
-            {% if officer.officeLocationUrl %}
+            {% if officer.officeLocationUrl and officer.officeName %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">More details</dt>
                 <dd class="pop-summary-card__value">
-                  <a class="govuk-link govuk-link--no-visited-state" href="{{ officer.officeLocationUrl }}" target="_blank" rel="noopener noreferrer" data-tracking-id="probation_office_location_link">Office location<span class="govuk-visually-hidden"> (opens in new tab)</span></a>
+                  Learn more about <a class="govuk-link govuk-link--no-visited-state" href="{{ officer.officeLocationUrl }}" target="_blank" rel="noopener noreferrer" data-tracking-id="probation_office_location_link">{{ officer.officeName }}<span class="govuk-visually-hidden"> (opens in new tab)</span></a>
                 </dd>
               </div>
             {% endif %}
