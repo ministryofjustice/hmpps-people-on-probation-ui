@@ -14,6 +14,7 @@ import {
   formatMapUrl,
   formatPersonName,
   formatPractitionerName,
+  formatSentenceType,
   sanitiseOfficeLocationUrl,
   shouldIncludeMissedAppointmentInAlert,
 } from './utils'
@@ -335,5 +336,25 @@ describe('sanitiseOfficeLocationUrl', () => {
     expect(sanitiseOfficeLocationUrl('https://www.gov.uk/guidance/havering-pioneer-house')).toEqual(
       'https://www.gov.uk/guidance/havering-pioneer-house',
     )
+  })
+})
+
+describe('formatSentenceType', () => {
+  it('returns undefined when the type is missing', () => {
+    expect(formatSentenceType(undefined)).toBeUndefined()
+    expect(formatSentenceType('')).toBeUndefined()
+  })
+
+  it('strips the SA2020 prefix', () => {
+    expect(formatSentenceType('SA2020 Suspended Sentence Order')).toEqual('Suspended Sentence Order')
+    expect(formatSentenceType('SA2020 Community Order')).toEqual('Community Order')
+  })
+
+  it('maps ORA Adult Custody (not PSS) to Licence', () => {
+    expect(formatSentenceType('ORA Adult Custody (not PSS)')).toEqual('Licence')
+  })
+
+  it('leaves other sentence types unchanged', () => {
+    expect(formatSentenceType('ORA Community Order')).toEqual('ORA Community Order')
   })
 })
