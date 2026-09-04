@@ -367,7 +367,7 @@ describe('GET /requirements', () => {
 
       expect(res.text).toContain('What does this mean?')
       expect(res.text).toContain(
-        'A community order is a sentence from court that lets you stay in the community instead of going to prison.',
+        'Your order is a community order. It lets you stay in the community to serve your sentence instead of going to prison.',
       )
     })
 
@@ -398,11 +398,9 @@ describe('GET /requirements', () => {
 
       expect(res.text).toContain('What does this mean?')
       expect(res.text).toContain(
-        'It means a suspended sentence order. That is a prison sentence the court has decided not to activate straight away, as long as you follow the rules set by the court.',
+        'Your sentence is called a suspended sentence. It is a prison sentence, but the court has decided to give you some rules to follow in the community instead so that you do not go to prison.',
       )
-      expect(res.text).toContain(
-        'If you do not follow the order, the court could bring you back and could activate the prison sentence.',
-      )
+      expect(res.text).toContain('send you to prison')
     })
 
     it('does not show the "What does this mean?" explanation for an order type without one', async () => {
@@ -609,8 +607,8 @@ describe('GET /requirements/:slug', () => {
       .expect(200)
 
     expect(res.text).toContain('What does this mean?')
-    expect(res.text).toContain('Community Payback is unpaid work in the community.')
-    expect(res.text).toContain('It can include jobs like removing graffiti or other useful local work.')
+    expect(res.text).toContain('Community payback (unpaid work) is sometimes called community service.')
+    expect(res.text).toContain('removing graffiti')
   })
 
   it('shows the "What does this mean?" RAR explanation for a RAR requirement', async () => {
@@ -638,8 +636,10 @@ describe('GET /requirements/:slug', () => {
       .expect(200)
 
     expect(res.text).toContain('What does this mean?')
-    expect(res.text).toContain('RAR means Rehabilitation Activity Requirement.')
-    expect(res.text).toContain('This could include meetings, courses, or support work.')
+    expect(res.text).toContain(
+      'Rehabilitation Activity Requirements (RAR) are activities set by your probation officer that you must take part in.',
+    )
+    expect(res.text).toContain('go to meetings with support workers who can help you')
   })
 
   it('shows the "What does this mean?" GPS tag explanation for a GPS tag requirement', async () => {
@@ -666,8 +666,8 @@ describe('GET /requirements/:slug', () => {
       .expect(200)
 
     expect(res.text).toContain('What does this mean?')
-    expect(res.text).toContain('A GPS tag is a location tag. It tracks where you go.')
-    expect(res.text).toContain('You must charge a location tag for at least 1 hour every day.')
+    expect(res.text).toContain('A GPS tag tracks your location. It checks that you:')
+    expect(res.text).toContain('You must keep your tag charged and you need to do this for at least 1 hour a day.')
   })
 
   it('shows the "What does this mean?" curfew explanation for a curfew requirement', async () => {
@@ -694,7 +694,9 @@ describe('GET /requirements/:slug', () => {
       .expect(200)
 
     expect(res.text).toContain('What does this mean?')
-    expect(res.text).toContain('A curfew means you must stay at a set address during set hours.')
-    expect(res.text).toContain('If you do not follow it, you could be returned to court or recalled to prison.')
+    expect(res.text).toContain('A curfew means you must stay at a specific address agreed with the court.')
+    expect(res.text).toContain(
+      'It is important to remember if you do not follow your curfew you could go back to court.',
+    )
   })
 })

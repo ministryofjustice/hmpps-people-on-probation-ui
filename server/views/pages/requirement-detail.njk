@@ -17,27 +17,42 @@
 
   {% if requirement.kind == "gps-tag" %}
     {% set explanationHtml %}
-      <p class="govuk-body">A GPS tag is a location tag. It tracks where you go.</p>
-      <p class="govuk-body">It can record your movements all the time. It checks if you stay out of banned areas, go to required appointments, and stick to any curfew.</p>
-      <p class="govuk-body">You usually wear it on your ankle. You must charge a location tag for at least 1 hour every day. If you do not follow the tag rules, you could be returned to court or prison.</p>
+      <p class="govuk-body">A GPS tag tracks your location. It checks that you:</p>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>do not go into banned areas</li>
+        <li>go to your appointments</li>
+        <li>follow your curfew</li>
+      </ul>
+      <p class="govuk-body">You must keep your tag charged and you need to do this for at least 1 hour a day. You will still need to wear the tag even when it is charging.</p>
+      <p class="govuk-body">It is important to remember if you do not follow the rules about your tag, you could go back to court.</p>
     {% endset %}
     {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_gps_tag_what_does_this_mean" }) }}
   {% elif requirement.kind == "unpaid-work" %}
     {% set explanationHtml %}
-      <p class="govuk-body">Community Payback is unpaid work in the community.</p>
-      <p class="govuk-body">It can include jobs like removing graffiti or other useful local work. It is part of some community sentences. If you do not attend or take part, you could be returned to court.</p>
+      <p class="govuk-body">Community payback (unpaid work) is sometimes called community service.</p>
+      <p class="govuk-body">Jobs you might be asked to do as part of Community payback include:</p>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>removing graffiti</li>
+        <li>cleaning up rubbish</li>
+        <li>helping local charities</li>
+        <li>painting local buildings</li>
+      </ul>
+      <p class="govuk-body">When deciding what job you will do, your probation officer will bear in mind things about you and your sentence that might affect where you can work and what work you can do.</p>
+      <p class="govuk-body">It is important to remember if you do not go to your Community payback or say no to taking part, you could go back to court.</p>
     {% endset %}
     {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_unpaid_work_what_does_this_mean" }) }}
   {% elif requirement.kind == "rar" %}
     {% set explanationHtml %}
-      <p class="govuk-body">RAR means Rehabilitation Activity Requirement.</p>
-      <p class="govuk-body">It means you must take part in activities set by your probation officer to help reduce the chance of offending. This could include meetings, courses, or support work. If you do not take part, you could be returned to court.</p>
+      <p class="govuk-body">Rehabilitation Activity Requirements (RAR) are activities set by your probation officer that you must take part in. Your probation officer will talk to you about the goals you have which will help them decide what activities would be best for you.</p>
+      <p class="govuk-body">For example, this might mean you need to go to meetings with support workers who can help you, or do some courses to help you learn important life skills.</p>
+      <p class="govuk-body">It is important to remember that if you do not take part in Rehabilitation Activity Requirements (RAR), you could go back to court.</p>
     {% endset %}
     {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_rar_what_does_this_mean" }) }}
   {% elif requirement.kind == "curfew" %}
     {% set explanationHtml %}
-      <p class="govuk-body">A curfew means you must stay at a set address during set hours.</p>
-      <p class="govuk-body">It is often checked with an electronic tag. Your order or licence will say the address and times. If you do not follow it, you could be returned to court or recalled to prison.</p>
+      <p class="govuk-body">A curfew means you must stay at a specific address agreed with the court. You must stay there at certain times of the day and night.</p>
+      <p class="govuk-body">Your curfew is often checked with a tag. You can find out where you must stay and when in your court order.</p>
+      <p class="govuk-body">It is important to remember if you do not follow your curfew you could go back to court.</p>
     {% endset %}
     {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_curfew_what_does_this_mean" }) }}
   {% endif %}
