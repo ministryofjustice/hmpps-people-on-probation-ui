@@ -41,25 +41,38 @@
         {% if overallOrder.type %}
           {% if overallOrder.type | lower == "community order" %}
             {% set orderTypeExplanationHtml %}
-              <p class="govuk-body">A community order is a sentence from court that lets you stay in the community instead of going to prison.</p>
-              <p class="govuk-body">It can include things like:</p>
+              <p class="govuk-body">Your order is a community order. It lets you stay in the community to serve your sentence instead of going to prison.</p>
+              <p class="govuk-body">The court could ask you to:</p>
               <ul class="govuk-list govuk-list--bullet">
-                <li>unpaid work, often called Community Payback</li>
-                <li>rehabilitation activities to help you stop offending</li>
-                <li>treatment for alcohol, drugs, or mental health if the court adds that</li>
+                <li>do unpaid work, which is sometimes called community service</li>
+                <li>go to appointments</li>
+                <li>take part in activities to stop you from offending again</li>
+                <li>get treatment or support</li>
               </ul>
-              <p class="govuk-body">If you do not follow it, you could be returned to court.</p>
+              <p class="govuk-body">It is important to remember if you do not follow the rules of your order you could go back to court.</p>
+              <p class="govuk-body">The court might decide to:</p>
+              <ul class="govuk-list govuk-list--bullet">
+                <li>give you more strict rules to follow in the community</li>
+                <li>add more time to your order</li>
+              </ul>
             {% endset %}
           {% elif overallOrder.type | lower == "suspended sentence order" %}
             {% set orderTypeExplanationHtml %}
-              <p class="govuk-body">It means a suspended sentence order. That is a prison sentence the court has decided not to activate straight away, as long as you follow the rules set by the court.</p>
-              <p class="govuk-body">Those rules can include things like:</p>
+              <p class="govuk-body">Your sentence is called a suspended sentence. It is a prison sentence, but the court has decided to give you some rules to follow in the community instead so that you do not go to prison.</p>
+              <p class="govuk-body">The court could ask you to:</p>
               <ul class="govuk-list govuk-list--bullet">
-                <li>unpaid work</li>
-                <li>appointments or activities</li>
-                <li>treatment or support work</li>
+                <li>do unpaid work, which is sometimes called community service</li>
+                <li>go to appointments</li>
+                <li>take part in activities to stop you from offending again</li>
+                <li>get treatment or support</li>
               </ul>
-              <p class="govuk-body">If you do not follow the order, the court could bring you back and could activate the prison sentence.</p>
+              <p class="govuk-body">It is important to remember if you do not follow the rules of your order you could go back to court.</p>
+              <p class="govuk-body">The court might decide to:</p>
+              <ul class="govuk-list govuk-list--bullet">
+                <li>send you to prison</li>
+                <li>give you more strict rules to follow in the community</li>
+                <li>add more time to your order</li>
+              </ul>
             {% endset %}
           {% endif %}
           <div class="pop-summary-card__row">
