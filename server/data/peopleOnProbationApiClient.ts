@@ -29,6 +29,7 @@ export interface ManagerResponse {
   name: PersonNameResponse
   team?: TeamResponse
   officeLocationUrl?: string | null
+  officeName?: string | null
 }
 
 export interface PersonalContactResponse {
