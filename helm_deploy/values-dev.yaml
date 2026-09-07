@@ -12,6 +12,11 @@ generic-service:
     INGRESS_URL: "https://probation-account-dev.hmpps.service.justice.gov.uk"
     HMPPS_AUTH_URL: "https://sign-in-dev.hmpps.service.justice.gov.uk/auth"
     ONE_LOGIN_ISSUER_URL: "https://oidc.integration.account.gov.uk"
+    # Dev-only: validate signing in without MFA before considering this for
+    # preprod/prod. Requires GOV.UK One Login to have approved the 'Cl'
+    # vector of trust for this client - do not copy to values-preprod.yaml
+    # or values-prod.yaml without that confirmed and a deliberate decision.
+    ONE_LOGIN_VTR_LOGIN: "Cl"
     PEOPLE_ON_PROBATION_API_URL: "https://people-on-probation-api-dev.hmpps.service.justice.gov.uk"
     ONE_LOGIN_REDIRECT_URI: "https://probation-account-dev.hmpps.service.justice.gov.uk/sign-in/callback"
     ONE_LOGIN_POST_LOGOUT_REDIRECT_URI: "https://probation-account-dev.hmpps.service.justice.gov.uk"
