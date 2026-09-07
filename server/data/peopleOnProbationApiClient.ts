@@ -30,6 +30,8 @@ export interface ManagerResponse {
   team?: TeamResponse
   officeLocationUrl?: string | null
   officeName?: string | null
+  officePhoneNumber?: string | null
+  officeAddress?: AddressResponse | null
 }
 
 export interface PersonalContactResponse {
