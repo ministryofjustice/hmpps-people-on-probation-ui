@@ -14,29 +14,37 @@
   <div class="govuk-!-margin-top-6">
 
     {% if officer %}
-      {% if officer.name %}
+      {% if officer.name or officer.officerPhoneNumber %}
         <div class="pop-summary-card">
           <div class="pop-summary-card__header">
             <span class="pop-summary-card__type">Your probation officer</span>
           </div>
           <dl class="pop-summary-card__details">
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">Name</dt>
-              <dd class="pop-summary-card__value">{{ officer.name }}</dd>
-            </div>
+            {% if officer.name %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Name</dt>
+                <dd class="pop-summary-card__value">{{ officer.name }}</dd>
+              </div>
+            {% endif %}
+            {% if officer.officerPhoneNumber %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Officer phone number</dt>
+                <dd class="pop-summary-card__value">{{ officer.officerPhoneNumber }}</dd>
+              </div>
+            {% endif %}
           </dl>
         </div>
       {% endif %}
-      {% if officer.phoneNumber or officer.officeAddress.length or officer.officeLocationUrl %}
+      {% if officer.officePhoneNumber or officer.officeAddress.length or officer.officeLocationUrl %}
         <div class="pop-summary-card govuk-!-margin-top-4">
           <div class="pop-summary-card__header">
             <span class="pop-summary-card__type">Your probation office</span>
           </div>
           <dl class="pop-summary-card__details">
-            {% if officer.phoneNumber %}
+            {% if officer.officePhoneNumber %}
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">Phone number</dt>
-                <dd class="pop-summary-card__value">{{ officer.phoneNumber }}</dd>
+                <dd class="pop-summary-card__value">{{ officer.officePhoneNumber }}</dd>
               </div>
             {% endif %}
             {% if officer.officeAddress.length %}

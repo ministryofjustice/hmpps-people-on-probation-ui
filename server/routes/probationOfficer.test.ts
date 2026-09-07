@@ -40,7 +40,7 @@ describe('GET /probation-officer', () => {
       .expect('Location', '/autherror')
   })
 
-  it('should render the probation officer name, phone number and office address', async () => {
+  it('should render the probation officer name and phone number, and the office phone number and address', async () => {
     peopleOnProbationService.getPersonalDetails.mockResolvedValue({
       name: { forename: 'John', surname: 'Smith' },
       emergencyContacts: [],
@@ -48,14 +48,14 @@ describe('GET /probation-officer', () => {
         name: { forename: 'Sarah', surname: 'Jones' },
         team: {
           telephoneNumber: '01234567890',
-          officeAddresses: [
-            {
-              houseNumber: '10',
-              street: 'Probation Lane',
-              town: 'Manchester',
-              postcode: 'M1 1AA',
-            },
-          ],
+          officeAddresses: [],
+        },
+        officePhoneNumber: '01708123456',
+        officeAddress: {
+          street: '27-35 New Road',
+          town: 'Chatham',
+          county: 'Kent',
+          postcode: 'ME4 4QR',
         },
       },
     })
@@ -68,10 +68,14 @@ describe('GET /probation-officer', () => {
 
     expect(response.text).toContain('Probation officer details')
     expect(response.text).toContain('Sarah Jones')
+    expect(response.text).toContain('<dt class="pop-summary-card__key">Officer phone number</dt>')
     expect(response.text).toContain('01234567890')
-    expect(response.text).toContain('Probation Lane')
-    expect(response.text).toContain('Manchester')
-    expect(response.text).toContain('M1 1AA')
+    expect(response.text).toContain('<dt class="pop-summary-card__key">Phone number</dt>')
+    expect(response.text).toContain('01708123456')
+    expect(response.text).toContain('27-35 New Road')
+    expect(response.text).toContain('Chatham')
+    expect(response.text).toContain('Kent')
+    expect(response.text).toContain('ME4 4QR')
     expect(peopleOnProbationService.getPersonalDetails).toHaveBeenCalledWith('X123456')
   })
 
@@ -141,14 +145,7 @@ describe('GET /probation-officer', () => {
         name: { forename: 'Sarah', surname: 'Jones' },
         team: {
           telephoneNumber: '01234567890',
-          officeAddresses: [
-            {
-              houseNumber: '10',
-              street: 'Probation Lane',
-              town: 'Manchester',
-              postcode: 'M1 1AA',
-            },
-          ],
+          officeAddresses: [],
         },
         officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
         officeName: 'Havering Pioneer House',
@@ -171,17 +168,7 @@ describe('GET /probation-officer', () => {
       emergencyContacts: [],
       practitioner: {
         name: { forename: 'Sarah', surname: 'Jones' },
-        team: {
-          telephoneNumber: '01234567890',
-          officeAddresses: [
-            {
-              houseNumber: '10',
-              street: 'Probation Lane',
-              town: 'Manchester',
-              postcode: 'M1 1AA',
-            },
-          ],
-        },
+        team: { telephoneNumber: '01234567890', officeAddresses: [] },
         officeName: 'Havering Pioneer House',
       },
     })
@@ -201,17 +188,7 @@ describe('GET /probation-officer', () => {
       emergencyContacts: [],
       practitioner: {
         name: { forename: 'Sarah', surname: 'Jones' },
-        team: {
-          telephoneNumber: '01234567890',
-          officeAddresses: [
-            {
-              houseNumber: '10',
-              street: 'Probation Lane',
-              town: 'Manchester',
-              postcode: 'M1 1AA',
-            },
-          ],
-        },
+        team: { telephoneNumber: '01234567890', officeAddresses: [] },
         officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
       },
     })
@@ -231,17 +208,7 @@ describe('GET /probation-officer', () => {
       emergencyContacts: [],
       practitioner: {
         name: { forename: 'Sarah', surname: 'Jones' },
-        team: {
-          telephoneNumber: '01234567890',
-          officeAddresses: [
-            {
-              houseNumber: '10',
-              street: 'Probation Lane',
-              town: 'Manchester',
-              postcode: 'M1 1AA',
-            },
-          ],
-        },
+        team: { telephoneNumber: '01234567890', officeAddresses: [] },
         officeLocationUrl: `${'java'}script:alert(1)`,
         officeName: 'Havering Pioneer House',
       },
@@ -262,17 +229,7 @@ describe('GET /probation-officer', () => {
       emergencyContacts: [],
       practitioner: {
         name: { forename: 'Sarah', surname: 'Jones' },
-        team: {
-          telephoneNumber: '01234567890',
-          officeAddresses: [
-            {
-              houseNumber: '10',
-              street: 'Probation Lane',
-              town: 'Manchester',
-              postcode: 'M1 1AA',
-            },
-          ],
-        },
+        team: { telephoneNumber: '01234567890', officeAddresses: [] },
         officeLocationUrl: null,
         officeName: 'Havering Pioneer House',
       },
@@ -286,13 +243,76 @@ describe('GET /probation-officer', () => {
     expect(response.text).not.toContain('Learn more about')
   })
 
-  it('should render without office address when the practitioner has no team address', async () => {
+  it('should not render the office phone number row when officePhoneNumber is absent', async () => {
     peopleOnProbationService.getPersonalDetails.mockResolvedValue({
       name: { forename: 'John', surname: 'Smith' },
       emergencyContacts: [],
       practitioner: {
         name: { forename: 'Sarah', surname: 'Jones' },
         team: { telephoneNumber: '01234567890', officeAddresses: [] },
+        officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
+        officeName: 'Havering Pioneer House',
+      },
+    })
+
+    const response = await request(app)
+      .get('/probation-officer')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('<dt class="pop-summary-card__key">Phone number</dt>')
+  })
+
+  it('should not render the office address block when officeAddress is null', async () => {
+    peopleOnProbationService.getPersonalDetails.mockResolvedValue({
+      name: { forename: 'John', surname: 'Smith' },
+      emergencyContacts: [],
+      practitioner: {
+        name: { forename: 'Sarah', surname: 'Jones' },
+        team: { telephoneNumber: '01234567890', officeAddresses: [] },
+        officeAddress: null,
+      },
+    })
+
+    const response = await request(app)
+      .get('/probation-officer')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('<dt class="pop-summary-card__key">Address</dt>')
+  })
+
+  it('should skip blank office address lines', async () => {
+    peopleOnProbationService.getPersonalDetails.mockResolvedValue({
+      name: { forename: 'John', surname: 'Smith' },
+      emergencyContacts: [],
+      practitioner: {
+        name: { forename: 'Sarah', surname: 'Jones' },
+        team: { telephoneNumber: '01234567890', officeAddresses: [] },
+        officeAddress: {
+          street: '27-35 New Road',
+          town: '',
+          county: undefined,
+          postcode: 'ME4 4QR',
+        },
+      },
+    })
+
+    const response = await request(app)
+      .get('/probation-officer')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('27-35 New Road')
+    expect(response.text).toContain('ME4 4QR')
+  })
+
+  it('should render without an officer phone number when the practitioner has no team', async () => {
+    peopleOnProbationService.getPersonalDetails.mockResolvedValue({
+      name: { forename: 'John', surname: 'Smith' },
+      emergencyContacts: [],
+      practitioner: {
+        name: { forename: 'Sarah', surname: 'Jones' },
       },
     })
 
@@ -302,7 +322,7 @@ describe('GET /probation-officer', () => {
       .expect(200)
 
     expect(response.text).toContain('Sarah Jones')
-    expect(response.text).toContain('01234567890')
+    expect(response.text).not.toContain('<dt class="pop-summary-card__key">Officer phone number</dt>')
   })
 
   it('should pass errors to the next error handler', async () => {
