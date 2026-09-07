@@ -31,8 +31,8 @@ async function signJwt(payload: AuthorizeRequestObject) {
     .sign(privateKey)
 }
 
-function getRequiredOneLoginConfig() {
-  const { clientId, keyId, redirectUri, scopes, vtr } = config.oneLogin
+function getRequiredOneLoginConfig(isRegistration: boolean) {
+  const { clientId, keyId, redirectUri, scopes, vtr, vtrLogin } = config.oneLogin
 
   if (!clientId) throw new Error('ONE_LOGIN_CLIENT_ID is required to start a One Login journey')
   if (!keyId) throw new Error('ONE_LOGIN_KEY_ID is required to start a One Login journey')
@@ -43,7 +43,7 @@ function getRequiredOneLoginConfig() {
     clientId,
     redirectUri,
     scopes,
-    vtr: vtr
+    vtr: (isRegistration ? vtr : vtrLogin)
       .split(',')
       .map(value => value.trim())
       .filter(Boolean),
@@ -51,8 +51,9 @@ function getRequiredOneLoginConfig() {
 }
 
 export default async function buildOneLoginAuthorizeUrl(transaction: OneLoginTransaction) {
+  const isRegistration = Boolean(transaction.registrationInviteToken)
   const { authorization_endpoint: authorizationEndpoint } = await getOneLoginDiscoveryDocument()
-  const { clientId, redirectUri, scopes, vtr } = getRequiredOneLoginConfig()
+  const { clientId, redirectUri, scopes, vtr } = getRequiredOneLoginConfig(isRegistration)
 
   const requestObject = await signJwt({
     aud: authorizationEndpoint,

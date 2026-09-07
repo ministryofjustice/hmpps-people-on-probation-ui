@@ -94,6 +94,7 @@ async function verifyIdToken(
   nonce: string,
   discoveryDocument: OneLoginDiscoveryDocument,
   transactionId: string,
+  isRegistration: boolean,
 ) {
   const clientId = getRequiredClientId()
   const jwks = createRemoteJWKSet(new URL(discoveryDocument.jwks_uri))
@@ -117,7 +118,7 @@ async function verifyIdToken(
     throw new Error('One Login ID token issued-at time is invalid')
   }
 
-  const expectedVot = getExpectedVectorOfTrust()
+  const expectedVot = getExpectedVectorOfTrust(isRegistration)
   if (payload.vot !== expectedVot) {
     logger.warn(
       { transactionId, oneLoginSubject: payload.sub, expectedVot, actualVot: payload.vot },
@@ -129,8 +130,9 @@ async function verifyIdToken(
   return payload
 }
 
-function getExpectedVectorOfTrust() {
-  const requestedVectorOfTrust = config.oneLogin.vtr.split(',')[0].trim()
+function getExpectedVectorOfTrust(isRegistration: boolean) {
+  const configuredVtr = isRegistration ? config.oneLogin.vtr : config.oneLogin.vtrLogin
+  const requestedVectorOfTrust = configuredVtr.split(',')[0].trim()
   const [credentialTrust, credentialTrustLevel] = requestedVectorOfTrust.split('.')
 
   return credentialTrust === 'Cl' && credentialTrustLevel
@@ -167,6 +169,7 @@ export async function authenticateOneLoginCallback(code: string, transaction: On
     transaction.nonce,
     discoveryDocument,
     transaction.id,
+    Boolean(transaction.registrationInviteToken),
   )
   const userInfo = await getUserInfo(tokenResponse.access_token, discoveryDocument, transaction.id)
 
