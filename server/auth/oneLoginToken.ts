@@ -94,6 +94,7 @@ async function verifyIdToken(
   nonce: string,
   discoveryDocument: OneLoginDiscoveryDocument,
   transactionId: string,
+  isRegistration: boolean,
 ) {
   const clientId = getRequiredClientId()
   const jwks = createRemoteJWKSet(new URL(discoveryDocument.jwks_uri))
@@ -117,11 +118,11 @@ async function verifyIdToken(
     throw new Error('One Login ID token issued-at time is invalid')
   }
 
-  const expectedVot = getExpectedVectorOfTrust()
-  if (payload.vot !== expectedVot) {
+  const requiredVot = getRequiredVectorOfTrust(isRegistration)
+  if (!meetsRequiredVectorOfTrust(payload.vot, requiredVot)) {
     logger.warn(
-      { transactionId, oneLoginSubject: payload.sub, expectedVot, actualVot: payload.vot },
-      'One Login ID token vector of trust mismatch',
+      { transactionId, oneLoginSubject: payload.sub, requiredVot, actualVot: payload.vot },
+      'One Login ID token vector of trust did not meet the required authentication level',
     )
     throw new Error('One Login ID token vector of trust did not match the requested authentication level')
   }
@@ -129,13 +130,30 @@ async function verifyIdToken(
   return payload
 }
 
-function getExpectedVectorOfTrust() {
-  const requestedVectorOfTrust = config.oneLogin.vtr.split(',')[0].trim()
-  const [credentialTrust, credentialTrustLevel] = requestedVectorOfTrust.split('.')
+// The two authentication-only vectors of trust this client ever requests, ranked by
+// credential trust strength. 'Cl' (single factor) is weaker than 'Cl.Cm' (single factor +
+// MFA). One Login may return a *stronger* vot than requested - e.g. a user who already has
+// an MFA-authenticated One Login session from another service, which it won't downgrade -
+// so the check below accepts anything at or above what was requested, not only an exact
+// match. Any vot outside this table (including undefined) fails closed: it's rejected
+// rather than assumed to be acceptable.
+const VECTOR_OF_TRUST_RANK: Record<string, number> = {
+  Cl: 0,
+  'Cl.Cm': 1,
+}
 
-  return credentialTrust === 'Cl' && credentialTrustLevel
-    ? `${credentialTrust}.${credentialTrustLevel}`
-    : requestedVectorOfTrust
+function getRequiredVectorOfTrust(isRegistration: boolean): string {
+  const configuredVtr = isRegistration ? config.oneLogin.vtr : config.oneLogin.vtrLogin
+  return configuredVtr.split(',')[0].trim()
+}
+
+function meetsRequiredVectorOfTrust(actualVot: unknown, requiredVot: string): boolean {
+  if (typeof actualVot !== 'string') return false
+
+  const actualRank = VECTOR_OF_TRUST_RANK[actualVot]
+  const requiredRank = VECTOR_OF_TRUST_RANK[requiredVot]
+
+  return actualRank !== undefined && requiredRank !== undefined && actualRank >= requiredRank
 }
 
 async function getUserInfo(
@@ -167,6 +185,7 @@ export async function authenticateOneLoginCallback(code: string, transaction: On
     transaction.nonce,
     discoveryDocument,
     transaction.id,
+    Boolean(transaction.registrationInviteToken),
   )
   const userInfo = await getUserInfo(tokenResponse.access_token, discoveryDocument, transaction.id)
 
