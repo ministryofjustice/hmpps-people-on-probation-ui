@@ -94,7 +94,6 @@ async function verifyIdToken(
   nonce: string,
   discoveryDocument: OneLoginDiscoveryDocument,
   transactionId: string,
-  isRegistration: boolean,
 ) {
   const clientId = getRequiredClientId()
   const jwks = createRemoteJWKSet(new URL(discoveryDocument.jwks_uri))
@@ -118,7 +117,7 @@ async function verifyIdToken(
     throw new Error('One Login ID token issued-at time is invalid')
   }
 
-  const requiredVot = getRequiredVectorOfTrust(isRegistration)
+  const requiredVot = getRequiredVectorOfTrust()
   if (!meetsRequiredVectorOfTrust(payload.vot, requiredVot)) {
     logger.warn(
       { transactionId, oneLoginSubject: payload.sub, requiredVot, actualVot: payload.vot },
@@ -130,30 +129,15 @@ async function verifyIdToken(
   return payload
 }
 
-// The two authentication-only vectors of trust this client ever requests, ranked by
-// credential trust strength. 'Cl' (single factor) is weaker than 'Cl.Cm' (single factor +
-// MFA). One Login may return a *stronger* vot than requested - e.g. a user who already has
-// an MFA-authenticated One Login session from another service, which it won't downgrade -
-// so the check below accepts anything at or above what was requested, not only an exact
-// match. Any vot outside this table (including undefined) fails closed: it's rejected
-// rather than assumed to be acceptable.
-const VECTOR_OF_TRUST_RANK: Record<string, number> = {
-  Cl: 0,
-  'Cl.Cm': 1,
-}
-
-function getRequiredVectorOfTrust(isRegistration: boolean): string {
-  const configuredVtr = isRegistration ? config.oneLogin.vtr : config.oneLogin.vtrLogin
-  return configuredVtr.split(',')[0].trim()
+// GOV.UK One Login's docs state the returned vot claim "must contain the credential trust
+// level you asked for" - i.e. an exact match, not "at least". Validate against exactly the
+// configured vtr; any other value (including undefined) is rejected.
+function getRequiredVectorOfTrust(): string {
+  return config.oneLogin.vtr.split(',')[0].trim()
 }
 
 function meetsRequiredVectorOfTrust(actualVot: unknown, requiredVot: string): boolean {
-  if (typeof actualVot !== 'string') return false
-
-  const actualRank = VECTOR_OF_TRUST_RANK[actualVot]
-  const requiredRank = VECTOR_OF_TRUST_RANK[requiredVot]
-
-  return actualRank !== undefined && requiredRank !== undefined && actualRank >= requiredRank
+  return typeof actualVot === 'string' && actualVot === requiredVot
 }
 
 async function getUserInfo(
@@ -185,7 +169,6 @@ export async function authenticateOneLoginCallback(code: string, transaction: On
     transaction.nonce,
     discoveryDocument,
     transaction.id,
-    Boolean(transaction.registrationInviteToken),
   )
   const userInfo = await getUserInfo(tokenResponse.access_token, discoveryDocument, transaction.id)
 

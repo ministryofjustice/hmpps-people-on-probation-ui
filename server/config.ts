@@ -111,13 +111,10 @@ export default {
       requiredInProduction,
     ) as string,
     scopes: get('ONE_LOGIN_SCOPES', 'openid email phone') as string,
-    // vtr (vector of trust) controls whether One Login requires MFA for a journey.
-    // Registration keeps the full ONE_LOGIN_VTR requirement; ONE_LOGIN_VTR_LOGIN lets
-    // sign-in request a lower level (e.g. 'Cl', no MFA) once One Login has approved it
-    // for this client - it falls back to ONE_LOGIN_VTR when unset, so existing
-    // environments are unaffected until it's explicitly configured.
-    vtr: get('ONE_LOGIN_VTR', 'Cl.Cm') as string,
-    vtrLogin: get('ONE_LOGIN_VTR_LOGIN', get('ONE_LOGIN_VTR', 'Cl.Cm') as string) as string,
+    // vtr (vector of trust) requested for every journey, registration and sign-in alike.
+    // 'Cl' (username/password only) skips MFA - only valid once One Login has approved
+    // this vtr for this client.
+    vtr: get('ONE_LOGIN_VTR', 'Cl') as string,
     keyId: get('ONE_LOGIN_KEY_ID', '', requiredInProduction) as string,
     privateKeyBase64: process.env.ONE_LOGIN_PRIVATE_KEY_BASE64,
     publicKeyBase64: process.env.ONE_LOGIN_PUBLIC_KEY_BASE64,
