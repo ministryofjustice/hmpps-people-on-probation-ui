@@ -97,8 +97,31 @@ describe('authenticateOneLoginCallback vector of trust checks', () => {
     expect(result.userId).toBe('user-1')
   })
 
-  it('rejects a login callback whose vot does not match the login vtr', async () => {
+  it('accepts a login callback whose vot is stronger than the requested login vtr', async () => {
+    // e.g. the user already has an MFA-authenticated One Login session from another
+    // service, and One Login doesn't downgrade it just because this journey asked for less.
     mockedVerifiedPayload = { sub: 'user-1', nonce: 'nonce-value', iat: Math.floor(Date.now() / 1000), vot: 'Cl.Cm' }
+
+    const result = await authenticateOneLoginCallback('auth-code', baseTransaction())
+
+    expect(result.userId).toBe('user-1')
+  })
+
+  it('rejects a login callback whose vot is not a recognised vector of trust', async () => {
+    mockedVerifiedPayload = {
+      sub: 'user-1',
+      nonce: 'nonce-value',
+      iat: Math.floor(Date.now() / 1000),
+      vot: 'not-a-real-vot',
+    }
+
+    await expect(authenticateOneLoginCallback('auth-code', baseTransaction())).rejects.toThrow(
+      'One Login ID token vector of trust did not match the requested authentication level',
+    )
+  })
+
+  it('rejects a login callback with a missing vot', async () => {
+    mockedVerifiedPayload = { sub: 'user-1', nonce: 'nonce-value', iat: Math.floor(Date.now() / 1000) }
 
     await expect(authenticateOneLoginCallback('auth-code', baseTransaction())).rejects.toThrow(
       'One Login ID token vector of trust did not match the requested authentication level',
