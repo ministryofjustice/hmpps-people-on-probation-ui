@@ -129,15 +129,31 @@ async function verifyIdToken(
   return payload
 }
 
-// GOV.UK One Login's docs state the returned vot claim "must contain the credential trust
-// level you asked for" - i.e. an exact match, not "at least". Validate against exactly the
-// configured vtr; any other value (including undefined) is rejected.
+// The two authentication-only vectors of trust this client can request, ranked by
+// credential trust strength. 'Cl' (single factor) is weaker than 'Cl.Cm' (single factor +
+// MFA). GOV.UK One Login's docs don't settle whether a returned vot can exceed what was
+// requested, but rejecting a stronger vot has no security upside - it only means the user
+// authenticated more strongly than required, e.g. an existing MFA session reused from
+// another service, or the mandatory second-factor setup every new One Login account goes
+// through. So this accepts anything at or above what was requested, not only an exact
+// match. Any vot outside this table (including undefined) fails closed: it's rejected
+// rather than assumed to be acceptable.
+const VECTOR_OF_TRUST_RANK: Record<string, number> = {
+  Cl: 0,
+  'Cl.Cm': 1,
+}
+
 function getRequiredVectorOfTrust(): string {
   return config.oneLogin.vtr.split(',')[0].trim()
 }
 
 function meetsRequiredVectorOfTrust(actualVot: unknown, requiredVot: string): boolean {
-  return typeof actualVot === 'string' && actualVot === requiredVot
+  if (typeof actualVot !== 'string') return false
+
+  const actualRank = VECTOR_OF_TRUST_RANK[actualVot]
+  const requiredRank = VECTOR_OF_TRUST_RANK[requiredVot]
+
+  return actualRank !== undefined && requiredRank !== undefined && actualRank >= requiredRank
 }
 
 async function getUserInfo(

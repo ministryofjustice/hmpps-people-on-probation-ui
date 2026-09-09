@@ -72,7 +72,7 @@ describe('authenticateOneLoginCallback vector of trust checks', () => {
     global.fetch = originalFetch
   })
 
-  it('accepts a registration callback whose vot exactly matches the configured vtr', async () => {
+  it('accepts a registration callback whose vot meets the configured vtr', async () => {
     mockedVerifiedPayload = { sub: 'user-1', nonce: 'nonce-value', iat: Math.floor(Date.now() / 1000), vot: 'Cl' }
 
     const result = await authenticateOneLoginCallback('auth-code', baseTransaction('invite-token'))
@@ -80,7 +80,7 @@ describe('authenticateOneLoginCallback vector of trust checks', () => {
     expect(result.userId).toBe('user-1')
   })
 
-  it('accepts a login callback whose vot exactly matches the configured vtr', async () => {
+  it('accepts a login callback whose vot meets the configured vtr', async () => {
     mockedVerifiedPayload = { sub: 'user-1', nonce: 'nonce-value', iat: Math.floor(Date.now() / 1000), vot: 'Cl' }
 
     const result = await authenticateOneLoginCallback('auth-code', baseTransaction())
@@ -88,8 +88,20 @@ describe('authenticateOneLoginCallback vector of trust checks', () => {
     expect(result.userId).toBe('user-1')
   })
 
-  it('rejects a callback whose vot does not exactly match the configured vtr', async () => {
+  it('accepts a callback whose vot is stronger than the configured vtr', async () => {
+    // e.g. the user already has an MFA-authenticated One Login session from another
+    // service, or just went through mandatory MFA setup when creating a new account -
+    // rejecting a stronger-than-required vot has no security upside.
     mockedVerifiedPayload = { sub: 'user-1', nonce: 'nonce-value', iat: Math.floor(Date.now() / 1000), vot: 'Cl.Cm' }
+
+    const result = await authenticateOneLoginCallback('auth-code', baseTransaction())
+
+    expect(result.userId).toBe('user-1')
+  })
+
+  it('rejects a callback whose vot is weaker than the configured vtr', async () => {
+    config.oneLogin.vtr = 'Cl.Cm'
+    mockedVerifiedPayload = { sub: 'user-1', nonce: 'nonce-value', iat: Math.floor(Date.now() / 1000), vot: 'Cl' }
 
     await expect(authenticateOneLoginCallback('auth-code', baseTransaction())).rejects.toThrow(
       'One Login ID token vector of trust did not match the requested authentication level',

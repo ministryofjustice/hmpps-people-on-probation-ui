@@ -112,9 +112,12 @@ export default {
     ) as string,
     scopes: get('ONE_LOGIN_SCOPES', 'openid email phone') as string,
     // vtr (vector of trust) requested for every journey, registration and sign-in alike.
-    // 'Cl' (username/password only) skips MFA - only valid once One Login has approved
-    // this vtr for this client.
-    vtr: get('ONE_LOGIN_VTR', 'Cl') as string,
+    // Defaults to 'Cl.Cm' (MFA required) so a missing/misconfigured env var fails closed
+    // rather than silently downgrading to single-factor auth, and is required in production
+    // so that case is a boot failure instead. 'Cl' (username/password only) skips MFA - only
+    // valid once One Login has approved this vtr for this client - and is set explicitly per
+    // environment (e.g. values-dev.yaml) rather than via this default.
+    vtr: get('ONE_LOGIN_VTR', 'Cl.Cm', requiredInProduction) as string,
     keyId: get('ONE_LOGIN_KEY_ID', '', requiredInProduction) as string,
     privateKeyBase64: process.env.ONE_LOGIN_PRIVATE_KEY_BASE64,
     publicKeyBase64: process.env.ONE_LOGIN_PUBLIC_KEY_BASE64,
