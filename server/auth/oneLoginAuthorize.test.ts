@@ -54,8 +54,7 @@ describe('buildOneLoginAuthorizeUrl', () => {
       keyId: 'test-key-id',
       redirectUri: 'https://example.gov.uk/sign-in/callback',
       scopes: 'openid email phone',
-      vtr: 'Cl.Cm',
-      vtrLogin: 'Cl',
+      vtr: 'Cl',
     }
   })
 
@@ -63,23 +62,15 @@ describe('buildOneLoginAuthorizeUrl', () => {
     config.oneLogin = { ...originalOneLogin }
   })
 
-  it('requests the registration vtr when the transaction has a registration invite token', async () => {
+  it('requests the configured vtr for a registration transaction', async () => {
     const authorizeUrl = await buildOneLoginAuthorizeUrl(baseTransaction('invite-token'))
-
-    expect(requestedVtr(authorizeUrl)).toEqual(['Cl.Cm'])
-  })
-
-  it('requests the login vtr when the transaction has no registration invite token', async () => {
-    const authorizeUrl = await buildOneLoginAuthorizeUrl(baseTransaction())
 
     expect(requestedVtr(authorizeUrl)).toEqual(['Cl'])
   })
 
-  it('falls back to the registration vtr for login when ONE_LOGIN_VTR_LOGIN is not configured', async () => {
-    config.oneLogin.vtrLogin = config.oneLogin.vtr
-
+  it('requests the same configured vtr for a login transaction', async () => {
     const authorizeUrl = await buildOneLoginAuthorizeUrl(baseTransaction())
 
-    expect(requestedVtr(authorizeUrl)).toEqual(['Cl.Cm'])
+    expect(requestedVtr(authorizeUrl)).toEqual(['Cl'])
   })
 })
