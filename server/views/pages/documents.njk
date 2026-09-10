@@ -1,0 +1,22 @@
+{% extends "../partials/layout.njk" %}
+
+{% set pageTitle = "Documents – Check your probation account – GOV.UK" %}
+{% set currentPage = "documents" %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-xl">Documents</h1>
+
+  {% if documents.length %}
+    <div class="pop-requirement-cards govuk-!-margin-bottom-9">
+      {% for document in documents %}
+        <a class="pop-requirement-card" href="/documents/{{ document.id }}" data-tracking-id="documents_view_{{ document.id }}">
+          <span class="pop-requirement-card__title">{{ document.name }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="govuk-body">You do not have any documents yet.</p>
+  {% endif %}
+
+{% endblock %}

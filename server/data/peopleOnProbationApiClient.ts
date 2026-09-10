@@ -193,6 +193,35 @@ export interface SentencePlanResponse {
   goals: GoalResponse[]
 }
 
+export type DocumentType = 'COURT_ORDER'
+
+export interface DocumentResponse {
+  id: string
+  name: string
+  documentType: DocumentType
+  uploadedAt: string
+}
+
+export interface DocumentViewResponse extends DocumentResponse {
+  viewUrl: string
+}
+
+export interface DocumentsResponse {
+  documents: DocumentResponse[]
+}
+
+export interface DocumentUploadPresignResponse {
+  s3Key: string
+  uploadUrl: string
+  contentType: string
+}
+
+export type CreateDocumentRequest = {
+  name: string
+  s3Key: string
+  documentType: DocumentType
+}
+
 export type AnalyticsDeviceType = 'desktop' | 'tablet' | 'mobile' | 'unknown'
 
 export type AnalyticsEventName =
@@ -289,6 +318,28 @@ export default class PeopleOnProbationApiClient extends RestClient {
 
   getSentencePlan(crn: string) {
     return this.get<SentencePlanResponse>({ path: `/v1/person/${crn}/sentence-plan` }, asSystem())
+  }
+
+  getDocuments(crn: string) {
+    return this.get<DocumentsResponse>({ path: `/v1/person/${crn}/documents` }, asSystem())
+  }
+
+  getDocument(crn: string, documentId: string) {
+    return this.get<DocumentViewResponse>({ path: `/v1/person/${crn}/documents/${documentId}` }, asSystem())
+  }
+
+  presignDocumentUpload(crn: string, documentType: DocumentType) {
+    return this.post<DocumentUploadPresignResponse, PeopleOnProbationApiErrorResponse>(
+      { path: `/v1/person/${crn}/documents/presign`, data: { documentType } },
+      asSystem(),
+    )
+  }
+
+  createDocument(crn: string, request: CreateDocumentRequest) {
+    return this.post<DocumentResponse, PeopleOnProbationApiErrorResponse>(
+      { path: `/v1/person/${crn}/documents`, data: request },
+      asSystem(),
+    )
   }
 
   postAnalyticsEvent(event: AnalyticsEvent) {

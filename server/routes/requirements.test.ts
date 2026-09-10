@@ -3,9 +3,10 @@ import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import type { Services } from '../services'
 import type { SentenceProgressResponse } from '../data/peopleOnProbationApiClient'
+import config from '../config'
 
 let app: Express
-let peopleOnProbationService: { getSentences: jest.Mock }
+let peopleOnProbationService: { getSentences: jest.Mock; getDocuments: jest.Mock }
 
 // Fake only the Date clock; leave async timer primitives real so supertest works
 const fakeDate = (dateStr: string) => {
@@ -25,14 +26,17 @@ const fakeDate = (dateStr: string) => {
   return jest.useFakeTimers(opts as any)
 }
 
+const originalDocumentsFeatureFlag = config.features.documents
+
 beforeEach(() => {
-  peopleOnProbationService = { getSentences: jest.fn() }
+  peopleOnProbationService = { getSentences: jest.fn(), getDocuments: jest.fn() }
   app = appWithAllRoutes({
     services: { peopleOnProbationService } as unknown as Partial<Services>,
   })
 })
 
 afterEach(() => {
+  config.features.documents = originalDocumentsFeatureFlag
   jest.useRealTimers()
   jest.resetAllMocks()
 })
@@ -459,6 +463,94 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).toContain('You can find this information in your court order')
     expect(res.text).toContain('Your requirements were last updated on')
     expect(res.text).toContain('Thursday 14 May 2026')
+  })
+
+  it('links "court order" to the document when the documents feature is on and a document exists', async () => {
+    config.features.documents = true
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'RM49', description: 'Curfew' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+    peopleOnProbationService.getDocuments.mockResolvedValue({
+      documents: [{ id: 'doc-1', name: 'Your Court Order', uploadedAt: '2026-01-01T00:00:00Z' }],
+    })
+
+    const res = await request(app)
+      .get('/requirements/curfew')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('href="/documents/doc-1">court order</a>')
+    expect(peopleOnProbationService.getDocuments).toHaveBeenCalledWith('X123456')
+  })
+
+  it('falls back to plain text when the documents feature is on but no document exists', async () => {
+    config.features.documents = true
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'RM49', description: 'Curfew' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+    peopleOnProbationService.getDocuments.mockResolvedValue({ documents: [] })
+
+    const res = await request(app)
+      .get('/requirements/curfew')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('You can find this information in your court order')
+    expect(res.text).not.toContain('href="/documents/')
+  })
+
+  it('does not call getDocuments when the documents feature is off', async () => {
+    config.features.documents = false
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'RM49', description: 'Curfew' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/curfew')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('You can find this information in your court order')
+    expect(peopleOnProbationService.getDocuments).not.toHaveBeenCalled()
   })
 
   it('does not show Where to find details for a date-based requirement that is not a tag type', async () => {

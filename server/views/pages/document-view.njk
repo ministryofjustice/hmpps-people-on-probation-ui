@@ -1,0 +1,22 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% set pageTitle = document.name + " – Check your probation account – GOV.UK" %}
+{% set currentPage = "documents" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Back", href: "/documents" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-l govuk-!-margin-bottom-6">{{ document.name }}</h1>
+
+  <div class="pop-document-viewer" data-document-view-url="{{ document.viewUrl }}"></div>
+
+{% endblock %}
+
+{% block bodyEnd %}
+  {{ super() }}
+  <script type="module" src="{{ '/assets/js/documents.js' | assetMap }}"></script>
+{% endblock %}

@@ -2,6 +2,7 @@ import { Router } from 'express'
 
 import { startOfDay, addDays, differenceInDays, isBefore } from 'date-fns'
 import type { Services } from '../services'
+import config from '../config'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
 import {
@@ -235,7 +236,16 @@ export default function requirementsRoutes(services: Services): Router {
 
       if (!requirement) return next()
 
-      return res.render('pages/requirement-detail', { requirement })
+      // Court order is currently the only document type this app surfaces, so any
+      // uploaded document is treated as "the" court order - revisit this once other
+      // document types exist and documents carry their own type/category.
+      let courtOrderDocumentId: string | undefined
+      if (config.features.documents) {
+        const { documents } = await services.peopleOnProbationService.getDocuments(crn)
+        courtOrderDocumentId = documents[0]?.id
+      }
+
+      return res.render('pages/requirement-detail', { requirement, courtOrderDocumentId })
     } catch (error) {
       return next(error)
     }

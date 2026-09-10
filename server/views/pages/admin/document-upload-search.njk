@@ -1,0 +1,39 @@
+{% extends "../../partials/layout.njk" %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageTitle = "Upload a court order – Check your probation account – GOV.UK" %}
+{% set currentPage = "admin-document-upload" %}
+
+{% block content %}
+  <div class="govuk-grid-row govuk-!-margin-top-9">
+    <div class="govuk-grid-column-two-thirds">
+
+      {% if errorMessage %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: [{ text: errorMessage, href: "#crn" }]
+        }) }}
+      {% endif %}
+
+      <h1 class="govuk-heading-l">Upload a court order</h1>
+
+      <form method="post" action="/admin/documents/upload" novalidate>
+        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+        {{ govukInput({
+          label: { text: "CRN", classes: "govuk-label--m" },
+          hint: { text: "For example, X123456" },
+          id: "crn",
+          name: "crn",
+          value: crn,
+          errorMessage: { text: errorMessage } if errorMessage else undefined
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+      </form>
+
+    </div>
+  </div>
+{% endblock %}
