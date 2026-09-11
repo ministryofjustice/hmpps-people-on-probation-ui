@@ -79,11 +79,9 @@
     </div>
   {% endif %}
   <script type="module" src="{{ '/assets/js/index.js' | assetMap }}"></script>
-  {% if user and chatbotEnabled %}
-    <link href="{{ '/assets/css/chatbot.css' | assetMap }}" rel="stylesheet"/>
-    <div id="chatbot-root"></div>
-    <script type="module" src="{{ '/assets/js/chatbot.js' | assetMap }}"></script>
-  {% endif %}
+  {# The chatbot now lives on its own full-screen /chat page (pages/chat.njk),
+     reached via the "Chat" item in the service nav, so it is no longer injected
+     as a floating widget on every page. #}
 {% endblock %}
 
 {% block footer %}

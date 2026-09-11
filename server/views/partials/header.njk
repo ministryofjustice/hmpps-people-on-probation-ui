@@ -9,37 +9,28 @@
    should. Off /admin pages (adminUser unset) any citizen session counts, as
    before. #}
 {% if user and (not adminUser or user.previewedByAdmin) %}
+  {# When the chatbot is enabled, chat is the landing page: Home moves to /home
+     and a "Chat" item is added below it. With the flag off the nav is unchanged
+     (Home points at /, no Chat item). #}
+  {% set citizenNav = [
+    { href: "/home" if chatbotEnabled else "/", text: "Home", active: currentPage === "home" }
+  ] %}
+  {% if chatbotEnabled %}
+    {% set citizenNav = citizenNav.concat([
+      { href: "/chat", text: "Chat", active: currentPage === "chat" }
+    ]) %}
+  {% endif %}
+  {% set citizenNav = citizenNav.concat([
+    { href: "/appointments", text: "Appointments and activities", active: currentPage === "appointments" },
+    { href: "/goals", text: "Goals", active: currentPage === "goals" },
+    { href: "/requirements", text: "Order requirements", active: currentPage === "requirements" },
+    { href: "/admin/sign-out" if user.previewedByAdmin else "/sign-out", text: "Sign out", active: false }
+  ]) %}
   {{ govukServiceNavigation({
     serviceName: "Check your probation account",
     serviceUrl: "/",
     collapseNavigationOnMobile: true,
-    navigation: [
-      {
-        href: "/",
-        text: "Home",
-        active: currentPage === "home"
-      },
-      {
-        href: "/appointments",
-        text: "Appointments and activities",
-        active: currentPage === "appointments"
-      },
-      {
-        href: "/goals",
-        text: "Goals",
-        active: currentPage === "goals"
-      },
-      {
-        href: "/requirements",
-        text: "Order requirements",
-        active: currentPage === "requirements"
-      },
-      {
-        href: "/admin/sign-out" if user.previewedByAdmin else "/sign-out",
-        text: "Sign out",
-        active: false
-      }
-    ]
+    navigation: citizenNav
   }) }}
 {% elif adminUser %}
   {{ govukServiceNavigation({
