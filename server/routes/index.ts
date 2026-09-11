@@ -137,8 +137,12 @@ export default function routes(services: Services): Router {
   // setUpAdminAuthentication.ts and server/routes/admin.ts.
   if (config.features.adminPreview) {
     router.use('/admin', setUpAdminAuthentication(services), adminRoutes(services))
+    // setUpAdminAuthentication is already mounted for the whole /admin/* prefix above - it
+    // doesn't need mounting again here, and doing so would register a second, unreachable set
+    // of sign-in/callback/sign-out routes under /admin/documents (the OAuth callbackURL is
+    // fixed to /admin/sign-in/callback) and re-run passport.initialize()/session() for nothing.
     if (config.features.documents) {
-      router.use('/admin/documents', setUpAdminAuthentication(services), adminDocumentsRoutes(services))
+      router.use('/admin/documents', adminDocumentsRoutes(services))
     }
   }
 

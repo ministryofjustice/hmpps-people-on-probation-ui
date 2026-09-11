@@ -220,6 +220,7 @@ export type CreateDocumentRequest = {
   name: string
   s3Key: string
   documentType: DocumentType
+  uploadedBy: string
 }
 
 export type AnalyticsDeviceType = 'desktop' | 'tablet' | 'mobile' | 'unknown'

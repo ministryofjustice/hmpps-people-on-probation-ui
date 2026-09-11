@@ -1,7 +1,9 @@
+import type { DocumentType } from '../data/peopleOnProbationApiClient'
 import {
   isValidDocumentName,
   isValidDocumentType,
   formatDocumentTypeLabel,
+  isS3KeyForCrn,
   DOCUMENT_NAME_MAX_LENGTH,
 } from './documentTypes'
 
@@ -52,5 +54,23 @@ describe('isValidDocumentType', () => {
 describe('formatDocumentTypeLabel', () => {
   it('returns the citizen-facing label for a court order', () => {
     expect(formatDocumentTypeLabel('COURT_ORDER')).toBe('Your Court Order')
+  })
+
+  it('falls back to a generic label for a document type this UI does not recognise', () => {
+    expect(formatDocumentTypeLabel('SOME_FUTURE_TYPE' as DocumentType)).toBe('Document')
+  })
+})
+
+describe('isS3KeyForCrn', () => {
+  it('accepts a key whose CRN segment matches', () => {
+    expect(isS3KeyForCrn('court-orders/X123456/3f1b1e5e-6c1a-4a3a-9b1a-1e6b2b7a9c9e.pdf', 'X123456')).toBe(true)
+  })
+
+  it('rejects a key belonging to a different CRN', () => {
+    expect(isS3KeyForCrn('court-orders/X999999/3f1b1e5e-6c1a-4a3a-9b1a-1e6b2b7a9c9e.pdf', 'X123456')).toBe(false)
+  })
+
+  it('rejects a key with the wrong number of segments', () => {
+    expect(isS3KeyForCrn('X123456/doc-1.pdf', 'X123456')).toBe(false)
   })
 })

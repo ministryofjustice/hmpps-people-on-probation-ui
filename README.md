@@ -103,6 +103,7 @@ All variables are configured in `.env` (copy from `.env.example`). The key ones 
 | `AUDIT_SQS_QUEUE_URL` | HMPPS audit SQS queue URL | `http://localhost:4566/000000000000/mainQueue` |
 | `AUDIT_SERVICE_NAME` | Service name included in HMPPS audit messages | `hmpps-probation-accounts` |
 | `FEATURE_ADMIN_PREVIEW` | Master switch for the `/admin` "preview as user" feature | `false` |
+| `FEATURE_DOCUMENTS` | Master switch for the citizen Documents area and admin document upload flow (see [Documents](#documents)) | `false` |
 | `AUTH_CODE_CLIENT_ID` | HMPPS Auth client ID for the admin sign-in (authorization code grant) | — |
 | `AUTH_CODE_CLIENT_SECRET` | HMPPS Auth client secret for the admin sign-in | — |
 | `ADMIN_AUTHORISED_ROLES` | HMPPS Auth roles (without `ROLE_`) allowed to use admin preview | — |
@@ -139,6 +140,7 @@ Authentication audit events are emitted once GOV.UK One Login has identified the
 | `ADMIN_PREVIEW_SEARCH_ATTEMPTED` | An admin submitted a CRN on the admin search page | CRN (or absent for an invalid-format search) |
 | `ADMIN_PREVIEW_STARTED` | A CRN search succeeded and a preview session was created | CRN |
 | `ADMIN_PREVIEW_ENDED` | An admin ended an active preview session | CRN |
+| `ADMIN_DOCUMENT_UPLOADED` | An admin confirmed a document upload for a CRN (see [Documents](#documents)) | CRN |
 
 Pre-identity failures, such as a missing One Login transaction cookie or state mismatch, are logged by the app but are not sent as audit events because the service cannot reliably identify `who` performed the action.
 
@@ -199,6 +201,14 @@ Access is controlled by one of two gates, both applied in `server/routes/admin.t
 
 If you hit HMPPS Auth's own "Access denied" page mid-flow despite following the above, check `docker logs hmpps-auth` for the actual cause rather than assuming your credentials are wrong — the generic page is shown for several unrelated failure types (see the redirect-URI warning in step 2).
 
+## Documents
+
+`/documents` lets a citizen view documents uploaded for their CRN (currently just a court order); `/admin/documents/upload` (behind the same admin gate as [Admin preview](#admin-preview-preview-as-user)) lets an admin search a CRN, pick a PDF, preview it locally with PDF.js, and confirm the upload. Both are gated behind `FEATURE_DOCUMENTS` (`false` unless set), independently of `FEATURE_ADMIN_PREVIEW` — either can be live without the other.
+
+This app stays a pure BFF for documents: the People on Probation API owns the S3 bucket and mints every presigned URL (PUT for upload, GET for view) — this app never touches AWS directly, and PDF bytes flow straight between the browser and S3. The admin upload flow is a single continuous screen: nothing is persisted, in S3 or via the API, until the admin explicitly confirms, at which point the client presigns, PUTs directly to S3, then tells the API the upload succeeded (`server/routes/adminDocuments.ts`, `assets/js/lib/documents/uploadDocument.ts`).
+
+`FEATURE_DOCUMENTS` depends on the People on Probation API's document endpoints and the S3 bucket/IRSA role provisioned via `cloud-platform-environments` — not every environment has both yet, so this stays off until each environment's infrastructure is ready.
+
 ## Application pages
 
 | Path | Description |
@@ -207,9 +217,12 @@ If you hit HMPPS Auth's own "Access denied" page mid-flow despite following the 
 | `/appointments` | Appointments and activities (future and past) |
 | `/progress` | Your probation progress — overall order and requirement progress bars |
 | `/requirements` | Order requirements and charge details |
-| `/probation-officer` | Probation officer name, phone, and office address |
+| `/probation-officer` | Probation officer name and office address |
 | `/details` | Personal, contact, and emergency contact details |
+| `/documents` | Documents uploaded for the citizen's CRN (see [Documents](#documents)) |
+| `/documents/:id` | View a single document, rendered with PDF.js |
 | `/admin/search` | Admin "preview as user" — search a CRN and start/end a preview session (see [Admin preview](#admin-preview-preview-as-user)) |
+| `/admin/documents/upload` | Admin document upload — search a CRN, preview, and confirm a document upload (see [Documents](#documents)) |
 
 ## Running tests
 

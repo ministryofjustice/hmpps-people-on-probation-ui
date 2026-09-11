@@ -531,6 +531,35 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).toContain('href="/documents/doc-1">court order</a>')
   })
 
+  it('falls back to plain text, without 500ing the page, when the documents API call fails', async () => {
+    config.features.documents = true
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'RM49', description: 'Curfew' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+    peopleOnProbationService.getDocuments.mockRejectedValue(new Error('API failure'))
+
+    const res = await request(app)
+      .get('/requirements/curfew')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('You can find this information in your court order')
+    expect(res.text).not.toContain('href="/documents/')
+  })
+
   it('falls back to plain text when the documents feature is on but no document exists', async () => {
     config.features.documents = true
     fakeDate('2025-06-01')

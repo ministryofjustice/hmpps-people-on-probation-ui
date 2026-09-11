@@ -20,19 +20,35 @@ const fileInput = document.querySelector<HTMLInputElement>('[data-document-uploa
 const previewContainer = document.querySelector<HTMLElement>('[data-document-upload-preview]')
 const confirmButton = document.querySelector<HTMLButtonElement>('[data-document-upload-confirm]')
 
+// govukButton({ disabled: true }) renders both the disabled attribute and aria-disabled="true"
+// (see govuk-frontend's button template) - setting .disabled alone leaves aria-disabled="true"
+// in place, so screen readers keep announcing the button as unavailable even once it's
+// genuinely clickable again.
+function setConfirmButtonDisabled(button: HTMLButtonElement, disabled: boolean): void {
+  // eslint-disable-next-line no-param-reassign -- mutating the passed button's state is the whole point of this helper
+  button.disabled = disabled
+  if (disabled) {
+    button.setAttribute('aria-disabled', 'true')
+  } else {
+    button.removeAttribute('aria-disabled')
+  }
+}
+
 if (fileInput && previewContainer) {
   let previewObjectUrl: string | null = null
-  // Bumped on every selection so a slow-to-render earlier file can't act (enable the confirm
-  // button, or overwrite the preview with its own error) after a later selection has already
-  // superseded it.
-  let selectionToken = 0
+  // Aborted on every new selection so a slower-to-render earlier file can't act (enable the
+  // confirm button, overwrite the preview with its own error, or - inside pdfViewer.ts - append
+  // its own pages into the container) after a later selection has already superseded it.
+  let previewAbortController: AbortController | null = null
 
   fileInput.addEventListener('change', () => {
     const file = fileInput.files?.[0]
-    selectionToken += 1
-    const token = selectionToken
+    previewAbortController?.abort()
+    const controller = new AbortController()
+    previewAbortController = controller
+
     if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl)
-    if (confirmButton) confirmButton.disabled = true
+    if (confirmButton) setConfirmButtonDisabled(confirmButton, true)
 
     if (!file) {
       previewContainer.textContent = ''
@@ -40,13 +56,13 @@ if (fileInput && previewContainer) {
     }
 
     previewObjectUrl = URL.createObjectURL(file)
-    renderPdfIntoContainer(previewContainer, previewObjectUrl)
+    renderPdfIntoContainer(previewContainer, previewObjectUrl, controller.signal)
       .then(() => {
-        if (token !== selectionToken) return
-        if (confirmButton) confirmButton.disabled = false
+        if (controller.signal.aborted) return
+        if (confirmButton) setConfirmButtonDisabled(confirmButton, false)
       })
       .catch(() => {
-        if (token !== selectionToken) return
+        if (controller.signal.aborted) return
         previewContainer.textContent = 'Sorry, this file could not be previewed. Choose a different PDF.'
       })
   })
@@ -55,7 +71,7 @@ if (fileInput && previewContainer) {
 // Matches the API's CreateDocumentRequest.name constraints exactly (@Size(max = 255) +
 // @Pattern "^[A-Za-z0-9 _'.,:()/-]+$") - checking it here too is fast feedback before a
 // round trip, not a substitute for the API's own validation.
-const DOCUMENT_NAME_PATTERN = /^[A-Za-z0-9 _'.,:()/-]{1,255}$/
+const DOCUMENT_NAME_PATTERN = /^[A-Za-z0-9 _'.,:()/-]{1,255}$/ // gitleaks:allow - validation regex, not a secret
 
 // Mirrors the markup the govukErrorSummary macro renders server-side (see
 // document-upload.njk's other error rendering), so a client-side failure looks the same as a
@@ -112,7 +128,7 @@ if (confirmButton && fileInput) {
       return
     }
 
-    confirmButton.disabled = true
+    setConfirmButtonDisabled(confirmButton, true)
     if (errorContainer) errorContainer.innerHTML = ''
 
     uploadDocument({ crn, name, documentType, file })
@@ -120,7 +136,7 @@ if (confirmButton && fileInput) {
         window.location.href = '/admin/documents/upload/confirmed'
       })
       .catch(() => {
-        confirmButton.disabled = false
+        setConfirmButtonDisabled(confirmButton, false)
         if (errorContainer) {
           renderUploadError(errorContainer, 'Sorry, there was a problem uploading this document. Try again.')
         }

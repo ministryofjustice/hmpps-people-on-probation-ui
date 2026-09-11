@@ -6,7 +6,12 @@ import requireAdminUsername from '../auth/requireAdminUsername'
 import config from '../config'
 import isValidCrnFormat from '../utils/crn'
 import { formatPersonName } from '../utils/utils'
-import { DOCUMENT_TYPE_UPLOAD_OPTIONS, isValidDocumentType, isValidDocumentName } from '../utils/documentTypes'
+import {
+  DOCUMENT_TYPE_UPLOAD_OPTIONS,
+  isValidDocumentType,
+  isValidDocumentName,
+  isS3KeyForCrn,
+} from '../utils/documentTypes'
 import logger from '../../logger'
 
 async function auditDocumentUploaded(services: Services, req: Request, who: string | undefined, crn: string) {
@@ -110,8 +115,15 @@ export default function adminDocumentsRoutes(services: Services): Router {
       const name = typeof req.body.name === 'string' ? req.body.name.trim() : ''
       const s3Key = typeof req.body.s3Key === 'string' ? req.body.s3Key : ''
       const { documentType } = req.body
+      const adminUsername = res.locals.adminUser?.username
 
-      if (!isValidCrnFormat(crn) || !isValidDocumentName(name) || !s3Key || !isValidDocumentType(documentType)) {
+      if (
+        !isValidCrnFormat(crn) ||
+        !isValidDocumentName(name) ||
+        !s3Key ||
+        !isValidDocumentType(documentType) ||
+        !adminUsername
+      ) {
         logger.info(
           { crn, documentType, s3Key: s3Key || undefined },
           'Document upload confirm rejected: invalid details',
@@ -119,12 +131,26 @@ export default function adminDocumentsRoutes(services: Services): Router {
         return res.status(400).json({ error: 'Missing or invalid document details' })
       }
 
+      // s3Key is client-supplied here - a tampered or replayed confirm could otherwise point at
+      // another person's file, creating a document record on this CRN that serves someone
+      // else's document. This is fast, client-facing feedback only: the API's own
+      // DocumentService.createDocument re-derives and enforces the exact key it minted for this
+      // CRN/type and rejects anything else, which is the actual security boundary here.
+      if (!isS3KeyForCrn(s3Key, crn)) {
+        logger.warn({ crn, documentType }, 'Document upload confirm rejected: s3Key does not match CRN')
+        return res.status(400).json({ error: 'Missing or invalid document details' })
+      }
+
       // Deliberately not logging the admin-entered `name` - free text, not needed for tracing.
       logger.info({ crn, documentType, s3Key }, 'Confirming document upload')
-      const document = await services.peopleOnProbationService.createDocument(crn, { name, s3Key, documentType })
+      const document = await services.peopleOnProbationService.createDocument(crn, {
+        name,
+        s3Key,
+        documentType,
+        uploadedBy: adminUsername,
+      })
       logger.info({ crn, documentId: document.id }, 'Document upload confirmed')
 
-      const adminUsername = res.locals.adminUser?.username
       await auditDocumentUploaded(services, req, adminUsername, crn)
 
       return res.json(document)

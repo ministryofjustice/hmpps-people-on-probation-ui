@@ -189,6 +189,22 @@ describe('POST /admin/documents/upload/confirm', () => {
     expect(createDocumentMock).not.toHaveBeenCalled()
   })
 
+  it('returns 400 when s3Key does not belong to the submitted CRN', async () => {
+    const { app, createDocumentMock } = buildApp()
+
+    await request(app)
+      .post('/admin/documents/upload/confirm')
+      .send({
+        crn: 'X123456',
+        name: 'Your Court Order',
+        s3Key: 'documents/X999999/doc-1.pdf',
+        documentType: 'COURT_ORDER',
+      })
+      .expect(400)
+
+    expect(createDocumentMock).not.toHaveBeenCalled()
+  })
+
   it('creates the document and audits the upload', async () => {
     const { app, createDocumentMock, auditService } = buildApp()
     createDocumentMock.mockResolvedValue({
@@ -218,6 +234,7 @@ describe('POST /admin/documents/upload/confirm', () => {
       name: 'Your Court Order',
       s3Key: 'documents/X123456/doc-1.pdf',
       documentType: 'COURT_ORDER',
+      uploadedBy: 'admin1',
     })
     expect(auditService.logAdminDocumentUploaded).toHaveBeenCalledWith(
       expect.objectContaining({ who: 'admin1', subjectId: 'X123456' }),

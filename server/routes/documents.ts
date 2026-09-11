@@ -18,7 +18,7 @@ export default function documentsRoutes(services: Services): Router {
       if (!crn) return res.redirect('/autherror')
 
       logger.info({ crn }, 'Fetching documents list')
-      const { documents } = await services.peopleOnProbationService.getDocuments(crn)
+      const { documents = [] } = await services.peopleOnProbationService.getDocuments(crn)
       logger.info({ crn, count: documents.length }, 'Documents list fetched')
 
       return res.render('pages/documents', {

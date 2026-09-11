@@ -33,6 +33,14 @@
   display: flex;
   flex-wrap: wrap;
 
+  // .govuk-grid-row's own clearfix (::after { display: block; clear: both; }) is pointless once
+  // this row is flex - nothing floats in flex layout - and actively harmful: a flex container
+  // turns its ::after into a flex item too, which with flex-wrap lands on its own empty line and
+  // picks up the mobile row-gap below, adding unwanted space under the last row.
+  &::after {
+    display: none;
+  }
+
   [class*="govuk-grid-column"] {
     display: flex;
     flex-direction: column;
