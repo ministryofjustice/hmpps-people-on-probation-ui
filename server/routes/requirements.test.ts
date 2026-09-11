@@ -589,6 +589,7 @@ describe('GET /requirements/:slug', () => {
   })
 
   it('does not show Where to find details for a date-based requirement that is not a tag type', async () => {
+    config.features.documents = true
     fakeDate('2025-06-01')
     peopleOnProbationService.getSentences.mockResolvedValue({
       sentences: [
@@ -616,6 +617,7 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).toContain('Start date and time')
     expect(res.text).toContain('End date and time')
     expect(res.text).not.toContain('Where to find details')
+    expect(peopleOnProbationService.getDocuments).not.toHaveBeenCalled()
   })
 
   it('shows Time required and the Community Campus note for an unpaid work requirement, without Where to find details', async () => {

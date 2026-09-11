@@ -237,7 +237,7 @@ export default function requirementsRoutes(services: Services): Router {
       if (!requirement) return next()
 
       let courtOrderDocumentId: string | undefined
-      if (config.features.documents) {
+      if (config.features.documents && requirement.isTag) {
         const { documents } = await services.peopleOnProbationService.getDocuments(crn)
         courtOrderDocumentId = documents.find(document => document.documentType === 'COURT_ORDER')?.id
       }

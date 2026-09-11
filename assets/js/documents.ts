@@ -22,9 +22,15 @@ const confirmButton = document.querySelector<HTMLButtonElement>('[data-document-
 
 if (fileInput && previewContainer) {
   let previewObjectUrl: string | null = null
+  // Bumped on every selection so a slow-to-render earlier file can't act (enable the confirm
+  // button, or overwrite the preview with its own error) after a later selection has already
+  // superseded it.
+  let selectionToken = 0
 
   fileInput.addEventListener('change', () => {
     const file = fileInput.files?.[0]
+    selectionToken += 1
+    const token = selectionToken
     if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl)
     if (confirmButton) confirmButton.disabled = true
 
@@ -36,9 +42,11 @@ if (fileInput && previewContainer) {
     previewObjectUrl = URL.createObjectURL(file)
     renderPdfIntoContainer(previewContainer, previewObjectUrl)
       .then(() => {
+        if (token !== selectionToken) return
         if (confirmButton) confirmButton.disabled = false
       })
       .catch(() => {
+        if (token !== selectionToken) return
         previewContainer.textContent = 'Sorry, this file could not be previewed. Choose a different PDF.'
       })
   })
@@ -84,7 +92,14 @@ if (confirmButton && fileInput) {
     const documentType = typeSelect?.value
     const errorContainer = document.getElementById('document-upload-error')
 
-    if (!file || !crn || !name || !documentType) return
+    if (!file || !crn || !documentType) return
+
+    if (!name) {
+      if (errorContainer) {
+        renderUploadError(errorContainer, 'Enter a document name', 'document-name')
+      }
+      return
+    }
 
     if (!DOCUMENT_NAME_PATTERN.test(name)) {
       if (errorContainer) {

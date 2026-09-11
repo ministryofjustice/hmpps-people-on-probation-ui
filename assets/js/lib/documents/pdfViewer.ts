@@ -16,9 +16,25 @@ async function renderPage(container: HTMLElement, page: Awaited<ReturnType<pdfjs
   container.appendChild(canvas)
 
   const context = canvas.getContext('2d')
-  if (!context) return
+  if (context) {
+    await page.render({ canvasContext: context, viewport, canvas }).promise
+  }
 
-  await page.render({ canvasContext: context, viewport, canvas }).promise
+  // A <canvas> alone has no text in the accessibility tree, so without this a screen reader
+  // gets an empty viewer and can't read the court order. This appends the page's real text,
+  // in reading order, visually hidden alongside the canvas - a plain text fallback rather
+  // than a positioned PDF.js text layer, since the latter's absolute-positioned overlay is
+  // designed to sit over the official PDF.js viewer's own page chrome/CSS custom properties,
+  // which this standalone canvas-only viewer doesn't provide.
+  const textContent = await page.getTextContent()
+  const pageText = textContent.items.map(item => ('str' in item ? item.str + (item.hasEOL ? '\n' : '') : '')).join('')
+
+  if (pageText.trim()) {
+    const textElement = document.createElement('p')
+    textElement.className = 'govuk-visually-hidden'
+    textElement.textContent = pageText
+    container.appendChild(textElement)
+  }
 }
 
 // Renders every page of the PDF at `url` into `container` as a stack of <canvas> elements,

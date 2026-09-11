@@ -34,6 +34,12 @@ const getAssetsConfig = buildConfig => ({
   bundle: true,
   plugins: [
     cleanPlugin(globSync(buildConfig.assets.clear)),
+    // Runs on esbuild's onEnd hook (esbuild-plugin-copy's default), which always fires after
+    // the clean plugin's onStart within this same build context - see build.config.js.
+    copy({
+      resolveFrom: 'cwd',
+      assets: [buildConfig.assets.workerCopy],
+    }),
     manifestPlugin({
       generate: entries =>
         Object.fromEntries(Object.entries(entries).map(paths => paths.map(p => p.replace(/^dist\//, '/')))),
