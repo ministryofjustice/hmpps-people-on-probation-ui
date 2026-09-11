@@ -49,6 +49,31 @@ if (fileInput && previewContainer) {
 // round trip, not a substitute for the API's own validation.
 const DOCUMENT_NAME_PATTERN = /^[A-Za-z0-9 _'.,:()/-]{1,255}$/
 
+// Mirrors the markup the govukErrorSummary macro renders server-side (see
+// document-upload.njk's other error rendering), so a client-side failure looks the same as a
+// server-rendered one. Only ever called with our own hardcoded copy, never user input, so
+// innerHTML here doesn't need escaping. Moves focus to the summary, matching GOV.UK's own
+// error-summary.js behaviour on page load, so screen reader/keyboard users notice it.
+function renderUploadError(container: HTMLElement, message: string, fieldId?: string): void {
+  const item = fieldId ? `<a href="#${fieldId}">${message}</a>` : message
+  // eslint-disable-next-line no-param-reassign -- mutating the passed container's innerHTML is the whole point of this helper
+  container.innerHTML = `
+    <div class="govuk-error-summary" data-module="govuk-error-summary">
+      <div role="alert">
+        <h2 class="govuk-error-summary__title">There is a problem</h2>
+        <div class="govuk-error-summary__body">
+          <ul class="govuk-list govuk-error-summary__list">
+            <li>${item}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `
+  const summary = container.querySelector<HTMLElement>('.govuk-error-summary')
+  summary?.setAttribute('tabindex', '-1')
+  summary?.focus()
+}
+
 if (confirmButton && fileInput) {
   confirmButton.addEventListener('click', () => {
     const file = fileInput.files?.[0]
@@ -63,14 +88,17 @@ if (confirmButton && fileInput) {
 
     if (!DOCUMENT_NAME_PATTERN.test(name)) {
       if (errorContainer) {
-        errorContainer.textContent =
-          "Document name must only contain letters, numbers, spaces and the following: _ ' . , : ( ) / -"
+        renderUploadError(
+          errorContainer,
+          "Document name must only contain letters, numbers, spaces and the following: _ ' . , : ( ) / -",
+          'document-name',
+        )
       }
       return
     }
 
     confirmButton.disabled = true
-    if (errorContainer) errorContainer.textContent = ''
+    if (errorContainer) errorContainer.innerHTML = ''
 
     uploadDocument({ crn, name, documentType, file })
       .then(() => {
@@ -79,7 +107,7 @@ if (confirmButton && fileInput) {
       .catch(() => {
         confirmButton.disabled = false
         if (errorContainer) {
-          errorContainer.textContent = 'Sorry, there was a problem uploading this document. Try again.'
+          renderUploadError(errorContainer, 'Sorry, there was a problem uploading this document. Try again.')
         }
       })
   })
