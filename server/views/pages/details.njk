@@ -4,7 +4,7 @@
 {% set currentPage = "details" %}
 
 {% block breadcrumb %}
-  {{ govukBackLink({ text: "Home", href: "/" }) }}
+  {{ govukBackLink({ text: "Home", href: "/home" if chatbotEnabled else "/" }) }}
 {% endblock %}
 
 {% block content %}

@@ -70,3 +70,12 @@
     }
   }
 }
+
+// Chat page (full-screen /chat): let the width container run full-bleed so the
+// chat fills the viewport edge-to-edge, with no side gutters. The widget sizes
+// itself to fill the height below the GOV.UK header.
+.govuk-width-container.app-chat-fullbleed {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}

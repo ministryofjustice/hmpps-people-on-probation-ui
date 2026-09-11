@@ -1,8 +1,8 @@
-import { Router } from 'express'
+import { Router, type Response, type NextFunction } from 'express'
 import { startOfDay, differenceInDays, isBefore, addDays } from 'date-fns'
 
 import logger from '../../logger'
-import config from '../config'
+import config, { chatbotEnabled } from '../config'
 import type { Services } from '../services'
 import { loadCurrentUser, requireAuthentication } from '../auth/currentUser'
 import normaliseReturnTo from '../auth/returnTo'
@@ -133,40 +133,73 @@ export default function routes(services: Services): Router {
     router.use('/admin', setUpAdminAuthentication(services), adminRoutes(services))
   }
 
+  // The signed-in account dashboard. Shared by /home and by / (when the chatbot
+  // is switched off), so the two entry points can never drift apart.
+  const renderAccountHome = async (res: Response, next: NextFunction) => {
+    try {
+      const crn = getSessionCrn(res.locals.user)
+
+      if (!crn) {
+        return res.redirect('/autherror')
+      }
+
+      const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
+        services.peopleOnProbationService.getFutureAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
+        services.peopleOnProbationService.getPastAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
+        services.peopleOnProbationService.getSentences(crn),
+      ])
+
+      const [nextAppointment] = futureAppointments.content
+
+      const missedAppointments = pastAppointments.content
+        .filter(isMissedMandatoryAppointmentOrActivity)
+        .filter(appointment =>
+          shouldIncludeMissedAppointmentInAlert(
+            appointment,
+            res.locals.user.registeredUserDetails?.createdAt,
+            res.locals.user.isRegistrationSession,
+          ),
+        )
+      const missedAlertEnabled = config.features.missedAppointmentAlert
+
+      return res.render('pages/index', {
+        nextAppointment: toNextAppointmentView(nextAppointment),
+        missedAppointment: missedAlertEnabled ? toMissedAppointmentView(missedAppointments[0]) : null,
+        missedAppointmentsCount: missedAlertEnabled ? missedAppointments.length : 0,
+        orderProgress: toOrderProgressView(sentenceProgress.sentences),
+      })
+    } catch (error) {
+      return next(error)
+    }
+  }
+
+  // Full-screen chat page and chat-first landing, gated behind `chatbotEnabled`
+  // (the flag AND the backend creds — the same check the nav uses, so routes and
+  // nav can't disagree). With it off, /chat and /home don't exist and / falls
+  // through to the normal account dashboard below — the site behaves as before.
+  if (chatbotEnabled) {
+    router.get('/chat', requireAuthentication, (req, res) => {
+      // Match the dashboard and every other account page: a signed-in user with
+      // no CRN has no probation record, so send them to /autherror rather than
+      // let the chat answer record-specific questions with nothing behind them.
+      const crn = getSessionCrn(res.locals.user)
+      if (!crn) {
+        return res.redirect('/autherror')
+      }
+      return res.render('pages/chat')
+    })
+    router.get('/home', requireAuthentication, (req, res, next) => renderAccountHome(res, next))
+  }
+
   router.get('/', async (req, res, next) => {
     try {
       if (res.locals.user) {
-        const crn = getSessionCrn(res.locals.user)
-
-        if (!crn) {
-          return res.redirect('/autherror')
+        // Chat-first landing: signed-in users go straight to the chat when the
+        // chatbot is enabled; otherwise they see the account dashboard.
+        if (chatbotEnabled) {
+          return res.redirect('/chat')
         }
-
-        const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
-          services.peopleOnProbationService.getFutureAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
-          services.peopleOnProbationService.getPastAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
-          services.peopleOnProbationService.getSentences(crn),
-        ])
-
-        const [nextAppointment] = futureAppointments.content
-
-        const missedAppointments = pastAppointments.content
-          .filter(isMissedMandatoryAppointmentOrActivity)
-          .filter(appointment =>
-            shouldIncludeMissedAppointmentInAlert(
-              appointment,
-              res.locals.user.registeredUserDetails?.createdAt,
-              res.locals.user.isRegistrationSession,
-            ),
-          )
-        const missedAlertEnabled = config.features.missedAppointmentAlert
-
-        return res.render('pages/index', {
-          nextAppointment: toNextAppointmentView(nextAppointment),
-          missedAppointment: missedAlertEnabled ? toMissedAppointmentView(missedAppointments[0]) : null,
-          missedAppointmentsCount: missedAlertEnabled ? missedAppointments.length : 0,
-          orderProgress: toOrderProgressView(sentenceProgress.sentences),
-        })
+        return renderAccountHome(res, next)
       }
 
       if (res.locals.sessionTimedOut) {
