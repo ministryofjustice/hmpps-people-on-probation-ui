@@ -42,6 +42,12 @@
         {{ govukButton({ text: "Search" }) }}
       </form>
 
+      {% if features.documents %}
+        <p class="govuk-body">
+          <a class="govuk-link" href="/admin/documents/upload">Upload a document</a>
+        </p>
+      {% endif %}
+
     </div>
   </div>
 {% endblock %}

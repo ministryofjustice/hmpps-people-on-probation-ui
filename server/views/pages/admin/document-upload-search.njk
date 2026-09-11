@@ -3,7 +3,7 @@
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
-{% set pageTitle = "Upload a court order – Check your probation account – GOV.UK" %}
+{% set pageTitle = "Upload a document – Check your probation account – GOV.UK" %}
 {% set currentPage = "admin-document-upload" %}
 
 {% block content %}
@@ -17,7 +17,7 @@
         }) }}
       {% endif %}
 
-      <h1 class="govuk-heading-l">Upload a court order</h1>
+      <h1 class="govuk-heading-l">Upload a document</h1>
 
       <form method="post" action="/admin/documents/upload" novalidate>
         <input type="hidden" name="_csrf" value="{{ csrfToken }}">

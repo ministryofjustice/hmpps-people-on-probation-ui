@@ -57,7 +57,7 @@ describe('GET /admin/documents/upload', () => {
 
     const response = await request(app).get('/admin/documents/upload').expect(200)
 
-    expect(response.text).toContain('Upload a court order')
+    expect(response.text).toContain('Upload a document')
   })
 
   it('redirects to sign-in when there is no admin session', async () => {
