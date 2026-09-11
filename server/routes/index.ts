@@ -2,7 +2,7 @@ import { Router, type Response, type NextFunction } from 'express'
 import { startOfDay, differenceInDays, isBefore, addDays } from 'date-fns'
 
 import logger from '../../logger'
-import config from '../config'
+import config, { chatbotEnabled } from '../config'
 import type { Services } from '../services'
 import { loadCurrentUser, requireAuthentication } from '../auth/currentUser'
 import normaliseReturnTo from '../auth/returnTo'
@@ -173,11 +173,21 @@ export default function routes(services: Services): Router {
     }
   }
 
-  // Full-screen chat page and chat-first landing, gated behind FEATURE_CHATBOT.
-  // With the flag off, /chat and /home don't exist and / falls through to the
-  // normal account dashboard below — i.e. the site behaves exactly as before.
-  if (config.features.chatbot) {
-    router.get('/chat', requireAuthentication, (req, res) => res.render('pages/chat'))
+  // Full-screen chat page and chat-first landing, gated behind `chatbotEnabled`
+  // (the flag AND the backend creds — the same check the nav uses, so routes and
+  // nav can't disagree). With it off, /chat and /home don't exist and / falls
+  // through to the normal account dashboard below — the site behaves as before.
+  if (chatbotEnabled) {
+    router.get('/chat', requireAuthentication, (req, res) => {
+      // Match the dashboard and every other account page: a signed-in user with
+      // no CRN has no probation record, so send them to /autherror rather than
+      // let the chat answer record-specific questions with nothing behind them.
+      const crn = getSessionCrn(res.locals.user)
+      if (!crn) {
+        return res.redirect('/autherror')
+      }
+      return res.render('pages/chat')
+    })
     router.get('/home', requireAuthentication, (req, res, next) => renderAccountHome(res, next))
   }
 
@@ -186,7 +196,7 @@ export default function routes(services: Services): Router {
       if (res.locals.user) {
         // Chat-first landing: signed-in users go straight to the chat when the
         // chatbot is enabled; otherwise they see the account dashboard.
-        if (config.features.chatbot) {
+        if (chatbotEnabled) {
           return res.redirect('/chat')
         }
         return renderAccountHome(res, next)

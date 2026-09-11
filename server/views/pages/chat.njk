@@ -1,4 +1,5 @@
 {% extends "../partials/layout.njk" %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 
 {% set pageTitle = "Chat – Check your probation account – GOV.UK" %}
 {% set currentPage = "chat" %}
@@ -14,9 +15,18 @@
   <link href="{{ '/assets/css/chatbot.css' | assetMap }}" rel="stylesheet"/>
 {% endblock %}
 
-{# No Beta banner on the chat page — it sits outside the main block and would
-   push the chat down / add page scroll. #}
-{% block beforeContent %}{% endblock %}
+{# Drop the Beta banner here (it would push the full-height chat down and add
+   page scroll), but keep the admin "preview as user" banner so an admin
+   previewing an account still sees it and the Exit preview control. #}
+{% block beforeContent %}
+  {% if user.previewedByAdmin %}
+    {{ govukNotificationBanner({
+      html: 'You are previewing this account as CRN <strong>' + user.adminPreviewSubject.personReference + '</strong>. <form method="post" action="/admin/preview/end" class="pop-admin-preview-banner__form"><input type="hidden" name="_csrf" value="' + csrfToken + '"><button type="submit" class="govuk-link pop-admin-preview-banner__exit">Exit preview</button></form>',
+      titleText: "Admin preview",
+      classes: "govuk-!-margin-top-6"
+    }) }}
+  {% endif %}
+{% endblock %}
 
 {# Full-bleed: skip the GOV.UK width container so the chat fills edge-to-edge
    and exactly fills the viewport below the header (the widget sizes itself). #}

@@ -1,4 +1,4 @@
-import { clearChatbotSession, init } from '@justiceaiunit/chatbot-widget'
+import { init } from '@justiceaiunit/chatbot-widget'
 import '@justiceaiunit/chatbot-widget/style.css'
 
 // Privacy notice URL — points at the chatbot's own /privacy page, which
@@ -46,15 +46,7 @@ init({
   },
 })
 
-document.addEventListener('click', event => {
-  const { target } = event
-  if (!(target instanceof Element)) return
-
-  const link = target.closest<HTMLAnchorElement>('a')
-  if (!link) return
-
-  const url = new URL(link.href)
-  if (url.origin === window.location.origin && ['/sign-out', '/admin/sign-out'].includes(url.pathname)) {
-    clearChatbotSession('pop')
-  }
-})
+// Note: clearing the persisted conversation on sign-out lives in
+// assets/js/chatbot-signout.ts, which loads on every signed-in page — this
+// bundle only loads on /chat, so it can't be relied on to catch sign-outs
+// from elsewhere.
