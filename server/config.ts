@@ -188,5 +188,8 @@ export default {
     // explicitly in its helm values (.env.example does the same for local
     // dev, preconfigured against the docker-compose hmpps-auth container).
     adminPreview: get('FEATURE_ADMIN_PREVIEW', 'false') === 'true',
+    // Master switch for the citizen-facing Documents area (nav item, homepage
+    // card, /documents pages) and the admin document upload flow. Off by default
+    documents: get('FEATURE_DOCUMENTS', 'false') === 'true',
   },
 }

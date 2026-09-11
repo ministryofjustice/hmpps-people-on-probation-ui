@@ -27,6 +27,8 @@ import chatbotRoutes from './chatbot'
 import expectationsRoutes from './expectations'
 import feedbackRoutes from './feedback'
 import adminRoutes from './admin'
+import documentsRoutes from './documents'
+import adminDocumentsRoutes from './adminDocuments'
 import setUpAdminAuthentication from '../middleware/setUpAdminAuthentication'
 
 type NextAppointmentView = {
@@ -125,12 +127,23 @@ export default function routes(services: Services): Router {
   router.use('/probation-agreement', expectationsRoutes(services))
   router.use('/feedback', feedbackRoutes(services))
 
+  if (config.features.documents) {
+    router.use('/documents', documentsRoutes(services))
+  }
+
   // Admin "preview as user" feature — independent HMPPS Auth identity
   // (res.locals.adminUser), fully separate from the citizen One Login
   // session above (res.locals.user). See server/middleware/
   // setUpAdminAuthentication.ts and server/routes/admin.ts.
   if (config.features.adminPreview) {
     router.use('/admin', setUpAdminAuthentication(services), adminRoutes(services))
+    // setUpAdminAuthentication is already mounted for the whole /admin/* prefix above - it
+    // doesn't need mounting again here, and doing so would register a second, unreachable set
+    // of sign-in/callback/sign-out routes under /admin/documents (the OAuth callbackURL is
+    // fixed to /admin/sign-in/callback) and re-run passport.initialize()/session() for nothing.
+    if (config.features.documents) {
+      router.use('/admin/documents', adminDocumentsRoutes(services))
+    }
   }
 
   router.get('/', async (req, res, next) => {

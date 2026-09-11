@@ -2,6 +2,8 @@ import PeopleOnProbationApiClient, {
   type CompleteOneLoginRegistrationRequest,
   type CurrentRegisteredUserRequest,
   type AnalyticsEvent,
+  type CreateDocumentRequest,
+  type DocumentType,
 } from '../data/peopleOnProbationApiClient'
 import { getAuthenticationClient } from '../data/index'
 
@@ -46,6 +48,22 @@ export default class PeopleOnProbationService {
 
   postAnalyticsEvent(event: AnalyticsEvent) {
     return this.peopleOnProbationApiClient.postAnalyticsEvent(event)
+  }
+
+  getDocuments(crn: string) {
+    return this.peopleOnProbationApiClient.getDocuments(crn)
+  }
+
+  getDocument(crn: string, documentId: string) {
+    return this.peopleOnProbationApiClient.getDocument(crn, documentId)
+  }
+
+  presignDocumentUpload(crn: string, documentType: DocumentType) {
+    return this.peopleOnProbationApiClient.presignDocumentUpload(crn, documentType)
+  }
+
+  createDocument(crn: string, request: CreateDocumentRequest) {
+    return this.peopleOnProbationApiClient.createDocument(crn, request)
   }
 }
 

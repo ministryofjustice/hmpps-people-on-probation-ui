@@ -1,0 +1,21 @@
+{% extends "../../partials/layout.njk" %}
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+
+{% set pageTitle = "Document uploaded – Check your probation account – GOV.UK" %}
+{% set currentPage = "admin-document-upload" %}
+
+{% block content %}
+  <div class="govuk-grid-row govuk-!-margin-top-9">
+    <div class="govuk-grid-column-two-thirds">
+
+      {{ govukPanel({
+        titleText: "Document uploaded"
+      }) }}
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/admin/documents/upload">Upload another document</a>
+      </p>
+
+    </div>
+  </div>
+{% endblock %}

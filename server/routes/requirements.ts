@@ -2,8 +2,10 @@ import { Router } from 'express'
 
 import { startOfDay, addDays, differenceInDays, isBefore } from 'date-fns'
 import type { Services } from '../services'
+import config from '../config'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
+import logger from '../../logger'
 import {
   formatDate,
   formatDateTimeWithDay,
@@ -235,7 +237,19 @@ export default function requirementsRoutes(services: Services): Router {
 
       if (!requirement) return next()
 
-      return res.render('pages/requirement-detail', { requirement })
+      let courtOrderDocumentId: string | undefined
+      if (config.features.documents && requirement.isTag) {
+        // Best-effort: this only feeds an optional signpost link, so a documents-API failure
+        // shouldn't take down the whole requirement detail page - fall back to no link instead.
+        try {
+          const { documents = [] } = await services.peopleOnProbationService.getDocuments(crn)
+          courtOrderDocumentId = documents.find(document => document.documentType === 'COURT_ORDER')?.id
+        } catch (err) {
+          logger.warn({ err, crn }, 'Failed to fetch documents for the requirement detail signpost link')
+        }
+      }
+
+      return res.render('pages/requirement-detail', { requirement, courtOrderDocumentId })
     } catch (error) {
       return next(error)
     }
