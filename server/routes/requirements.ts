@@ -236,13 +236,10 @@ export default function requirementsRoutes(services: Services): Router {
 
       if (!requirement) return next()
 
-      // Court order is currently the only document type this app surfaces, so any
-      // uploaded document is treated as "the" court order - revisit this once other
-      // document types exist and documents carry their own type/category.
       let courtOrderDocumentId: string | undefined
       if (config.features.documents) {
         const { documents } = await services.peopleOnProbationService.getDocuments(crn)
-        courtOrderDocumentId = documents[0]?.id
+        courtOrderDocumentId = documents.find(document => document.documentType === 'COURT_ORDER')?.id
       }
 
       return res.render('pages/requirement-detail', { requirement, courtOrderDocumentId })

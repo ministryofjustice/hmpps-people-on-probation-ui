@@ -484,7 +484,9 @@ describe('GET /requirements/:slug', () => {
       ],
     })
     peopleOnProbationService.getDocuments.mockResolvedValue({
-      documents: [{ id: 'doc-1', name: 'Your Court Order', uploadedAt: '2026-01-01T00:00:00Z' }],
+      documents: [
+        { id: 'doc-1', name: 'Your Court Order', documentType: 'COURT_ORDER', uploadedAt: '2026-01-01T00:00:00Z' },
+      ],
     })
 
     const res = await request(app)
@@ -494,6 +496,39 @@ describe('GET /requirements/:slug', () => {
 
     expect(res.text).toContain('href="/documents/doc-1">court order</a>')
     expect(peopleOnProbationService.getDocuments).toHaveBeenCalledWith('X123456')
+  })
+
+  it('ignores non-court-order documents when picking which document to link to', async () => {
+    config.features.documents = true
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'RM49', description: 'Curfew' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+    peopleOnProbationService.getDocuments.mockResolvedValue({
+      documents: [
+        { id: 'doc-other', name: 'Something else', documentType: 'OTHER', uploadedAt: '2026-01-01T00:00:00Z' },
+        { id: 'doc-1', name: 'Your Court Order', documentType: 'COURT_ORDER', uploadedAt: '2026-01-02T00:00:00Z' },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/curfew')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('href="/documents/doc-1">court order</a>')
   })
 
   it('falls back to plain text when the documents feature is on but no document exists', async () => {
