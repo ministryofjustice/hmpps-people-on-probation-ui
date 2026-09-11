@@ -40,7 +40,7 @@ describe('GET /probation-officer', () => {
       .expect('Location', '/autherror')
   })
 
-  it('should render the probation officer name and phone number, and the office phone number and address', async () => {
+  it('should render the probation officer name, and the office phone number and address', async () => {
     peopleOnProbationService.getPersonalDetails.mockResolvedValue({
       name: { forename: 'John', surname: 'Smith' },
       emergencyContacts: [],
@@ -68,8 +68,6 @@ describe('GET /probation-officer', () => {
 
     expect(response.text).toContain('Probation officer details')
     expect(response.text).toContain('Sarah Jones')
-    expect(response.text).toContain('<dt class="pop-summary-card__key">Officer phone number</dt>')
-    expect(response.text).toContain('01234567890')
     expect(response.text).toContain('<dt class="pop-summary-card__key">Phone number</dt>')
     expect(response.text).toContain('01708123456')
     expect(response.text).toContain('27-35 New Road')
@@ -305,24 +303,6 @@ describe('GET /probation-officer', () => {
 
     expect(response.text).toContain('27-35 New Road')
     expect(response.text).toContain('ME4 4QR')
-  })
-
-  it('should render without an officer phone number when the practitioner has no team', async () => {
-    peopleOnProbationService.getPersonalDetails.mockResolvedValue({
-      name: { forename: 'John', surname: 'Smith' },
-      emergencyContacts: [],
-      practitioner: {
-        name: { forename: 'Sarah', surname: 'Jones' },
-      },
-    })
-
-    const response = await request(app)
-      .get('/probation-officer')
-      .set('Cookie', await createAppSessionCookie('X123456'))
-      .expect(200)
-
-    expect(response.text).toContain('Sarah Jones')
-    expect(response.text).not.toContain('<dt class="pop-summary-card__key">Officer phone number</dt>')
   })
 
   it('should pass errors to the next error handler', async () => {

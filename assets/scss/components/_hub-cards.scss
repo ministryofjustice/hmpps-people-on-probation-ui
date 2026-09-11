@@ -26,19 +26,27 @@
   }
 }
 
-// Ensure cards in a card-row stretch to equal height
-.pop-card-row [class*="govuk-grid-column"] {
+// Ensure cards in a card-row stretch to equal height. The row itself needs display: flex too -
+// GOV.UK's grid row is float-based by default, so without it each column's height is
+// independent of its sibling and flexing the column alone has nothing to stretch against.
+.pop-card-row {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
 
-  .pop-card {
-    flex: 1;
+  [class*="govuk-grid-column"] {
+    display: flex;
+    flex-direction: column;
+
+    .pop-card {
+      flex: 1;
+    }
   }
 }
 
+// Flex items don't collapse margins like block/float siblings do, so this uses gap rather than
+// margin-top + margin-bottom on each column (which would double up to 2x the intended spacing).
 @include govuk-media-query($until: tablet) {
-  .pop-card-row [class*="govuk-grid-column"] {
-    margin-top: govuk-spacing(6);
-    margin-bottom: govuk-spacing(6);
+  .pop-card-row {
+    row-gap: govuk-spacing(6);
   }
 }

@@ -21,7 +21,6 @@ export default function probationOfficerRoutes(services: Services): Router {
       const officer = practitioner
         ? {
             name: formatPractitionerName(practitioner.name),
-            officerPhoneNumber: practitioner.team?.telephoneNumber,
             officePhoneNumber: practitioner.officePhoneNumber,
             officeAddress: formatAddress(practitioner.officeAddress),
             officeLocationUrl: officeLocationUrl && practitioner.officeName ? officeLocationUrl : undefined,
@@ -32,11 +31,7 @@ export default function probationOfficerRoutes(services: Services): Router {
       return res.render('pages/probation-officer', {
         officer:
           officer &&
-          (officer.name ||
-            officer.officerPhoneNumber ||
-            officer.officePhoneNumber ||
-            officer.officeAddress.length ||
-            officer.officeLocationUrl)
+          (officer.name || officer.officePhoneNumber || officer.officeAddress.length || officer.officeLocationUrl)
             ? officer
             : null,
       })
