@@ -29,6 +29,14 @@ describe('resolveInteractionElementId', () => {
     expect(resolveInteractionElementId(target)).toBe('chat_icon')
   })
 
+  it('falls back to "chat_use_website_instead" for the widget "use the website instead" link', () => {
+    const target = fakeElement({
+      '#chatbot-root a[href$="/home"]': { dataset: {} },
+    })
+
+    expect(resolveInteractionElementId(target)).toBe('chat_use_website_instead')
+  })
+
   it('prefers a data-tracking-id ancestor over a chatbot-button ancestor when both match', () => {
     const target = fakeElement({
       '[data-tracking-id]': { dataset: { trackingId: 'add_to_calendar' } },

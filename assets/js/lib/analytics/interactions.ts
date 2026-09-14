@@ -15,7 +15,12 @@
 export function resolveInteractionElementId(target: Element): string | undefined {
   const tracked = target.closest<HTMLElement>('[data-tracking-id]')
   if (tracked) return tracked.dataset.trackingId
-  return target.closest('.chatbot-button') ? 'chat_icon' : undefined
+  if (target.closest('.chatbot-button')) return 'chat_icon'
+  // "Use the website instead" is rendered from markdown inside the widget, so it
+  // carries no data-tracking-id — match it by href within the widget root. Same
+  // soft dependency on widget markup as the chat icon above.
+  if (target.closest('#chatbot-root a[href$="/home"]')) return 'chat_use_website_instead'
+  return undefined
 }
 
 /**
