@@ -10,8 +10,8 @@ import { getAuthenticationClient } from '../data/index'
 export default class PeopleOnProbationService {
   constructor(private readonly peopleOnProbationApiClient: PeopleOnProbationApiClient) {}
 
-  getName(crn: string) {
-    return this.peopleOnProbationApiClient.getName(crn)
+  getName(crn: string, options?: { retries?: number }) {
+    return this.peopleOnProbationApiClient.getName(crn, options)
   }
 
   getPersonalDetails(crn: string) {

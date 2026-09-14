@@ -31,6 +31,10 @@ import documentsRoutes from './documents'
 import adminDocumentsRoutes from './adminDocuments'
 import setUpAdminAuthentication from '../middleware/setUpAdminAuthentication'
 
+// Max time to wait on the cosmetic "Hi, {name}" record lookup before rendering
+// /chat with the widget's default greeting instead (see the /chat handler).
+const GREETING_NAME_TIMEOUT_MS = 1500
+
 type NextAppointmentView = {
   date?: string
   timeRange?: string
@@ -205,9 +209,18 @@ export default function routes(services: Services): Router {
       // does NOT change anything sent to the chatbot.
       let greetingName = (res.locals.user.displayName || '').trim().split(' ')[0]
       if (!greetingName) {
+        // This lookup is purely cosmetic and sits on the landing path (/ redirects
+        // here), so bound it hard: no retries and a short timeout. If the POP API
+        // is slow or down, don't stall the page — just render the widget's default
+        // greeting (what it would have shown anyway).
         try {
-          const { forename } = await services.peopleOnProbationService.getName(crn)
-          greetingName = (forename || '').trim()
+          const name = await Promise.race([
+            services.peopleOnProbationService.getName(crn, { retries: 0 }),
+            new Promise<null>(resolve => {
+              setTimeout(() => resolve(null), GREETING_NAME_TIMEOUT_MS)
+            }),
+          ])
+          greetingName = (name?.forename || '').trim()
         } catch {
           // Non-fatal — fall back to the widget's default greeting.
         }
