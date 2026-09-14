@@ -4,7 +4,7 @@ import nunjucks from 'nunjucks'
 import express from 'express'
 import fs from 'fs'
 import { initialiseName } from './utils'
-import config from '../config'
+import config, { chatbotEnabled } from '../config'
 import logger from '../../logger'
 
 export default function nunjucksSetup(app: express.Express): void {
@@ -14,7 +14,7 @@ export default function nunjucksSetup(app: express.Express): void {
   app.locals.applicationName = 'Probation Account'
   app.locals.environmentName = config.environmentName
   app.locals.environmentNameColour = config.environmentName === 'PRE-PRODUCTION' ? 'govuk-tag--green' : ''
-  app.locals.chatbotEnabled = Boolean(config.features.chatbot && config.popChatbot.apiUrl && config.popChatbot.apiKey)
+  app.locals.chatbotEnabled = chatbotEnabled
   app.locals.analyticsEnabled = config.features.analytics
   app.locals.feedbackBanner = config.feedbackBanner
   app.locals.features = config.features

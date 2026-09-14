@@ -1,0 +1,84 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% set pageTitle = "Chat – Check your probation account – GOV.UK" %}
+{% set currentPage = "chat" %}
+{# Full-bleed width container (see overrides/_local.scss) so the chat fills the
+   viewport edge-to-edge with no side gutters. #}
+{% set containerClasses = "app-chat-fullbleed" %}
+
+{# Uses the normal POP UI layout, so the chat page has the identical GOV.UK
+   header + service nav as every other page. The widget hides its own header
+   (see chatbot.ts) and fills the content area beneath it. #}
+{% block head %}
+  {{ super() }}
+  <link href="{{ '/assets/css/chatbot.css' | assetMap }}" rel="stylesheet"/>
+{% endblock %}
+
+{# Drop the Beta banner here (it would push the full-height chat down and add
+   page scroll), but keep the admin "preview as user" banner so an admin
+   previewing an account still sees it and the Exit preview control. #}
+{% block beforeContent %}
+  {% if user.previewedByAdmin %}
+    {{ govukNotificationBanner({
+      html: 'You are previewing this account as CRN <strong>' + user.adminPreviewSubject.personReference + '</strong>. <form method="post" action="/admin/preview/end" class="pop-admin-preview-banner__form"><input type="hidden" name="_csrf" value="' + csrfToken + '"><button type="submit" class="govuk-link pop-admin-preview-banner__exit">Exit preview</button></form>',
+      titleText: "Admin preview",
+      classes: "govuk-!-margin-top-6"
+    }) }}
+  {% endif %}
+{% endblock %}
+
+{# Full-bleed: skip the GOV.UK width container so the chat fills edge-to-edge
+   and exactly fills the viewport below the header (the widget sizes itself). #}
+{% block main %}
+  <main id="main-content" role="main">
+    <div
+      id="chatbot-root"
+      {% if user.displayName %}data-display-title="Hi, {{ user.displayName.split(' ')[0] }}"{% endif %}
+    ></div>
+  </main>
+{% endblock %}
+
+{# Standard site footer, like every other page. #}
+{% block footer %}{{ super() }}{% endblock %}
+
+{% block bodyEnd %}
+  {{ super() }}
+  <script type="module" src="{{ '/assets/js/chatbot.js' | assetMap }}"></script>
+  {# Chat interaction behaviour: interacting with the chat closes the mobile
+     "Menu" if it's open, and brings the chat back to the top of the screen —
+     unless the user is deliberately scrolling down toward the footer. #}
+  <script nonce="{{ cspNonce }}">
+    (function () {
+      var root = document.getElementById('chatbot-root')
+      if (!root) return
+      var navToggle = document.querySelector('.govuk-service-navigation__toggle')
+
+      function closeMenuIfOpen() {
+        if (navToggle && navToggle.getAttribute('aria-expanded') === 'true') {
+          navToggle.click()
+        }
+      }
+
+      // Remember the last downward scroll so we don't yank the user back to the
+      // top while they're scrolling toward the footer.
+      var lastScrollY = window.scrollY
+      var scrollingDownUntil = 0
+      window.addEventListener('scroll', function () {
+        var y = window.scrollY
+        if (y > lastScrollY) scrollingDownUntil = Date.now() + 800
+        lastScrollY = y
+      }, { passive: true })
+
+      function onChatInteract() {
+        closeMenuIfOpen()
+        var nearBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight - 4
+        if (Date.now() < scrollingDownUntil || nearBottom) return
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+
+      root.addEventListener('pointerdown', onChatInteract)
+      root.addEventListener('focusin', onChatInteract)
+    })()
+  </script>
+{% endblock %}
