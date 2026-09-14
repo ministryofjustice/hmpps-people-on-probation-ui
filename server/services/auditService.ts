@@ -15,6 +15,7 @@ export enum AuditAction {
   ADMIN_PREVIEW_SEARCH_ATTEMPTED = 'ADMIN_PREVIEW_SEARCH_ATTEMPTED',
   ADMIN_PREVIEW_STARTED = 'ADMIN_PREVIEW_STARTED',
   ADMIN_PREVIEW_ENDED = 'ADMIN_PREVIEW_ENDED',
+  ADMIN_DOCUMENT_UPLOADED = 'ADMIN_DOCUMENT_UPLOADED',
 }
 
 export interface AuditEvent {
@@ -127,6 +128,17 @@ export default class AuditService {
     await this.logAuditEvent({
       ...eventDetails,
       action: AuditAction.ADMIN_PREVIEW_ENDED,
+      subjectType: 'CRN',
+    })
+  }
+
+  // Admin document upload feature (server/routes/adminDocuments.ts) — who is
+  // the admin's own HMPPS Auth username, subjectId is the CRN the document
+  // was uploaded for.
+  async logAdminDocumentUploaded(eventDetails: Omit<AuditEvent, 'action' | 'subjectType'>) {
+    await this.logAuditEvent({
+      ...eventDetails,
+      action: AuditAction.ADMIN_DOCUMENT_UPLOADED,
       subjectType: 'CRN',
     })
   }

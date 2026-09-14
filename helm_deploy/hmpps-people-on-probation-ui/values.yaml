@@ -42,7 +42,7 @@ generic-service:
     AUDIT_SQS_REGION: 'eu-west-2'
     AUDIT_SERVICE_NAME: 'hmpps-probation-accounts'
     ONE_LOGIN_SCOPES: 'openid email phone'
-    ONE_LOGIN_VTR: 'Cl.Cm'
+    ONE_LOGIN_VTR: 'Cl'
     WEB_SESSION_TIMEOUT_IN_MINUTES: '15'
 
   # Pre-existing kubernetes secrets to load as environment variables in the deployment.

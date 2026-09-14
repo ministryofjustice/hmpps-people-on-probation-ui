@@ -118,7 +118,13 @@
           {% if requirement.isTag %}
             <div class="pop-summary-card__row">
               <dt class="pop-summary-card__key">Where to find details</dt>
-              <dd class="pop-summary-card__value">You can find this information in your court order</dd>
+              <dd class="pop-summary-card__value">
+                {% if courtOrderDocumentId %}
+                  You can find this information in your <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">court order</a>
+                {% else %}
+                  You can find this information in your court order
+                {% endif %}
+              </dd>
             </div>
           {% endif %}
         {% endif %}

@@ -23,7 +23,14 @@
   {% set citizenNav = citizenNav.concat([
     { href: "/appointments", text: "Appointments and activities", active: currentPage === "appointments" },
     { href: "/goals", text: "Goals", active: currentPage === "goals" },
-    { href: "/requirements", text: "Order requirements", active: currentPage === "requirements" },
+    { href: "/requirements", text: "Order requirements", active: currentPage === "requirements" }
+  ]) %}
+  {% if features.documents %}
+    {% set citizenNav = citizenNav.concat([
+      { href: "/documents", text: "Documents", active: currentPage === "documents" }
+    ]) %}
+  {% endif %}
+  {% set citizenNav = citizenNav.concat([
     { href: "/admin/sign-out" if user.previewedByAdmin else "/sign-out", text: "Sign out", active: false }
   ]) %}
   {{ govukServiceNavigation({
