@@ -26,4 +26,34 @@
     outline-offset: 0;
     box-shadow: inset 0 0 0 4px $govuk-focus-text-colour;
   }
+
+  // Documents list only (see documents.njk) - not applied to the shared base class so the
+  // Order requirements list, which reuses .pop-requirement-card, is unaffected.
+  &--chevron {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: govuk-spacing(4);
+  }
+
+  &__chevron {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: $govuk-link-colour;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      stroke: govuk-colour('white');
+    }
+  }
+
+  &:hover &__chevron {
+    background-color: $govuk-link-hover-colour;
+  }
 }

@@ -44,6 +44,7 @@ generic-service:
     ONE_LOGIN_SCOPES: 'openid email phone'
     ONE_LOGIN_VTR: 'Cl'
     WEB_SESSION_TIMEOUT_IN_MINUTES: '15'
+    FEATURE_DOCUMENTS: 'true'
 
   # Pre-existing kubernetes secrets to load as environment variables in the deployment.
   namespace_secrets:
