@@ -44,9 +44,6 @@ generic-service:
     ONE_LOGIN_SCOPES: 'openid email phone'
     ONE_LOGIN_VTR: 'Cl'
     WEB_SESSION_TIMEOUT_IN_MINUTES: '15'
-    # Validated in dev. Requires the people-on-probation-api document endpoints and the S3
-    # bucket/IRSA role (cloud-platform-environments) to be applied in every environment this
-    # reaches - do not merge/deploy this until those are confirmed live in preprod and prod too.
     FEATURE_DOCUMENTS: 'true'
 
   # Pre-existing kubernetes secrets to load as environment variables in the deployment.
