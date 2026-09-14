@@ -196,8 +196,6 @@ const config = {
 // the `/` → /chat redirect, and the service-nav Chat item all use this, so they
 // can never disagree — e.g. flag on but creds unset in preprod/local, which
 // would otherwise redirect to a /chat with no Chat nav item and a dead backend.
-export const chatbotEnabled = Boolean(
-  config.features.chatbot && config.popChatbot.apiUrl && config.popChatbot.apiKey,
-)
+export const chatbotEnabled = Boolean(config.features.chatbot && config.popChatbot.apiUrl && config.popChatbot.apiKey)
 
 export default config
