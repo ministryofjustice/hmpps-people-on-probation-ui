@@ -29,6 +29,24 @@ describe('resolveInteractionElementId', () => {
     expect(resolveInteractionElementId(target)).toBe('chat_icon')
   })
 
+  it('falls back to "chat_use_website_instead" for the welcome intro\'s exact /home link', () => {
+    const target = fakeElement({
+      '#chatbot-root .chatbot-welcome-intro a[href="/home"]': { dataset: {} },
+    })
+
+    expect(resolveInteractionElementId(target)).toBe('chat_use_website_instead')
+  })
+
+  it('does not match a /home link outside the welcome intro (e.g. an assistant response)', () => {
+    // Only a broad widget /home link matches — not the scoped welcome-intro
+    // selector — so it must not be counted as "use the website instead".
+    const target = fakeElement({
+      '#chatbot-root a[href$="/home"]': { dataset: {} },
+    })
+
+    expect(resolveInteractionElementId(target)).toBeUndefined()
+  })
+
   it('prefers a data-tracking-id ancestor over a chatbot-button ancestor when both match', () => {
     const target = fakeElement({
       '[data-tracking-id]': { dataset: { trackingId: 'add_to_calendar' } },

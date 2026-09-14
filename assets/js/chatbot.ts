@@ -33,11 +33,7 @@ init({
     // Keep the conversation across navigation so returning to /chat from an
     // account page doesn't lose it.
     persistSession: true,
-    suggestedQuestions: [
-      "When's my next appointment?",
-      'How many hours of unpaid work do I have left?',
-      'What are my order requirements?',
-    ],
+    suggestedQuestions: ["When's my next appointment?", 'How many hours of unpaid work do I have left?'],
     // Widget rewrites `#privacy` markdown links and the bottom-of-widget link
     // to open this URL in a new tab. `privacyMessage` is no longer needed here
     // — the chatbot's /privacy page is the single source of truth.

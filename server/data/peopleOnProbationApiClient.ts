@@ -261,8 +261,8 @@ export default class PeopleOnProbationApiClient extends RestClient {
     super('People on Probation API', config.apis.peopleOnProbationApi, logger, authenticationClient)
   }
 
-  getName(crn: string) {
-    return this.get<PersonNameResponse>({ path: `/v1/person/${crn}/name` }, asSystem())
+  getName(crn: string, options: { retries?: number } = {}) {
+    return this.get<PersonNameResponse>({ path: `/v1/person/${crn}/name`, retries: options.retries }, asSystem())
   }
 
   getPersonalDetails(crn: string) {
