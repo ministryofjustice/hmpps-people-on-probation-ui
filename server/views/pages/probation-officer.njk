@@ -14,24 +14,16 @@
   <div class="govuk-!-margin-top-6">
 
     {% if officer %}
-      {% if officer.name or officer.officerPhoneNumber %}
+      {% if officer.name %}
         <div class="pop-summary-card">
           <div class="pop-summary-card__header">
             <span class="pop-summary-card__type">Your probation officer</span>
           </div>
           <dl class="pop-summary-card__details">
-            {% if officer.name %}
-              <div class="pop-summary-card__row">
-                <dt class="pop-summary-card__key">Name</dt>
-                <dd class="pop-summary-card__value">{{ officer.name }}</dd>
-              </div>
-            {% endif %}
-            {% if officer.officerPhoneNumber %}
-              <div class="pop-summary-card__row">
-                <dt class="pop-summary-card__key">Officer phone number</dt>
-                <dd class="pop-summary-card__value">{{ officer.officerPhoneNumber }}</dd>
-              </div>
-            {% endif %}
+            <div class="pop-summary-card__row">
+              <dt class="pop-summary-card__key">Name</dt>
+              <dd class="pop-summary-card__value">{{ officer.name }}</dd>
+            </div>
           </dl>
         </div>
       {% endif %}

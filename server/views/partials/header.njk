@@ -9,37 +9,45 @@
    should. Off /admin pages (adminUser unset) any citizen session counts, as
    before. #}
 {% if user and (not adminUser or user.previewedByAdmin) %}
+  {% set navigation = [
+    {
+      href: "/",
+      text: "Home",
+      active: currentPage === "home"
+    },
+    {
+      href: "/appointments",
+      text: "Appointments and activities",
+      active: currentPage === "appointments"
+    },
+    {
+      href: "/goals",
+      text: "Goals",
+      active: currentPage === "goals"
+    },
+    {
+      href: "/requirements",
+      text: "Order requirements",
+      active: currentPage === "requirements"
+    }
+  ] %}
+  {% if features.documents %}
+    {% set navigation = navigation.concat([{
+      href: "/documents",
+      text: "Documents",
+      active: currentPage === "documents"
+    }]) %}
+  {% endif %}
+  {% set navigation = navigation.concat([{
+    href: "/admin/sign-out" if user.previewedByAdmin else "/sign-out",
+    text: "Sign out",
+    active: false
+  }]) %}
   {{ govukServiceNavigation({
     serviceName: "Check your probation account",
     serviceUrl: "/",
     collapseNavigationOnMobile: true,
-    navigation: [
-      {
-        href: "/",
-        text: "Home",
-        active: currentPage === "home"
-      },
-      {
-        href: "/appointments",
-        text: "Appointments and activities",
-        active: currentPage === "appointments"
-      },
-      {
-        href: "/goals",
-        text: "Goals",
-        active: currentPage === "goals"
-      },
-      {
-        href: "/requirements",
-        text: "Order requirements",
-        active: currentPage === "requirements"
-      },
-      {
-        href: "/admin/sign-out" if user.previewedByAdmin else "/sign-out",
-        text: "Sign out",
-        active: false
-      }
-    ]
+    navigation: navigation
   }) }}
 {% elif adminUser %}
   {{ govukServiceNavigation({
