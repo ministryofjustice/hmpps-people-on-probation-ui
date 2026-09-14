@@ -3,9 +3,6 @@
 
 {% set pageTitle = "Chat – Check your probation account – GOV.UK" %}
 {% set currentPage = "chat" %}
-{# Full-bleed width container (see overrides/_local.scss) so the chat fills the
-   viewport edge-to-edge with no side gutters. #}
-{% set containerClasses = "app-chat-fullbleed" %}
 
 {# Uses the normal POP UI layout, so the chat page has the identical GOV.UK
    header + service nav as every other page. The widget hides its own header
@@ -28,13 +25,14 @@
   {% endif %}
 {% endblock %}
 
-{# Full-bleed: skip the GOV.UK width container so the chat fills edge-to-edge
-   and exactly fills the viewport below the header (the widget sizes itself). #}
+{# Sit the chat inside the standard GOV.UK width container so it shares the same
+   left-aligned margins as every other page. The widget still sizes itself to
+   fill the height below the header. #}
 {% block main %}
-  <main id="main-content" role="main">
+  <main id="main-content" role="main" class="govuk-width-container">
     <div
       id="chatbot-root"
-      {% if user.displayName %}data-display-title="Hi, {{ user.displayName.split(' ')[0] }}"{% endif %}
+      {% if greetingName %}data-display-title="Hi, {{ greetingName }}"{% endif %}
     ></div>
   </main>
 {% endblock %}

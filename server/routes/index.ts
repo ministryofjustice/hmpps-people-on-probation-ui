@@ -191,7 +191,7 @@ export default function routes(services: Services): Router {
   // nav can't disagree). With it off, /chat and /home don't exist and / falls
   // through to the normal account dashboard below — the site behaves as before.
   if (chatbotEnabled) {
-    router.get('/chat', requireAuthentication, (req, res) => {
+    router.get('/chat', requireAuthentication, async (req, res) => {
       // Match the dashboard and every other account page: a signed-in user with
       // no CRN has no probation record, so send them to /autherror rather than
       // let the chat answer record-specific questions with nothing behind them.
@@ -199,7 +199,20 @@ export default function routes(services: Services): Router {
       if (!crn) {
         return res.redirect('/autherror')
       }
-      return res.render('pages/chat')
+      // Greeting name for the "Hi, {name}" home screen: prefer the One Login
+      // display name; if it's blank (not every user has a verified name claim),
+      // fall back to the forename on the probation record. Display-only — this
+      // does NOT change anything sent to the chatbot.
+      let greetingName = (res.locals.user.displayName || '').trim().split(' ')[0]
+      if (!greetingName) {
+        try {
+          const { forename } = await services.peopleOnProbationService.getName(crn)
+          greetingName = (forename || '').trim()
+        } catch {
+          // Non-fatal — fall back to the widget's default greeting.
+        }
+      }
+      return res.render('pages/chat', { greetingName })
     })
     router.get('/home', requireAuthentication, (req, res, next) => renderAccountHome(res, next))
   }
