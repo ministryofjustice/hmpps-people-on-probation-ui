@@ -118,11 +118,6 @@
       {% for requirement in requirements %}
         <a class="pop-requirement-card" href="/requirements/{{ requirement.slug }}" data-tracking-id="requirements_view_{{ requirement.slug }}">
           <span class="pop-requirement-card__title">{{ requirement.label }}</span>
-          <span class="pop-requirement-card__chevron" aria-hidden="true">
-            <svg viewBox="0 0 12 18" xmlns="http://www.w3.org/2000/svg" focusable="false">
-              <path d="M1 1l8 8-8 8" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
         </a>
       {% endfor %}
     </div>
