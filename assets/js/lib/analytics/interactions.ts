@@ -17,9 +17,12 @@ export function resolveInteractionElementId(target: Element): string | undefined
   if (tracked) return tracked.dataset.trackingId
   if (target.closest('.chatbot-button')) return 'chat_icon'
   // "Use the website instead" is rendered from markdown inside the widget, so it
-  // carries no data-tracking-id — match it by href within the widget root. Same
-  // soft dependency on widget markup as the chat icon above.
-  if (target.closest('#chatbot-root a[href$="/home"]')) return 'chat_use_website_instead'
+  // carries no data-tracking-id. Scope to the welcome intro's link with an exact
+  // href, so assistant-response links and external URLs merely ending in /home
+  // aren't counted. Soft dependency on widget markup, same as the chat icon above.
+  if (target.closest('#chatbot-root .chatbot-welcome-intro a[href="/home"]')) {
+    return 'chat_use_website_instead'
+  }
   return undefined
 }
 
