@@ -16,6 +16,8 @@
    page scroll), but keep the admin "preview as user" banner so an admin
    previewing an account still sees it and the Exit preview control. #}
 {% block beforeContent %}
+  {# Standard Beta banner, like every other page. #}
+  {{ super() }}
   {% if user.previewedByAdmin %}
     {{ govukNotificationBanner({
       html: 'You are previewing this account as CRN <strong>' + user.adminPreviewSubject.personReference + '</strong>. <form method="post" action="/admin/preview/end" class="pop-admin-preview-banner__form"><input type="hidden" name="_csrf" value="' + csrfToken + '"><button type="submit" class="govuk-link pop-admin-preview-banner__exit">Exit preview</button></form>',
@@ -30,7 +32,7 @@
    `app-chat-fullbleed`), so the chat shares the same left-aligned margins as every
    other page. The widget sizes itself to fill the height below the header. #}
 {% block main %}
-  <main id="main-content" role="main">
+  <main id="main-content" role="main" class="govuk-main-wrapper">
     <div
       id="chatbot-root"
       {% if greetingName %}data-display-title="Hi, {{ greetingName }}"{% endif %}
