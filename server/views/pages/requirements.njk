@@ -30,7 +30,7 @@
 
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
       <dl class="pop-summary-card__details">
-        {% if overallOrder.charge %}
+        {% if features.offenceDetails and overallOrder.charge %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">Offence</dt>
             <dd class="pop-summary-card__value">

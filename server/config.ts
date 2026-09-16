@@ -192,6 +192,10 @@ const config = {
     // Master switch for the citizen-facing Documents area (nav item, homepage
     // card, /documents pages) and the admin document upload flow. Off by default
     documents: get('FEATURE_DOCUMENTS', 'false') === 'true',
+    // Master switch for the "Offence" row on the requirements page. Off by
+    // default: no validated user need for offence information there, and it
+    // adds unnecessary stigma/risk. Set FEATURE_OFFENCE_DETAILS=true to show it.
+    offenceDetails: get('FEATURE_OFFENCE_DETAILS', 'false') === 'true',
   },
 }
 
