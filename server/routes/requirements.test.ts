@@ -27,6 +27,7 @@ const fakeDate = (dateStr: string) => {
 }
 
 const originalDocumentsFeatureFlag = config.features.documents
+const originalOffenceDetailsFeatureFlag = config.features.offenceDetails
 
 beforeEach(() => {
   peopleOnProbationService = { getSentences: jest.fn(), getDocuments: jest.fn() }
@@ -37,6 +38,7 @@ beforeEach(() => {
 
 afterEach(() => {
   config.features.documents = originalDocumentsFeatureFlag
+  config.features.offenceDetails = originalOffenceDetailsFeatureFlag
   jest.useRealTimers()
   jest.resetAllMocks()
 })
@@ -58,8 +60,23 @@ const sentenceWithDates = (startDate: string, expectedEndDate: string): Sentence
 })
 
 describe('GET /requirements', () => {
-  it('renders the main offence description as the overall order charge', async () => {
+  it('does not render offence details by default', async () => {
     fakeDate('2025-01-01')
+    config.features.offenceDetails = false
+    peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
+
+    const res = await request(app)
+      .get('/requirements')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).not.toContain('Offence')
+    expect(res.text).not.toContain('Test main offence')
+  })
+
+  it('renders the main offence description as the overall order charge when the feature flag is enabled', async () => {
+    fakeDate('2025-01-01')
+    config.features.offenceDetails = true
     peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
     const res = await request(app)
