@@ -293,6 +293,35 @@ describe('GET /requirements', () => {
       expect(res.text).toContain('pop-requirement-card__title">GPS tag')
     })
 
+    it('renders a GPS tag requirement that only has imposedDate (no expectedStartDate/actualStartDate)', async () => {
+      fakeDate('2026-09-18')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            requirements: [
+              {
+                mainCategory: { code: 'RM59', description: 'Location Monitoring(GPS Tagging)' },
+                subCategory: { code: 'EM3', description: 'Trail Monitoring' },
+                imposedDate: '2026-07-02',
+                expectedEndDate: '2027-01-02',
+                lastUpdatedAt: '2026-07-06T11:52:55+01:00',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('href="/requirements/gps-tag"')
+      expect(res.text).toContain('pop-requirement-card__title">GPS tag')
+    })
+
     it('labels a curfew requirement (mainCategory.code = RM49) as "Curfew" and links to its slug', async () => {
       fakeDate('2025-06-01')
       peopleOnProbationService.getSentences.mockResolvedValue({

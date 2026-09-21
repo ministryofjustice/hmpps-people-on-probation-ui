@@ -118,7 +118,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
   const isTag = TAG_CATEGORY_CODES.includes(requirement.mainCategory?.code)
   const lastUpdatedAt = formatDateTimeWithDay(requirement.lastUpdatedAt)
 
-  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
+  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate ?? requirement.imposedDate
   const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
 
   if (requirement.required && requirement.required > 0) {
