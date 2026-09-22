@@ -533,7 +533,7 @@ describe('GET /requirements', () => {
       expect(peopleOnProbationService.getDocuments).not.toHaveBeenCalled()
     })
 
-    it('does not show the signpost when the documents feature is off, even if a requirement needs it', async () => {
+    it('shows the fallback plain-text signpost, without a link, when the documents feature is off', async () => {
       config.features.documents = false
       fakeDate('2025-01-01')
       peopleOnProbationService.getSentences.mockResolvedValue({
@@ -559,8 +559,72 @@ describe('GET /requirements', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
+      expect(res.text).toContain('Court order')
+      expect(res.text).toContain('You can find this information in your court order')
       expect(res.text).not.toContain('View your court order')
       expect(peopleOnProbationService.getDocuments).not.toHaveBeenCalled()
+    })
+
+    it('shows the fallback plain-text signpost, without a link, when sentence dates are missing so there is no overall order card', async () => {
+      config.features.documents = true
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            requirements: [
+              {
+                mainCategory: { code: 'RM49', description: 'Curfew' },
+                expectedStartDate: '2025-01-01',
+                expectedEndDate: '2025-12-31',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+      peopleOnProbationService.getDocuments.mockResolvedValue({ documents: [] })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).not.toContain('Overall order')
+      expect(res.text).toContain('Court order')
+      expect(res.text).toContain('You can find this information in your court order')
+    })
+
+    it('shows the fallback plain-text signpost, without a link, when the documents API returns no matching document', async () => {
+      config.features.documents = true
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            startDate: '2024-01-01',
+            expectedEndDate: '2026-01-01',
+            requirements: [
+              {
+                mainCategory: { code: 'RM49', description: 'Curfew' },
+                expectedStartDate: '2025-01-01',
+                expectedEndDate: '2025-12-31',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+      peopleOnProbationService.getDocuments.mockResolvedValue({ documents: [] })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Court order')
+      expect(res.text).toContain('You can find this information in your court order')
+      expect(res.text).not.toContain('View your court order')
     })
   })
 })

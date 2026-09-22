@@ -229,14 +229,17 @@ export default function requirementsRoutes(services: Services): Router {
         .sort()
         .reverse()[0]
 
+      const showCourtOrderSignpost = requirements.some(r => r.showCourtOrderSignpost)
+
       let courtOrderDocumentId: string | undefined
-      if (config.features.documents && requirements.some(r => r.showCourtOrderSignpost)) {
+      if (config.features.documents && showCourtOrderSignpost) {
         courtOrderDocumentId = await getCourtOrderDocumentId(services, crn)
       }
 
       return res.render('pages/requirements', {
         overallOrder,
         requirements,
+        showCourtOrderSignpost,
         courtOrderDocumentId,
         lastUpdatedAt: formatDateTimeWithDay(mostRecentUpdate),
       })
