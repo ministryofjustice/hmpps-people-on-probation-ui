@@ -53,7 +53,7 @@ describe('isValidDocumentType', () => {
 
 describe('formatDocumentTypeLabel', () => {
   it('returns the citizen-facing label for a court order', () => {
-    expect(formatDocumentTypeLabel('COURT_ORDER')).toBe('Your Court Order')
+    expect(formatDocumentTypeLabel('COURT_ORDER')).toBe('Your court order')
   })
 
   it('falls back to a generic label for a document type this UI does not recognise', () => {

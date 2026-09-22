@@ -111,6 +111,23 @@
     </div>
   {% endif %}
 
+  {% if showCourtOrderSignpost %}
+    <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
+      <dl class="pop-summary-card__details">
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Court order</dt>
+          <dd class="pop-summary-card__value">
+            {% if courtOrderDocumentId %}
+              <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
+            {% else %}
+              You can find this information in your court order
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  {% endif %}
+
   {% if requirements.length %}
     <h2 class="govuk-heading-l pop-requirements__section-heading">Requirements in your order</h2>
 

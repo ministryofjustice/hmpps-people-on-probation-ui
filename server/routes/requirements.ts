@@ -21,6 +21,7 @@ import {
   CURFEW_CATEGORY_CODE,
   UNPAID_WORK_CATEGORY_CODE,
   RAR_CATEGORY_CODE,
+  PROHIBITED_ACTIVITY_CATEGORY_CODE,
   TAG_CATEGORY_CODES,
 } from '../utils/categoryCodes'
 
@@ -61,13 +62,13 @@ type OverallOrderView = {
   percentComplete: number
 }
 
-export type RequirementKind = 'unpaid-work' | 'rar' | 'gps-tag' | 'curfew' | 'other'
+export type RequirementKind = 'unpaid-work' | 'rar' | 'gps-tag' | 'curfew' | 'prohibited-activity' | 'other'
 
 export type RequirementView = {
   label: string
   slug: string
   kind: RequirementKind
-  isTag: boolean
+  showCourtOrderSignpost: boolean
   percentComplete: number
   completedDuration?: string
   required?: number
@@ -93,6 +94,7 @@ const REQUIREMENT_KIND_LABELS: Record<Exclude<RequirementKind, 'other'>, string>
   rar: 'Rehabilitation Activity Requirement (RAR)',
   'gps-tag': 'GPS tag',
   curfew: 'Curfew',
+  'prohibited-activity': 'Prohibited Activity',
 }
 
 function classifyRequirement(requirement: RequirementResponse): RequirementKind {
@@ -105,6 +107,8 @@ function classifyRequirement(requirement: RequirementResponse): RequirementKind 
       return 'gps-tag'
     case CURFEW_CATEGORY_CODE:
       return 'curfew'
+    case PROHIBITED_ACTIVITY_CATEGORY_CODE:
+      return 'prohibited-activity'
     default:
       return 'other'
   }
@@ -115,10 +119,11 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
   const defaultLabel = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
   const label = kind === 'other' ? defaultLabel : REQUIREMENT_KIND_LABELS[kind]
   const slug = slugify(label)
-  const isTag = TAG_CATEGORY_CODES.includes(requirement.mainCategory?.code)
+  const showCourtOrderSignpost =
+    TAG_CATEGORY_CODES.includes(requirement.mainCategory?.code) || kind === 'prohibited-activity'
   const lastUpdatedAt = formatDateTimeWithDay(requirement.lastUpdatedAt)
 
-  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate
+  const startDate = requirement.actualStartDate ?? requirement.expectedStartDate ?? requirement.imposedDate
   const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
 
   if (requirement.required && requirement.required > 0) {
@@ -132,7 +137,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       label,
       slug,
       kind,
-      isTag,
+      showCourtOrderSignpost,
       required: requirement.required,
       completed,
       remaining,
@@ -159,7 +164,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       label,
       slug,
       kind,
-      isTag,
+      showCourtOrderSignpost,
       percentComplete,
       completedDuration,
       totalLength,
@@ -171,6 +176,18 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
   }
 
   return null
+}
+
+async function getCourtOrderDocumentId(services: Services, crn: string): Promise<string | undefined> {
+  // Best-effort: this only feeds an optional signpost link, so a documents-API failure
+  // shouldn't take down the whole page - fall back to no link instead.
+  try {
+    const { documents = [] } = await services.peopleOnProbationService.getDocuments(crn)
+    return documents.find(document => document.documentType === 'COURT_ORDER')?.id
+  } catch (err) {
+    logger.warn({ err, crn }, 'Failed to fetch documents for the court order signpost link')
+    return undefined
+  }
 }
 
 export default function requirementsRoutes(services: Services): Router {
@@ -212,9 +229,18 @@ export default function requirementsRoutes(services: Services): Router {
         .sort()
         .reverse()[0]
 
+      const showCourtOrderSignpost = requirements.some(r => r.showCourtOrderSignpost)
+
+      let courtOrderDocumentId: string | undefined
+      if (config.features.documents && showCourtOrderSignpost) {
+        courtOrderDocumentId = await getCourtOrderDocumentId(services, crn)
+      }
+
       return res.render('pages/requirements', {
         overallOrder,
         requirements,
+        showCourtOrderSignpost,
+        courtOrderDocumentId,
         lastUpdatedAt: formatDateTimeWithDay(mostRecentUpdate),
       })
     } catch (error) {
@@ -238,15 +264,8 @@ export default function requirementsRoutes(services: Services): Router {
       if (!requirement) return next()
 
       let courtOrderDocumentId: string | undefined
-      if (config.features.documents && requirement.isTag) {
-        // Best-effort: this only feeds an optional signpost link, so a documents-API failure
-        // shouldn't take down the whole requirement detail page - fall back to no link instead.
-        try {
-          const { documents = [] } = await services.peopleOnProbationService.getDocuments(crn)
-          courtOrderDocumentId = documents.find(document => document.documentType === 'COURT_ORDER')?.id
-        } catch (err) {
-          logger.warn({ err, crn }, 'Failed to fetch documents for the requirement detail signpost link')
-        }
+      if (config.features.documents && requirement.showCourtOrderSignpost) {
+        courtOrderDocumentId = await getCourtOrderDocumentId(services, crn)
       }
 
       return res.render('pages/requirement-detail', { requirement, courtOrderDocumentId })

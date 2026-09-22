@@ -55,6 +55,20 @@
       <p class="govuk-body">It is important to remember if you do not follow your curfew you could go back to court.</p>
     {% endset %}
     {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_curfew_what_does_this_mean" }) }}
+  {% elif requirement.kind == "prohibited-activity" %}
+    {% set explanationHtml %}
+      <p class="govuk-body">A prohibited activity is something the court has said you are not allowed to do.</p>
+      <p class="govuk-body">What you are not allowed to do often relates to your offence.</p>
+      <p class="govuk-body">For example, the court could say you are not allowed to:</p>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>contact a person</li>
+        <li>do a certain thing, like go to the pub</li>
+        <li>go to events, like a football match</li>
+      </ul>
+      <p class="govuk-body">You should check your order to find out what you are not allowed to do.</p>
+      <p class="govuk-body">If you do something you are not allowed to do, you could be returned to court.</p>
+    {% endset %}
+    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_prohibited_activity_what_does_this_mean" }) }}
   {% endif %}
 
   {% if requirement.lastUpdatedAt %}
@@ -115,12 +129,12 @@
               <dd class="pop-summary-card__value">{{ requirement.totalLength }}</dd>
             </div>
           {% endif %}
-          {% if requirement.isTag %}
+          {% if requirement.showCourtOrderSignpost %}
             <div class="pop-summary-card__row">
               <dt class="pop-summary-card__key">Where to find details</dt>
               <dd class="pop-summary-card__value">
                 {% if courtOrderDocumentId %}
-                  You can find this information in your <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">court order</a>
+                  <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
                 {% else %}
                   You can find this information in your court order
                 {% endif %}

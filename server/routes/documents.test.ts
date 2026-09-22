@@ -69,7 +69,7 @@ describe('GET /documents', () => {
 
     expect(response.text).toContain('Documents')
     expect(response.text).toContain('href="/documents/doc-1"')
-    expect(response.text).toContain('Your Court Order')
+    expect(response.text).toContain('Your court order')
     expect(getDocumentsMock).toHaveBeenCalledWith('X123456')
   })
 
@@ -96,7 +96,7 @@ describe('GET /documents/:id', () => {
 
     const response = await request(app).get('/documents/doc-1').expect(200)
 
-    expect(response.text).toContain('Your Court Order')
+    expect(response.text).toContain('Your court order')
     expect(response.text).toContain('data-document-view-url=')
     expect(response.text).toContain('example-bucket.s3.eu-west-2.amazonaws.com/doc-1.pdf')
     expect(getDocumentMock).toHaveBeenCalledWith('X123456', 'doc-1')
