@@ -4,7 +4,7 @@ import type { DocumentType } from '../data/peopleOnProbationApiClient'
 // admin-entered `name` field, so the wording citizens see is consistent regardless of what an
 // admin typed when uploading.
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
-  COURT_ORDER: 'Your Court Order',
+  COURT_ORDER: 'Your court order',
 }
 
 // documentType comes from the API response at runtime, so isn't actually guaranteed to be one
