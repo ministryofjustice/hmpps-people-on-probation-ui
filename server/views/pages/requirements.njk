@@ -17,6 +17,21 @@
     See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/probation-agreement">probation agreement</a>.
   </p>
 
+  {% if showCourtOrderSignpost %}
+    {% set courtOrderRow %}
+      <div class="pop-summary-card__row">
+        <dt class="pop-summary-card__key">Court order</dt>
+        <dd class="pop-summary-card__value">
+          {% if courtOrderDocumentId %}
+            <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
+          {% else %}
+            You can find this information in your court order
+          {% endif %}
+        </dd>
+      </div>
+    {% endset %}
+  {% endif %}
+
   {% if overallOrder %}
     <h2 class="govuk-heading-l pop-requirements__section-heading">Overall order</h2>
 
@@ -107,23 +122,13 @@
             <dd class="pop-summary-card__value">{{ overallOrder.totalLength }}</dd>
           </div>
         {% endif %}
+        {{ courtOrderRow | safe }}
       </dl>
     </div>
-  {% endif %}
-
-  {% if showCourtOrderSignpost %}
+  {% elif showCourtOrderSignpost %}
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
       <dl class="pop-summary-card__details">
-        <div class="pop-summary-card__row">
-          <dt class="pop-summary-card__key">Court order</dt>
-          <dd class="pop-summary-card__value">
-            {% if courtOrderDocumentId %}
-              <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
-            {% else %}
-              You can find this information in your court order
-            {% endif %}
-          </dd>
-        </div>
+        {{ courtOrderRow | safe }}
       </dl>
     </div>
   {% endif %}
