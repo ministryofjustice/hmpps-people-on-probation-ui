@@ -465,6 +465,104 @@ describe('GET /requirements', () => {
       expect(res.text).not.toContain('What does this mean?')
     })
   })
+
+  describe('court order signpost', () => {
+    it('shows a "View your court order" link when the documents feature is on and a requirement needs the signpost', async () => {
+      config.features.documents = true
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            startDate: '2024-01-01',
+            expectedEndDate: '2026-01-01',
+            requirements: [
+              {
+                mainCategory: { code: 'RM49', description: 'Curfew' },
+                expectedStartDate: '2025-01-01',
+                expectedEndDate: '2025-12-31',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+      peopleOnProbationService.getDocuments.mockResolvedValue({
+        documents: [
+          { id: 'doc-1', name: 'Your Court Order', documentType: 'COURT_ORDER', uploadedAt: '2026-01-01T00:00:00Z' },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Court order')
+      expect(res.text).toContain('href="/documents/doc-1">View your court order</a>')
+      expect(peopleOnProbationService.getDocuments).toHaveBeenCalledWith('X123456')
+    })
+
+    it('does not call getDocuments or show the signpost when no requirement needs it', async () => {
+      config.features.documents = true
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            startDate: '2024-01-01',
+            expectedEndDate: '2026-01-01',
+            requirements: [
+              {
+                mainCategory: { code: 'SUP', description: 'Supervision' },
+                expectedStartDate: '2025-01-01',
+                expectedEndDate: '2025-12-31',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).not.toContain('View your court order')
+      expect(peopleOnProbationService.getDocuments).not.toHaveBeenCalled()
+    })
+
+    it('does not show the signpost when the documents feature is off, even if a requirement needs it', async () => {
+      config.features.documents = false
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'ORA Community Order',
+            startDate: '2024-01-01',
+            expectedEndDate: '2026-01-01',
+            requirements: [
+              {
+                mainCategory: { code: 'R', description: 'Prohibited Activity' },
+                expectedStartDate: '2025-01-01',
+                expectedEndDate: '2025-12-31',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).not.toContain('View your court order')
+      expect(peopleOnProbationService.getDocuments).not.toHaveBeenCalled()
+    })
+  })
 })
 
 describe('GET /requirements/:slug', () => {
@@ -511,7 +609,7 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).toContain('Thursday 14 May 2026')
   })
 
-  it('links "court order" to the document when the documents feature is on and a document exists', async () => {
+  it('links "View your court order" to the document when the documents feature is on and a document exists', async () => {
     config.features.documents = true
     fakeDate('2025-06-01')
     peopleOnProbationService.getSentences.mockResolvedValue({
@@ -540,7 +638,7 @@ describe('GET /requirements/:slug', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(res.text).toContain('href="/documents/doc-1">court order</a>')
+    expect(res.text).toContain('href="/documents/doc-1">View your court order</a>')
     expect(peopleOnProbationService.getDocuments).toHaveBeenCalledWith('X123456')
   })
 
@@ -574,7 +672,7 @@ describe('GET /requirements/:slug', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(res.text).toContain('href="/documents/doc-1">court order</a>')
+    expect(res.text).toContain('href="/documents/doc-1">View your court order</a>')
   })
 
   it('falls back to plain text, without 500ing the page, when the documents API call fails', async () => {
@@ -693,6 +791,40 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).toContain('End date and time')
     expect(res.text).not.toContain('Where to find details')
     expect(peopleOnProbationService.getDocuments).not.toHaveBeenCalled()
+  })
+
+  it('shows Where to find details for a prohibited activity requirement, linking to the court order', async () => {
+    config.features.documents = true
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'R', description: 'Prohibited Activity' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+    peopleOnProbationService.getDocuments.mockResolvedValue({
+      documents: [
+        { id: 'doc-1', name: 'Your Court Order', documentType: 'COURT_ORDER', uploadedAt: '2026-01-01T00:00:00Z' },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/prohibited-activity')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('Where to find details')
+    expect(res.text).toContain('href="/documents/doc-1">View your court order</a>')
+    expect(peopleOnProbationService.getDocuments).toHaveBeenCalledWith('X123456')
   })
 
   it('shows Time required and the Community Campus note for an unpaid work requirement, without Where to find details', async () => {
@@ -902,5 +1034,33 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).toContain(
       'It is important to remember if you do not follow your curfew you could go back to court.',
     )
+  })
+
+  it('shows the "What does this mean?" Prohibited Activity explanation for a prohibited activity requirement', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'R', description: 'Prohibited Activity' },
+              expectedStartDate: '2025-01-01',
+              expectedEndDate: '2025-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/prohibited-activity')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('What does this mean?')
+    expect(res.text).toContain('A prohibited activity is something the court has said you are not allowed to do.')
+    expect(res.text).toContain('If you do something you are not allowed to do, you could be returned to court.')
   })
 })

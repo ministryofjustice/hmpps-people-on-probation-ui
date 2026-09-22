@@ -17,3 +17,6 @@ export const UNPAID_WORK_CATEGORY_CODE = 'W'
 
 // Main category code that identifies a Rehabilitation Activity Requirement (RAR).
 export const RAR_CATEGORY_CODE = 'F'
+
+// Main category code that identifies a Prohibited Activity requirement.
+export const PROHIBITED_ACTIVITY_CATEGORY_CODE = 'R'
