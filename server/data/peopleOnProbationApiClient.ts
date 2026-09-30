@@ -74,6 +74,8 @@ export interface RequirementResponse {
 }
 
 export interface LicenceConditionResponse {
+  type?: string
+  description?: string
   mainCategory?: CategoryResponse
   subCategory?: CategoryResponse
   startDate?: string
@@ -193,7 +195,7 @@ export interface SentencePlanResponse {
   goals: GoalResponse[]
 }
 
-export type DocumentType = 'COURT_ORDER'
+export type DocumentType = 'COURT_ORDER' | 'LICENCE_CONDITION'
 
 export interface DocumentResponse {
   id: string

@@ -1,0 +1,74 @@
+{% extends "../partials/layout.njk" %}
+{% from "../macros/whatDoesThisMean.njk" import whatDoesThisMean %}
+{% from "partials/licence-status.njk" import licenceStatus %}
+
+{% set pageTitle = "Your licence – Check your probation account – GOV.UK" %}
+{% set currentPage = "licence" %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-xl">Your licence</h1>
+
+  <p class="govuk-body">
+    You can find information about your sentence and your licence, which includes your licence conditions.
+  </p>
+  <p class="govuk-body">
+    See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/probation-agreement">probation agreement</a>.
+  </p>
+
+  <h2 class="govuk-heading-l pop-requirements__section-heading">Your sentence</h2>
+
+  <div class="govuk-!-margin-bottom-6">
+    {{ licenceStatus({ expiryDate: licenceSentence.endDate }) }}
+  </div>
+
+  <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
+    <dl class="pop-summary-card__details">
+      {% if licenceSentence.type %}
+        {% set sentenceTypeExplanationHtml %}
+          <p class="govuk-body">The court decided you had to spend time in prison. This is called being in custody.</p>
+          <p class="govuk-body">You have been released before your sentence ends. You will serve the rest of your time in the community. This is called being on licence.</p>
+          <p class="govuk-body">Until your sentence ends, you must follow your licence conditions and keep in touch with your probation officer.</p>
+        {% endset %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Sentence type</dt>
+          <dd class="pop-summary-card__value">
+            {{ licenceSentence.type }}
+            {{ whatDoesThisMean({
+              html: sentenceTypeExplanationHtml,
+              trackingId: "licence_sentence_type_what_does_this_mean",
+              classes: "pop-order-type-details"
+            }) }}
+          </dd>
+        </div>
+      {% endif %}
+      {% if licenceSentence.startDate %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Start date</dt>
+          <dd class="pop-summary-card__value">{{ licenceSentence.startDate }}</dd>
+        </div>
+      {% endif %}
+      {% if licenceSentence.endDate %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">End date</dt>
+          <dd class="pop-summary-card__value">{{ licenceSentence.endDate }}</dd>
+        </div>
+      {% endif %}
+      {% if licenceSentence.totalLength %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Total sentence length</dt>
+          <dd class="pop-summary-card__value">{{ licenceSentence.totalLength }}</dd>
+        </div>
+      {% endif %}
+      {% if licenceDocumentId %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Your licence document</dt>
+          <dd class="pop-summary-card__value">
+            <a class="govuk-link" href="/documents/{{ licenceDocumentId }}" data-tracking-id="licence_view_licence_document">View your licence document</a>
+          </dd>
+        </div>
+      {% endif %}
+    </dl>
+  </div>
+
+{% endblock %}

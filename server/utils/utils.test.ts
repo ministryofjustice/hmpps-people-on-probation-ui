@@ -15,9 +15,13 @@ import {
   formatPersonName,
   formatPractitionerName,
   formatSentenceType,
+  formatLicenceSentenceType,
+  getSentenceKind,
+  isLicenceSentence,
   sanitiseOfficeLocationUrl,
   shouldIncludeMissedAppointmentInAlert,
 } from './utils'
+import type { SentenceResponse } from '../data/peopleOnProbationApiClient'
 
 describe('convertToTitleCase', () => {
   it.each([
@@ -356,5 +360,60 @@ describe('formatSentenceType', () => {
 
   it('leaves other sentence types unchanged', () => {
     expect(formatSentenceType('ORA Community Order')).toEqual('ORA Community Order')
+  })
+})
+
+describe('getSentenceKind', () => {
+  const requirement = { mainCategory: { code: 'F', description: 'Rehabilitation activity requirement' } }
+  const licenceCondition = {
+    type: 'Standard',
+    description: 'Be of good behaviour',
+    mainCategory: { code: 'NLC8', description: 'Standard licence conditions' },
+    startDate: '2026-09-29',
+    expectedEndDate: '2027-09-29',
+  }
+
+  it('returns LICENCE when licence conditions are populated and requirements are empty', () => {
+    const sentence: SentenceResponse = { requirements: [], licenceConditions: [licenceCondition] }
+    expect(getSentenceKind(sentence)).toEqual('LICENCE')
+    expect(isLicenceSentence(sentence)).toBe(true)
+  })
+
+  it('returns COMMUNITY_ORDER when requirements are populated and licence conditions are empty', () => {
+    const sentence: SentenceResponse = { requirements: [requirement], licenceConditions: [] }
+    expect(getSentenceKind(sentence)).toEqual('COMMUNITY_ORDER')
+    expect(isLicenceSentence(sentence)).toBe(false)
+  })
+
+  it('returns undefined when neither is populated', () => {
+    const sentence: SentenceResponse = { requirements: [], licenceConditions: [] }
+    expect(getSentenceKind(sentence)).toBeUndefined()
+    expect(isLicenceSentence(sentence)).toBe(false)
+  })
+
+  it('returns undefined when there is no sentence', () => {
+    expect(getSentenceKind(undefined)).toBeUndefined()
+    expect(isLicenceSentence(undefined)).toBe(false)
+  })
+
+  it('tolerates a missing licenceConditions field from older API responses', () => {
+    const sentence = { requirements: [requirement] } as unknown as SentenceResponse
+    expect(getSentenceKind(sentence)).toEqual('COMMUNITY_ORDER')
+  })
+})
+
+describe('formatLicenceSentenceType', () => {
+  it.each([
+    ['ORA Adult Custody (not PSS)', 'Adult Custody'],
+    ['SA2020 Adult Custody', 'Adult Custody'],
+    ['Adult Custody', 'Adult Custody'],
+    ['CJA - Std Determinate Custody', 'CJA - Std Determinate Custody'],
+  ])('formats %s as %s', (type, expected) => {
+    expect(formatLicenceSentenceType(type)).toEqual(expected)
+  })
+
+  it('returns undefined when the type is missing', () => {
+    expect(formatLicenceSentenceType(undefined)).toBeUndefined()
+    expect(formatLicenceSentenceType('')).toBeUndefined()
   })
 })

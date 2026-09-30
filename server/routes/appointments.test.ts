@@ -309,6 +309,7 @@ describe('GET /appointments', () => {
 
   beforeEach(() => {
     config.features.missedAppointmentAlert = true
+    config.features.licence = true
 
     peopleOnProbationService = {
       getFutureAppointments: jest.fn().mockResolvedValue({ content: [] }),
@@ -325,6 +326,7 @@ describe('GET /appointments', () => {
 
   afterEach(() => {
     config.features.missedAppointmentAlert = false
+    config.features.licence = false
   })
 
   it('does not render the missed appointment alert when the feature flag is disabled', async () => {
@@ -795,6 +797,26 @@ describe('GET /appointments', () => {
 
     expect(response.text).toContain('Attended')
     expect(response.text).toContain('Status')
+  })
+
+  it.each([
+    ['licence', { requirements: [], licenceConditions: [{ mainCategory: { code: 'NLC8', description: 'Licence' } }] }],
+    ['community order', { requirements: [{ mainCategory: { code: 'F', description: 'RAR' } }], licenceConditions: [] }],
+  ])('shows the sentence-neutral description for a %s sentence', async (_kind, sentence) => {
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [sentence] })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain(
+      'Appointments and activities are an important part of your sentence. If you struggle to attend an appointment,',
+    )
+    expect(response.text).toContain(
+      '<a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">tell your probation officer as soon as possible</a>.',
+    )
+    expect(response.text).not.toContain('probation order')
   })
 
   it('shows the tag appointments guidance when a requirement main category is a tag code', async () => {

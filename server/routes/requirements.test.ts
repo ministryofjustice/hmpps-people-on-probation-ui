@@ -37,6 +37,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  config.features.licence = false
   config.features.documents = originalDocumentsFeatureFlag
   config.features.offenceDetails = originalOffenceDetailsFeatureFlag
   jest.useRealTimers()
@@ -60,6 +61,24 @@ const sentenceWithDates = (startDate: string, expectedEndDate: string): Sentence
 })
 
 describe('GET /requirements', () => {
+  it('redirects licence sentences to the licence page', async () => {
+    config.features.licence = true
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          requirements: [],
+          licenceConditions: [{ mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }],
+        },
+      ],
+    })
+
+    await request(app)
+      .get('/requirements')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(302)
+      .expect('Location', '/licence')
+  })
+
   it('does not render offence details by default', async () => {
     fakeDate('2025-01-01')
     config.features.offenceDetails = false

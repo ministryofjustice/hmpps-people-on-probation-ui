@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import { getRedisClient } from '../data/redisClient'
 import config from '../config'
 import type { RegisteredUserResponse } from '../data/peopleOnProbationApiClient'
+import type { SentenceKind } from '../utils/utils'
 
 // Details of the CRN being previewed, minted by the admin "preview as user"
 // feature (server/routes/admin.ts) — deliberately its own type, not
@@ -34,6 +35,8 @@ export type AuthenticatedUserSession = {
   // than faked into that field. Use getSessionCrn() to read "the CRN for
   // this session" regardless of whether it's a citizen or admin-preview one.
   adminPreviewSubject?: AdminPreviewSubjectDetails
+  // Cached by loadSentenceKind middleware: undefined = not looked up yet, null = neither kind.
+  sentenceKind?: SentenceKind | null
 }
 
 // The single place that resolves "what CRN is this session for" — a real

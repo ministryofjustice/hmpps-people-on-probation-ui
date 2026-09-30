@@ -1,0 +1,29 @@
+{#
+  licenceStatus macro — the "Time in prison completed / You are on licence" steps shown in place of
+  the progress bar for licence sentences (home page and licence page).
+
+  Parameters:
+    expiryDate (string): formatted licence end date. When missing the "Until" line is omitted and
+                         the status is centred on the pin icon.
+#}
+{% macro licenceStatus(params) %}
+<ul class="pop-licence-progress">
+  <li class="pop-licence-progress__item">
+    <span class="pop-licence-progress__icon">
+      <img src="/assets/images/progress-complete.svg" alt="" width="32" height="31">
+    </span>
+    <p class="govuk-body pop-licence-progress__status pop-licence-progress__status--complete">Time in prison completed</p>
+  </li>
+  <li class="pop-licence-progress__item{% if not params.expiryDate %} pop-licence-progress__item--centred{% endif %}">
+    <span class="pop-licence-progress__icon">
+      <img src="/assets/images/licence-pin.svg" alt="" width="48" height="40">
+    </span>
+    <div>
+      <p class="govuk-body pop-licence-progress__status">You are on licence</p>
+      {% if params.expiryDate %}
+        <p class="govuk-body-s pop-licence-progress__date">Until {{ params.expiryDate }}</p>
+      {% endif %}
+    </div>
+  </li>
+</ul>
+{% endmacro %}

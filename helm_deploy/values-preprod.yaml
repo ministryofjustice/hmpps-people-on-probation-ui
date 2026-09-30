@@ -21,6 +21,7 @@ generic-service:
     FEATURE_MISSED_APPOINTMENT_ALERT: "false"
     FEATURE_CHATBOT: "true"
     FEATURE_ANALYTICS: "true"
+    FEATURE_LICENCE: "false"
     FEEDBACK_BANNER_ENABLED: "true"
     ADMIN_RESTRICT_BY_USERNAME: "true"
     # The old Railway URL was retired 2026-07. The chatbot backend is

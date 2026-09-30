@@ -63,3 +63,45 @@
     display: none;
   }
 }
+
+// Licence sentences replace the progress bar with a two-step status list.
+.pop-licence-progress {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__item {
+    display: flex;
+    align-items: flex-start;
+    column-gap: 3px;
+
+    & + & {
+      margin-top: govuk-spacing(4);
+    }
+
+    // With no expiry date the status is a single line, so centre it on the icon.
+    &--centred {
+      align-items: center;
+    }
+  }
+
+  &__icon {
+    display: flex;
+    flex: 0 0 48px;
+    justify-content: center;
+    line-height: 0;
+  }
+
+  &__status {
+    margin: 0;
+
+    &--complete {
+      padding-top: 3px;
+    }
+  }
+
+  &__date {
+    margin: 5px 0 0;
+    color: govuk-functional-colour(secondary-text);
+  }
+}
