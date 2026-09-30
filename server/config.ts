@@ -196,6 +196,10 @@ const config = {
     // default: no validated user need for offence information there, and it
     // adds unnecessary stigma/risk. Set FEATURE_OFFENCE_DETAILS=true to show it.
     offenceDetails: get('FEATURE_OFFENCE_DETAILS', 'false') === 'true',
+    // Master switch for people on licence. Off by default: the licence journey is still being
+    // built, so until an environment sets FEATURE_LICENCE=true, anyone whose sentence has licence
+    // conditions is sent to the "You cannot use this service" page instead of their account.
+    licence: get('FEATURE_LICENCE', 'false') === 'true',
   },
 }
 

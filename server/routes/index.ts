@@ -1,26 +1,27 @@
 import { Router, type Response, type NextFunction } from 'express'
-import { startOfDay, differenceInDays, isBefore, addDays } from 'date-fns'
+import { differenceInDays } from 'date-fns'
 
 import logger from '../../logger'
 import config, { chatbotEnabled } from '../config'
 import type { Services } from '../services'
-import { loadCurrentUser, requireAuthentication } from '../auth/currentUser'
+import { isBlockedLicenceUser, loadCurrentUser, requireAuthentication } from '../auth/currentUser'
 import normaliseReturnTo from '../auth/returnTo'
 import { getSessionCrn } from '../auth/sessionStore'
 import type { AppointmentResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import {
+  calculateDateProgress,
+  formatDate,
   formatDateWithDay,
   formatTimeRange,
-  formatIntervalDuration,
-  formatRemainingDuration,
   isMissedMandatoryAppointmentOrActivity,
   shouldIncludeMissedAppointmentInAlert,
-  parseLocalDate,
+  isLicenceSentence,
   APPOINTMENTS_OVERVIEW_SIZE,
 } from '../utils/utils'
 import appointmentsRoutes from './appointments'
 import goalsRoutes from './goals'
 import requirementsRoutes from './requirements'
+import licenceRoutes from './licence'
 import probationOfficerRoutes from './probationOfficer'
 import detailsRoutes from './details'
 import chatbotRoutes from './chatbot'
@@ -30,6 +31,7 @@ import adminRoutes from './admin'
 import documentsRoutes from './documents'
 import adminDocumentsRoutes from './adminDocuments'
 import setUpAdminAuthentication from '../middleware/setUpAdminAuthentication'
+import loadSentenceKind from '../middleware/loadSentenceKind'
 
 // Max time to wait on the cosmetic "Hi, {name}" record lookup before rendering
 // /chat with the widget's default greeting instead (see the /chat handler).
@@ -50,6 +52,10 @@ type OrderProgressView = {
   percentComplete: number
   completedDuration: string
   remainingDuration: string
+}
+
+type LicenceProgressView = {
+  expiryDate?: string
 }
 
 function toNextAppointmentView(appointment?: AppointmentResponse): NextAppointmentView | null {
@@ -75,30 +81,31 @@ function toMissedAppointmentView(appointment?: AppointmentResponse): MissedAppoi
   }
 }
 
+function toLicenceProgressView(sentences: SentenceResponse[]): LicenceProgressView | null {
+  const sentence = sentences[0]
+  if (!isLicenceSentence(sentence)) return null
+
+  return { expiryDate: formatDate(sentence.expectedEndDate) }
+}
+
 function toOrderProgressView(sentences: SentenceResponse[]): OrderProgressView | null {
   const sentence = sentences[0]
+  // Licence sentences show the licence status (see toLicenceProgressView) instead of a progress bar.
+  if (isLicenceSentence(sentence)) return null
   if (!sentence?.startDate || !sentence?.expectedEndDate) return null
 
-  const start = parseLocalDate(sentence.startDate)
-  const end = parseLocalDate(sentence.expectedEndDate)
-  const today = startOfDay(new Date())
-
-  const totalDays = Math.max(differenceInDays(end, start) + 1, 1)
-  const completedDays = Math.min(Math.max(differenceInDays(today, start), 0), totalDays)
-  const percentComplete = Math.round((completedDays / totalDays) * 100)
-  const effectiveToday = isBefore(today, end) ? today : addDays(end, 1)
-
-  return {
-    percentComplete,
-    completedDuration: formatIntervalDuration(start, effectiveToday),
-    remainingDuration: formatRemainingDuration(sentence.expectedEndDate),
-  }
+  const { percentComplete, completedDuration, remainingDuration } = calculateDateProgress(
+    sentence.startDate,
+    sentence.expectedEndDate,
+  )
+  return { percentComplete, completedDuration, remainingDuration }
 }
 
 export default function routes(services: Services): Router {
   const router = Router()
 
   router.use(loadCurrentUser)
+  router.use(loadSentenceKind(services))
 
   router.get('/welcome', requireAuthentication, (req, res) => {
     const lastSignedInAt = res.locals.user?.registeredUserDetails?.lastSignedInAt
@@ -125,6 +132,7 @@ export default function routes(services: Services): Router {
   router.use('/appointments', appointmentsRoutes(services))
   router.use('/goals', goalsRoutes(services))
   router.use('/requirements', requirementsRoutes(services))
+  router.use('/licence', licenceRoutes(services))
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
   router.use('/api/chatbot', chatbotRoutes(services))
@@ -184,6 +192,7 @@ export default function routes(services: Services): Router {
         missedAppointment: missedAlertEnabled ? toMissedAppointmentView(missedAppointments[0]) : null,
         missedAppointmentsCount: missedAlertEnabled ? missedAppointments.length : 0,
         orderProgress: toOrderProgressView(sentenceProgress.sentences),
+        licenceProgress: toLicenceProgressView(sentenceProgress.sentences),
       })
     } catch (error) {
       return next(error)
@@ -233,6 +242,9 @@ export default function routes(services: Services): Router {
   router.get('/', async (req, res, next) => {
     try {
       if (res.locals.user) {
+        if (isBlockedLicenceUser(res)) {
+          return res.redirect('/autherror')
+        }
         // Chat-first landing: signed-in users go straight to the chat when the
         // chatbot is enabled; otherwise they see the account dashboard.
         if (chatbotEnabled) {

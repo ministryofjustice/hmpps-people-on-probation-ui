@@ -1,5 +1,21 @@
-import { format, parse, isValid, parseISO, startOfDay, isBefore, isAfter, addDays, intervalToDuration } from 'date-fns'
-import type { AddressResponse, AppointmentResponse, PersonNameResponse } from '../data/peopleOnProbationApiClient'
+import {
+  format,
+  parse,
+  isValid,
+  parseISO,
+  startOfDay,
+  isBefore,
+  isAfter,
+  addDays,
+  differenceInDays,
+  intervalToDuration,
+} from 'date-fns'
+import type {
+  AddressResponse,
+  AppointmentResponse,
+  PersonNameResponse,
+  SentenceResponse,
+} from '../data/peopleOnProbationApiClient'
 
 const properCase = (word: string): string =>
   word.length >= 1 ? word[0].toUpperCase() + word.toLowerCase().slice(1) : word
@@ -88,6 +104,32 @@ export const formatRemainingDuration = (endDateStr: string): string => {
   return formatIntervalDuration(today, addDays(end, 1))
 }
 
+export type DateProgressResult = {
+  percentComplete: number
+  completedDuration: string
+  totalLength: string
+  remainingDuration: string
+  startDate: string
+  endDate: string
+}
+
+export function calculateDateProgress(startDateStr: string, endDateStr: string): DateProgressResult {
+  const start = parseLocalDate(startDateStr)
+  const end = parseLocalDate(endDateStr)
+  const today = startOfDay(new Date())
+  const totalDays = Math.max(differenceInDays(end, start) + 1, 1)
+  const completedDays = Math.min(Math.max(differenceInDays(today, start), 0), totalDays)
+  const effectiveToday = isBefore(today, end) ? today : addDays(end, 1)
+  return {
+    percentComplete: Math.round((completedDays / totalDays) * 100),
+    completedDuration: formatIntervalDuration(start, effectiveToday),
+    totalLength: formatIntervalDuration(start, addDays(end, 1)),
+    remainingDuration: formatRemainingDuration(endDateStr),
+    startDate: formatDate(startDateStr) ?? startDateStr,
+    endDate: formatDate(endDateStr) ?? endDateStr,
+  }
+}
+
 export const formatUnit = (unit: string | undefined, amount: number): string => {
   const label = unit?.toLowerCase() || 'units'
   if (amount === 1 && label.endsWith('s')) return label.slice(0, -1)
@@ -137,6 +179,32 @@ export const formatSentenceType = (type?: string): string | undefined => {
   if (override) return override
   return type.replace(/^SA2020\s+/i, '')
 }
+
+// On the licence page the sentence type is shown as the custody type itself, so drop the
+// legislation prefix and trailing qualifier: "ORA Adult Custody (not PSS)" -> "Adult Custody".
+export const formatLicenceSentenceType = (type?: string): string | undefined => {
+  if (!type) return undefined
+  return (
+    type
+      .replace(/^(ORA|SA2020)\s+/i, '')
+      .replace(/\s*\([^)]*\)\s*$/, '')
+      .trim() || undefined
+  )
+}
+
+export type SentenceKind = 'LICENCE' | 'COMMUNITY_ORDER'
+
+// A sentence carries either licence conditions (licence) or requirements (community order),
+// never both. Returns undefined when neither is populated, so callers can fall back to the
+// existing requirements UI rather than guessing.
+export const getSentenceKind = (sentence?: SentenceResponse): SentenceKind | undefined => {
+  if (!sentence) return undefined
+  if (sentence.licenceConditions?.length) return 'LICENCE'
+  if (sentence.requirements?.length) return 'COMMUNITY_ORDER'
+  return undefined
+}
+
+export const isLicenceSentence = (sentence?: SentenceResponse): boolean => getSentenceKind(sentence) === 'LICENCE'
 
 export const formatPersonName = (name?: PersonNameResponse): string | undefined => {
   if (!name) return undefined

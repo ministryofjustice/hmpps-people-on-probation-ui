@@ -1,6 +1,7 @@
 {% extends "../partials/layout.njk" %}
 {% from "moj/components/alert/macro.njk" import mojAlert %}
 {% from "partials/progress-bar.njk" import progressBar %}
+{% from "partials/licence-status.njk" import licenceStatus %}
 {% set pageTitle = "Home – Check your probation account – GOV.UK" %}
 {% set currentPage = "home" %}
 
@@ -53,6 +54,13 @@
         }) }}
       {% endif %}
 
+      {% if licenceProgress %}
+        <div class="govuk-!-margin-bottom-6">
+          <h2 class="govuk-heading-l">Your progress</h2>
+          {{ licenceStatus({ expiryDate: licenceProgress.expiryDate }) }}
+        </div>
+      {% endif %}
+
       {% if orderProgress %}
         <div class="govuk-!-margin-bottom-6">
           <h2 class="govuk-heading-m">Progress in overall order</h2>
@@ -83,9 +91,14 @@
 
       <div class="govuk-grid-row pop-card-row govuk-!-margin-bottom-6">
         <div class="govuk-grid-column-one-half">
-          <a href="/requirements" class="pop-card">
-            <h2 class="govuk-heading-m pop-card__title">Order requirements</h2>
-            <p class="govuk-body pop-card__body">See progress against your order requirements</p>
+          <a href="{{ '/licence' if isLicence else '/requirements' }}" class="pop-card">
+            {% if isLicence %}
+              <h2 class="govuk-heading-m pop-card__title">Your licence</h2>
+              <p class="govuk-body pop-card__body">See your sentence information and check your licence</p>
+            {% else %}
+              <h2 class="govuk-heading-m pop-card__title">Order requirements</h2>
+              <p class="govuk-body pop-card__body">See progress against your order requirements</p>
+            {% endif %}
           </a>
         </div>
         {% if features.documents %}

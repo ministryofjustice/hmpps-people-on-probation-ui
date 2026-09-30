@@ -1,21 +1,19 @@
 import { Router } from 'express'
 
-import { startOfDay, addDays, differenceInDays, isBefore } from 'date-fns'
 import type { Services } from '../services'
 import config from '../config'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
-import logger from '../../logger'
 import {
+  calculateDateProgress,
   formatDate,
   formatDateTimeWithDay,
-  formatRemainingDuration,
-  formatIntervalDuration,
   formatSentenceType,
   formatUnit,
-  parseLocalDate,
+  isLicenceSentence,
 } from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
+import { findDocumentIdByType } from '../utils/documentTypes'
 import {
   GPS_TAG_CATEGORY_CODE,
   CURFEW_CATEGORY_CODE,
@@ -24,32 +22,6 @@ import {
   PROHIBITED_ACTIVITY_CATEGORY_CODE,
   TAG_CATEGORY_CODES,
 } from '../utils/categoryCodes'
-
-type DateProgressResult = {
-  percentComplete: number
-  completedDuration: string
-  totalLength: string
-  remainingDuration: string
-  startDate: string
-  endDate: string
-}
-
-function calculateDateProgress(startDateStr: string, endDateStr: string): DateProgressResult {
-  const start = parseLocalDate(startDateStr)
-  const end = parseLocalDate(endDateStr)
-  const today = startOfDay(new Date())
-  const totalDays = Math.max(differenceInDays(end, start) + 1, 1)
-  const completedDays = Math.min(Math.max(differenceInDays(today, start), 0), totalDays)
-  const effectiveToday = isBefore(today, end) ? today : addDays(end, 1)
-  return {
-    percentComplete: Math.round((completedDays / totalDays) * 100),
-    completedDuration: formatIntervalDuration(start, effectiveToday),
-    totalLength: formatIntervalDuration(start, addDays(end, 1)),
-    remainingDuration: formatRemainingDuration(endDateStr),
-    startDate: formatDate(startDateStr) ?? startDateStr,
-    endDate: formatDate(endDateStr) ?? endDateStr,
-  }
-}
 
 type OverallOrderView = {
   charge?: string
@@ -178,18 +150,6 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
   return null
 }
 
-async function getCourtOrderDocumentId(services: Services, crn: string): Promise<string | undefined> {
-  // Best-effort: this only feeds an optional signpost link, so a documents-API failure
-  // shouldn't take down the whole page - fall back to no link instead.
-  try {
-    const { documents = [] } = await services.peopleOnProbationService.getDocuments(crn)
-    return documents.find(document => document.documentType === 'COURT_ORDER')?.id
-  } catch (err) {
-    logger.warn({ err, crn }, 'Failed to fetch documents for the court order signpost link')
-    return undefined
-  }
-}
-
 export default function requirementsRoutes(services: Services): Router {
   const router = Router()
 
@@ -202,6 +162,9 @@ export default function requirementsRoutes(services: Services): Router {
 
       const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
       const sentence = sentenceProgress.sentences[0]
+
+      // Licence sentences have no requirements - their equivalent page is /licence.
+      if (isLicenceSentence(sentence)) return res.redirect('/licence')
 
       let overallOrder: OverallOrderView | null = null
       if (sentence?.startDate && sentence?.expectedEndDate) {
@@ -233,7 +196,7 @@ export default function requirementsRoutes(services: Services): Router {
 
       let courtOrderDocumentId: string | undefined
       if (config.features.documents && showCourtOrderSignpost) {
-        courtOrderDocumentId = await getCourtOrderDocumentId(services, crn)
+        courtOrderDocumentId = await findDocumentIdByType(services, crn, 'COURT_ORDER')
       }
 
       return res.render('pages/requirements', {
@@ -265,7 +228,7 @@ export default function requirementsRoutes(services: Services): Router {
 
       let courtOrderDocumentId: string | undefined
       if (config.features.documents && requirement.showCourtOrderSignpost) {
-        courtOrderDocumentId = await getCourtOrderDocumentId(services, crn)
+        courtOrderDocumentId = await findDocumentIdByType(services, crn, 'COURT_ORDER')
       }
 
       return res.render('pages/requirement-detail', { requirement, courtOrderDocumentId })

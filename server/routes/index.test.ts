@@ -5,6 +5,7 @@ import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import { appSessionCookieName } from '../auth/cookies'
 import type { Services } from '../services'
 import config from '../config'
+import type { SentenceResponse } from '../data/peopleOnProbationApiClient'
 
 let app: Express
 let peopleOnProbationService: {
@@ -15,6 +16,7 @@ let peopleOnProbationService: {
 
 beforeEach(() => {
   config.features.missedAppointmentAlert = true
+  config.features.licence = true
 
   peopleOnProbationService = {
     getFutureAppointments: jest.fn(),
@@ -31,6 +33,7 @@ beforeEach(() => {
 
 afterEach(() => {
   config.features.missedAppointmentAlert = false
+  config.features.licence = false
   jest.useRealTimers()
   jest.resetAllMocks()
 })
@@ -162,6 +165,140 @@ describe('GET /', () => {
       .expect(200)
 
     expect(response.text).not.toContain('Progress in overall order')
+  })
+
+  describe('when the licence feature is off', () => {
+    const licenceSentence: SentenceResponse = {
+      requirements: [],
+      licenceConditions: [{ mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }],
+    }
+
+    beforeEach(() => {
+      config.features.licence = false
+      peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [] })
+      peopleOnProbationService.getPastAppointments.mockResolvedValue({ content: [] })
+    })
+
+    it.each(['/', '/appointments', '/goals', '/requirements', '/licence', '/probation-officer', '/details'])(
+      'sends a licence user on %s to the error page',
+      async path => {
+        peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence] })
+
+        await request(app)
+          .get(path)
+          .set('Cookie', await createAppSessionCookie('X123456'))
+          .expect(302)
+          .expect('Location', '/autherror')
+      },
+    )
+
+    it('still lets a community order user into their account', async () => {
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            startDate: '2026-01-01',
+            expectedEndDate: '2027-07-15',
+            requirements: [{ mainCategory: { code: 'F', description: 'Rehabilitation activity requirement' } }],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const response = await request(app)
+        .get('/')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(response.text).toContain('Progress in overall order')
+    })
+
+    it('still shows the start page to signed-out visitors', async () => {
+      await request(app).get('/').expect(200)
+      expect(peopleOnProbationService.getSentences).not.toHaveBeenCalled()
+    })
+
+    it('renders the error page for a blocked licence user without redirecting again', async () => {
+      peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence] })
+
+      const response = await request(app)
+        .get('/autherror')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(403)
+
+      expect(response.text).toContain('You cannot use this service')
+    })
+  })
+
+  describe('licence sentence', () => {
+    const licenceCondition = { mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }
+
+    const renderHome = async (sentence: Record<string, unknown>) => {
+      peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [] })
+      peopleOnProbationService.getPastAppointments.mockResolvedValue({ content: [] })
+      peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [sentence] })
+
+      return request(app)
+        .get('/')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect('Content-Type', /html/)
+        .expect(200)
+    }
+
+    it('shows the licence status with the expiry date instead of the progress bar', async () => {
+      const response = await renderHome({
+        startDate: '2026-01-01',
+        expectedEndDate: '2027-07-15',
+        requirements: [],
+        licenceConditions: [licenceCondition],
+      })
+
+      expect(response.text).toContain('Your progress')
+      expect(response.text).not.toContain('Progress in overall order')
+      expect(response.text).toContain('Time in prison completed')
+      expect(response.text).toContain('You are on licence')
+      expect(response.text).toContain('Until 15 July 2027')
+      expect(response.text).not.toContain('pop-licence-progress__item--centred')
+      expect(response.text).toContain('<img src="/assets/images/progress-complete.svg" alt=""')
+      expect(response.text).toContain('<img src="/assets/images/licence-pin.svg" alt=""')
+      expect(response.text).not.toContain('role="progressbar"')
+    })
+
+    it('labels the requirements tile and nav item "Your licence"', async () => {
+      const response = await renderHome({ requirements: [], licenceConditions: [licenceCondition] })
+
+      expect(response.text).toContain('See your sentence information and check your licence')
+      expect(response.text).toMatch(/href="\/licence"[^>]*>\s*Your licence/)
+      expect(response.text).toContain('<a href="/licence" class="pop-card">')
+      expect(response.text).not.toContain('href="/requirements"')
+      expect(response.text).not.toContain('Order requirements')
+    })
+
+    it('omits the expiry date when it is not populated', async () => {
+      const response = await renderHome({ requirements: [], licenceConditions: [licenceCondition] })
+
+      expect(response.text).toContain('Time in prison completed')
+      expect(response.text).toContain('You are on licence')
+      expect(response.text).not.toContain('Until ')
+      expect(response.text).toContain('pop-licence-progress__item--centred')
+      expect(response.text).not.toContain('role="progressbar"')
+    })
+
+    it('shows the progress bar and no licence status for a community order', async () => {
+      const response = await renderHome({
+        startDate: '2026-01-01',
+        expectedEndDate: '2027-07-15',
+        requirements: [{ mainCategory: { code: 'F', description: 'Rehabilitation activity requirement' } }],
+        licenceConditions: [],
+      })
+
+      expect(response.text).toContain('role="progressbar"')
+      expect(response.text).toContain('Progress in overall order')
+      expect(response.text).toContain('Order requirements')
+      expect(response.text).toContain('See progress against your order requirements')
+      expect(response.text).not.toContain('Your licence')
+      expect(response.text).not.toContain('Your progress')
+      expect(response.text).not.toContain('You are on licence')
+    })
   })
 
   it('should treat missed unpaid work as a mandatory activity', async () => {

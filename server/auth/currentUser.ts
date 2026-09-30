@@ -10,6 +10,7 @@ import {
 import { refreshAuthenticatedUserSession, getAuthenticatedUserSessionTtlSeconds } from './sessionStore'
 import normaliseReturnTo from './returnTo'
 import logger from '../../logger'
+import config from '../config'
 
 export async function loadCurrentUser(req: Request, res: Response, next: NextFunction) {
   // An active admin preview (server/routes/admin.ts) takes precedence over
@@ -47,8 +48,17 @@ export async function loadCurrentUser(req: Request, res: Response, next: NextFun
   next()
 }
 
+// People on licence can't use the service until FEATURE_LICENCE is on (isLicence is resolved by
+// the loadSentenceKind middleware). Checked wherever a signed-in user reaches an account page.
+export function isBlockedLicenceUser(res: Response): boolean {
+  return Boolean(res.locals.user && res.locals.isLicence && !config.features.licence)
+}
+
 export function requireAuthentication(req: Request, res: Response, next: NextFunction) {
   if (res.locals.user) {
+    if (isBlockedLicenceUser(res)) {
+      return res.redirect('/autherror')
+    }
     return next()
   }
 

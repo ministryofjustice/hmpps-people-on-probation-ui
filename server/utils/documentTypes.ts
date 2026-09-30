@@ -1,10 +1,13 @@
 import type { DocumentType } from '../data/peopleOnProbationApiClient'
+import type { Services } from '../services'
+import logger from '../../logger'
 
 // Citizen-facing label for each document type - centralised here rather than trusting the
 // admin-entered `name` field, so the wording citizens see is consistent regardless of what an
 // admin typed when uploading.
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   COURT_ORDER: 'Your court order',
+  LICENCE_CONDITION: 'Your licence document',
 }
 
 // documentType comes from the API response at runtime, so isn't actually guaranteed to be one
@@ -18,9 +21,27 @@ export function formatDocumentTypeLabel(documentType: DocumentType): string {
 // Options for the admin upload form's document type dropdown.
 export const DOCUMENT_TYPE_UPLOAD_OPTIONS: { value: DocumentType; text: string }[] = [
   { value: 'COURT_ORDER', text: 'Court order' },
+  { value: 'LICENCE_CONDITION', text: 'Licence document' },
 ]
 
 const VALID_DOCUMENT_TYPES = new Set<string>(DOCUMENT_TYPE_UPLOAD_OPTIONS.map(option => option.value))
+
+// Id of the person's document of the given type, for signpost links such as "View your court
+// order". Best-effort: the link is optional, so a documents-API failure shouldn't take down the
+// whole page - fall back to no link instead.
+export async function findDocumentIdByType(
+  services: Pick<Services, 'peopleOnProbationService'>,
+  crn: string,
+  documentType: DocumentType,
+): Promise<string | undefined> {
+  try {
+    const { documents = [] } = await services.peopleOnProbationService.getDocuments(crn)
+    return documents.find(document => document.documentType === documentType)?.id
+  } catch (err) {
+    logger.warn({ err, crn, documentType }, 'Failed to fetch documents for a document signpost link')
+    return undefined
+  }
+}
 
 export function isValidDocumentType(value: unknown): value is DocumentType {
   return typeof value === 'string' && VALID_DOCUMENT_TYPES.has(value)

@@ -40,6 +40,7 @@ describe('isValidDocumentName', () => {
 describe('isValidDocumentType', () => {
   it('accepts a known document type', () => {
     expect(isValidDocumentType('COURT_ORDER')).toBe(true)
+    expect(isValidDocumentType('LICENCE_CONDITION')).toBe(true)
   })
 
   it('rejects an unrecognised value', () => {
@@ -54,6 +55,7 @@ describe('isValidDocumentType', () => {
 describe('formatDocumentTypeLabel', () => {
   it('returns the citizen-facing label for a court order', () => {
     expect(formatDocumentTypeLabel('COURT_ORDER')).toBe('Your court order')
+    expect(formatDocumentTypeLabel('LICENCE_CONDITION')).toBe('Your licence document')
   })
 
   it('falls back to a generic label for a document type this UI does not recognise', () => {
