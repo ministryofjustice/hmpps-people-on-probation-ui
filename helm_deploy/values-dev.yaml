@@ -24,6 +24,8 @@ generic-service:
     FEATURE_LICENCE: "true"
     FEEDBACK_BANNER_ENABLED: "true"
     ADMIN_RESTRICT_BY_USERNAME: "true"
+    # Dev only - any HMPPS Auth user can use the admin screens (ignored outside dev).
+    ADMIN_ALLOW_ALL_USERS: "true"
     # Points at the streaming endpoint on the MoJ Cloud Platform chatbot
     # (via its Next.js proxy which forwards SSE frames through unchanged).
     # The old Railway URL was retired 2026-07.

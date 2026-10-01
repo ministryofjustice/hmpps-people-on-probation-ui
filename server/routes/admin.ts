@@ -1,9 +1,7 @@
 import { Router, Request } from 'express'
 import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 import type { Services } from '../services'
-import requireAdminRole from '../auth/requireAdminRole'
-import requireAdminUsername from '../auth/requireAdminUsername'
-import config from '../config'
+import adminAccessGuard from '../auth/adminAccessGuard'
 import isValidCrnFormat from '../utils/crn'
 import {
   createAuthenticatedUserSession,
@@ -52,9 +50,9 @@ async function auditSearchAttempt(
 export default function adminRoutes(services: Services): Router {
   const router = Router()
 
-  // See config.adminRestrictByUsername for why this can switch between the
-  // two gates without touching this file again.
-  router.use(config.adminRestrictByUsername ? requireAdminUsername : requireAdminRole)
+  // See adminAccessGuard for how the gate is chosen (open to any admin in dev,
+  // otherwise the username allowlist or role check).
+  router.use(adminAccessGuard())
 
   router.get('/search', async (req, res, next) => {
     try {
