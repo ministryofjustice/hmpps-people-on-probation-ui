@@ -144,6 +144,10 @@ const config = {
     .split(',')
     .map(username => username.trim().toUpperCase())
     .filter(Boolean),
+  // Dev only: lets anyone who can sign in to HMPPS Auth use the admin screens, skipping the
+  // username/role gates above. Ignored unless ENVIRONMENT_NAME is dev (see adminAccessGuard), so
+  // setting it by mistake in preprod/prod has no effect.
+  adminAllowAllUsers: get('ADMIN_ALLOW_ALL_USERS', 'false') === 'true',
   popChatbot: {
     // Both vars are optional so the chatbot can be switched off in any env
     // (including production) without a redeploy — leave POP_CHATBOT_API_URL

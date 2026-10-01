@@ -1,9 +1,7 @@
 import { Router, Request } from 'express'
 import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 import type { Services } from '../services'
-import requireAdminRole from '../auth/requireAdminRole'
-import requireAdminUsername from '../auth/requireAdminUsername'
-import config from '../config'
+import adminAccessGuard from '../auth/adminAccessGuard'
 import isValidCrnFormat from '../utils/crn'
 import { formatPersonName } from '../utils/utils'
 import {
@@ -42,7 +40,7 @@ async function auditDocumentUploaded(services: Services, req: Request, who: stri
 export default function adminDocumentsRoutes(services: Services): Router {
   const router = Router()
 
-  router.use(config.adminRestrictByUsername ? requireAdminUsername : requireAdminRole)
+  router.use(adminAccessGuard())
 
   router.get('/upload', async (_req, res) => {
     return res.render('pages/admin/document-upload-search')

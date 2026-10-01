@@ -811,7 +811,7 @@ describe('GET /appointments', () => {
       .expect(200)
 
     expect(response.text).toContain(
-      'Appointments and activities are an important part of your sentence. If you struggle to attend an appointment,',
+      'Appointments and activities are an important part of your sentence. If you will struggle to attend an appointment,',
     )
     expect(response.text).toContain(
       '<a class="govuk-link govuk-link--no-visited-state" href="/probation-officer">tell your probation officer as soon as possible</a>.',
