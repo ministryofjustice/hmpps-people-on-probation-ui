@@ -147,9 +147,8 @@ function sanitizePersonalDetails(personalDetails: PersonalDetailsResponse): Reco
 }
 
 // toRequirementView is the exact function requirements.ts hands to the
-// requirements page (see the `res.render('pages/requirements', ...)` call).
-// It already returns null for requirements the page wouldn't render at all,
-// so filtering nulls here matches what the page shows. lastUpdatedAt is only
+// requirements page (see the `res.render('pages/requirements', ...)` call),
+// so the requirements here match what the page shows. lastUpdatedAt is only
 // ever shown on a single requirement's own detail page (never the requirements
 // list this context is built from), so it's stripped here the same way
 // sanitizeAddress strips it.
@@ -159,10 +158,7 @@ function sanitizeSentence(sentence: SentenceResponse): Record<string, unknown> {
     startDate: sentence.startDate,
     expectedEndDate: sentence.expectedEndDate,
     mainOffence: sentence.mainOffence?.description ? { description: sentence.mainOffence.description } : undefined,
-    requirements: (sentence.requirements ?? [])
-      .map(toRequirementView)
-      .filter((r): r is RequirementView => r !== null)
-      .map(({ lastUpdatedAt, ...rest }) => rest),
+    requirements: (sentence.requirements ?? []).map(toRequirementView).map(({ lastUpdatedAt, ...rest }) => rest),
     // licenceConditions is never rendered anywhere in the UI — dropped entirely.
   }
 }

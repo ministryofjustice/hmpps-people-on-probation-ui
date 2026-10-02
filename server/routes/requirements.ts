@@ -41,7 +41,7 @@ export type RequirementView = {
   slug: string
   kind: RequirementKind
   showCourtOrderSignpost: boolean
-  percentComplete: number
+  percentComplete?: number
   completedDuration?: string
   required?: number
   completed?: number
@@ -86,7 +86,7 @@ function classifyRequirement(requirement: RequirementResponse): RequirementKind 
   }
 }
 
-export function toRequirementView(requirement: RequirementResponse): RequirementView | null {
+export function toRequirementView(requirement: RequirementResponse): RequirementView {
   const kind = classifyRequirement(requirement)
   const defaultLabel = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
   const label = kind === 'other' ? defaultLabel : REQUIREMENT_KIND_LABELS[kind]
@@ -147,7 +147,16 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     }
   }
 
-  return null
+  // No count and no end date (e.g. accredited programmes): nothing to measure progress against.
+  return {
+    label,
+    slug,
+    kind,
+    showCourtOrderSignpost,
+    startDate: formatDate(startDate) ?? startDate,
+    endDate: formatDate(endDate) ?? endDate,
+    lastUpdatedAt,
+  }
 }
 
 export default function requirementsRoutes(services: Services): Router {
@@ -182,9 +191,7 @@ export default function requirementsRoutes(services: Services): Router {
         }
       }
 
-      const requirements = (sentence?.requirements ?? [])
-        .map(toRequirementView)
-        .filter((r): r is RequirementView => r !== null)
+      const requirements = (sentence?.requirements ?? []).map(toRequirementView)
 
       const mostRecentUpdate = (sentence?.requirements ?? [])
         .map(r => r.lastUpdatedAt)
@@ -219,10 +226,7 @@ export default function requirementsRoutes(services: Services): Router {
       const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
       const sentence = sentenceProgress.sentences[0]
 
-      const requirement = (sentence?.requirements ?? [])
-        .map(toRequirementView)
-        .filter((r): r is RequirementView => r !== null)
-        .find(r => r.slug === req.params.slug)
+      const requirement = (sentence?.requirements ?? []).map(toRequirementView).find(r => r.slug === req.params.slug)
 
       if (!requirement) return next()
 
