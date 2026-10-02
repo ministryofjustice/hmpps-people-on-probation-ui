@@ -77,7 +77,7 @@
     </div>
   {% endif %}
 
-  {% if requirement.kind == "rar" %}
+  {% if requirement.kind == "rar" and requirement.percentComplete is defined %}
     <h2 class="govuk-heading-l pop-requirements__section-heading">Details</h2>
 
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
@@ -93,15 +93,19 @@
       </dl>
     </div>
   {% else %}
-    <h2 class="govuk-heading-l pop-requirements__section-heading">Progress and details</h2>
+    {% if requirement.percentComplete is defined %}
+      <h2 class="govuk-heading-l pop-requirements__section-heading">Progress and details</h2>
 
-    <div class="pop-progress__row govuk-!-margin-bottom-4">
-      {{ progressBar({
-        percentComplete: requirement.percentComplete,
-        completedDuration: requirement.completedDuration,
-        remainingDuration: (requirement.remaining ~ " " ~ requirement.remainingUnitLabel) if requirement.remaining is defined else requirement.remainingDuration
-      }) }}
-    </div>
+      <div class="pop-progress__row govuk-!-margin-bottom-4">
+        {{ progressBar({
+          percentComplete: requirement.percentComplete,
+          completedDuration: requirement.completedDuration,
+          remainingDuration: (requirement.remaining ~ " " ~ requirement.remainingUnitLabel) if requirement.remaining is defined else requirement.remainingDuration
+        }) }}
+      </div>
+    {% else %}
+      <h2 class="govuk-heading-l pop-requirements__section-heading">Details</h2>
+    {% endif %}
 
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
       <dl class="pop-summary-card__details">

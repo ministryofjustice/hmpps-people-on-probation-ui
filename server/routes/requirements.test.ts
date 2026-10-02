@@ -395,6 +395,67 @@ describe('GET /requirements', () => {
       expect(res.text).toContain('pop-requirement-card__title">Supervision')
     })
 
+    it('renders a card for a requirement with no required count and no end date', async () => {
+      fakeDate('2026-06-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'SA2020 Community Order',
+            requirements: [
+              {
+                mainCategory: { code: '7', description: 'Court - Accredited Programme' },
+                subCategory: { code: '734', description: 'Building Choices' },
+                imposedDate: '2026-03-23',
+                expectedStartDate: '2026-03-23',
+                actualStartDate: '2026-03-23',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('href="/requirements/court-accredited-programme"')
+      expect(res.text).toContain('pop-requirement-card__title">Court - Accredited Programme')
+    })
+
+    it('renders the detail page without a progress bar for a requirement with no required count and no end date', async () => {
+      fakeDate('2026-06-01')
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          {
+            type: 'SA2020 Community Order',
+            requirements: [
+              {
+                mainCategory: { code: '7', description: 'Court - Accredited Programme' },
+                imposedDate: '2026-03-23',
+                expectedStartDate: '2026-03-23',
+                actualStartDate: '2026-03-23',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      })
+
+      const res = await request(app)
+        .get('/requirements/court-accredited-programme')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Court - Accredited Programme')
+      expect(res.text).toContain('>Details</h2>')
+      expect(res.text).not.toContain('Progress and details')
+      expect(res.text).not.toContain('pop-progress__row')
+      expect(res.text).toContain('Start date and time')
+      expect(res.text).not.toContain('End date and time')
+    })
+
     it('does not render a card list section when there are no requirements', async () => {
       fakeDate('2025-01-01')
       peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
