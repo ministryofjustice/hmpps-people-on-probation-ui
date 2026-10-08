@@ -159,6 +159,29 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
   }
 }
 
+// Requirements sharing a label (e.g. Unpaid Work "Regular" and "Additional Hours") get the
+// sub-category appended so each has its own card and detail page.
+export function toRequirementViews(requirements: RequirementResponse[] = []): RequirementView[] {
+  const views = requirements.map(toRequirementView)
+  const labelCounts = views.reduce<Record<string, number>>(
+    (counts, view) => ({ ...counts, [view.label]: (counts[view.label] ?? 0) + 1 }),
+    {},
+  )
+  const usedSlugs = new Set<string>()
+
+  return views.map((view, index) => {
+    let { label } = view
+    const subCategory = requirements[index].subCategory?.description
+    if (labelCounts[view.label] > 1 && subCategory && subCategory !== view.label) {
+      label = `${view.label} – ${subCategory}`
+    }
+    let slug = slugify(label)
+    for (let n = 2; usedSlugs.has(slug); n += 1) slug = `${slugify(label)}-${n}`
+    usedSlugs.add(slug)
+    return { ...view, label, slug }
+  })
+}
+
 export default function requirementsRoutes(services: Services): Router {
   const router = Router()
 
@@ -191,7 +214,7 @@ export default function requirementsRoutes(services: Services): Router {
         }
       }
 
-      const requirements = (sentence?.requirements ?? []).map(toRequirementView)
+      const requirements = toRequirementViews(sentence?.requirements)
 
       const mostRecentUpdate = (sentence?.requirements ?? [])
         .map(r => r.lastUpdatedAt)
@@ -226,7 +249,7 @@ export default function requirementsRoutes(services: Services): Router {
       const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
       const sentence = sentenceProgress.sentences[0]
 
-      const requirement = (sentence?.requirements ?? []).map(toRequirementView).find(r => r.slug === req.params.slug)
+      const requirement = toRequirementViews(sentence?.requirements).find(r => r.slug === req.params.slug)
 
       if (!requirement) return next()
 

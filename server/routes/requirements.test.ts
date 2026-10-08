@@ -395,6 +395,88 @@ describe('GET /requirements', () => {
       expect(res.text).toContain('pop-requirement-card__title">Supervision')
     })
 
+    describe('requirements sharing a category', () => {
+      const unpaidWorkSentence: SentenceProgressResponse = {
+        sentences: [
+          {
+            type: 'SA2020 Suspended Sentence Order',
+            requirements: [
+              {
+                mainCategory: { code: 'W', description: 'Unpaid Work' },
+                subCategory: { code: 'W01', description: 'Regular' },
+                required: 150,
+                completed: 82,
+                unit: 'HOURS',
+                imposedDate: '2026-06-04',
+              },
+              {
+                mainCategory: { code: 'W', description: 'Unpaid Work' },
+                subCategory: { code: 'W03', description: 'Additional Hours' },
+                required: 10,
+                completed: 5,
+                unit: 'HOURS',
+                imposedDate: '2026-08-24',
+              },
+            ],
+            licenceConditions: [],
+          },
+        ],
+      }
+
+      it('renders a separate card for each, labelled by sub-category', async () => {
+        fakeDate('2026-10-01')
+        peopleOnProbationService.getSentences.mockResolvedValue(unpaidWorkSentence)
+
+        const res = await request(app)
+          .get('/requirements')
+          .set('Cookie', await createAppSessionCookie('X123456'))
+          .expect(200)
+
+        expect(res.text).toContain('href="/requirements/community-payback-unpaid-work-regular"')
+        expect(res.text).toContain('href="/requirements/community-payback-unpaid-work-additional-hours"')
+        expect(res.text).toContain('Community payback (unpaid work) – Regular')
+        expect(res.text).toContain('Community payback (unpaid work) – Additional Hours')
+      })
+
+      it('renders the detail page of the second requirement', async () => {
+        fakeDate('2026-10-01')
+        peopleOnProbationService.getSentences.mockResolvedValue(unpaidWorkSentence)
+
+        const res = await request(app)
+          .get('/requirements/community-payback-unpaid-work-additional-hours')
+          .set('Cookie', await createAppSessionCookie('X123456'))
+          .expect(200)
+
+        expect(res.text).toContain('Community payback (unpaid work) – Additional Hours')
+        expect(res.text).toContain('10 hours')
+        expect(res.text).not.toContain('150 hours')
+      })
+
+      it('falls back to a numeric slug suffix when sub-categories are missing', async () => {
+        fakeDate('2026-10-01')
+        peopleOnProbationService.getSentences.mockResolvedValue({
+          sentences: [
+            {
+              type: 'ORA Community Order',
+              requirements: [
+                { mainCategory: { code: 'W', description: 'Unpaid Work' }, required: 50, unit: 'HOURS' },
+                { mainCategory: { code: 'W', description: 'Unpaid Work' }, required: 20, unit: 'HOURS' },
+              ],
+              licenceConditions: [],
+            },
+          ],
+        })
+
+        const res = await request(app)
+          .get('/requirements')
+          .set('Cookie', await createAppSessionCookie('X123456'))
+          .expect(200)
+
+        expect(res.text).toContain('href="/requirements/community-payback-unpaid-work"')
+        expect(res.text).toContain('href="/requirements/community-payback-unpaid-work-2"')
+      })
+    })
+
     it('renders a card for a requirement with no required count and no end date', async () => {
       fakeDate('2026-06-01')
       peopleOnProbationService.getSentences.mockResolvedValue({
