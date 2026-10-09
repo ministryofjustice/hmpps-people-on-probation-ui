@@ -19,38 +19,63 @@
   <h2 class="govuk-heading-l pop-requirements__section-heading">Your sentence</h2>
 
   <div class="govuk-!-margin-bottom-6">
-    {{ licenceStatus({ expiryDate: licenceSentence.endDate }) }}
+    {{ licenceStatus({
+      expiryDate: licenceSentence.endDate,
+      percentComplete: licenceSentence.percentComplete,
+      remainingDuration: licenceSentence.remainingDuration,
+      tags: licenceSentence.tags
+    }) }}
   </div>
 
+  {% if licenceSentence.type %}
+  <div class="pop-summary-card pop-summary-card--flat">
+    <dl class="pop-summary-card__details">
+      {% set sentenceTypeExplanationHtml %}
+        <p class="govuk-body">The court decided you had to spend time in prison. This is called being in custody.</p>
+        <p class="govuk-body">You have been released before your sentence ends. You will serve the rest of your time in the community. This is called being on licence.</p>
+        <p class="govuk-body">Until your sentence ends, you must follow your licence conditions and keep in touch with your probation officer.</p>
+      {% endset %}
+      <div class="pop-summary-card__row">
+        <dt class="pop-summary-card__key">Sentence type</dt>
+        <dd class="pop-summary-card__value">
+          {{ licenceSentence.type }}
+          {{ whatDoesThisMean({
+            html: sentenceTypeExplanationHtml,
+            trackingId: "licence_sentence_type_what_does_this_mean",
+            classes: "pop-order-type-details"
+          }) }}
+        </dd>
+      </div>
+    </dl>
+  </div>
+  {% endif %}
+
+  <h2 class="govuk-heading-l pop-requirements__section-heading">Licence conditions</h2>
+
+  {% set licenceConditionsExplanationHtml %}
+    <p class="govuk-body">Licence conditions are an important part of serving the rest of your prison sentence in the community. They tell you what you must and must not do while on licence.</p>
+    <p class="govuk-body">There are licence conditions for everyone, they are called standard licence conditions. These will not change.</p>
+    <p class="govuk-body">There are also licence conditions specific to you, they are called additional or bespoke conditions. These can change, be added or removed.</p>
+    <p class="govuk-body">In some cases, not following your licence conditions means your probation officer must consider whether you should be sent back to prison. This is called being recalled.</p>
+    <p class="govuk-body">Ask your probation officer any questions you have.</p>
+  {% endset %}
+  {{ whatDoesThisMean({
+    html: licenceConditionsExplanationHtml,
+    trackingId: "licence_conditions_what_does_this_mean"
+  }) }}
+
+  {% if licenceSentence.startDate or licenceSentence.endDate or licenceSentence.totalLength or licenceDocumentId %}
   <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
     <dl class="pop-summary-card__details">
-      {% if licenceSentence.type %}
-        {% set sentenceTypeExplanationHtml %}
-          <p class="govuk-body">The court decided you had to spend time in prison. This is called being in custody.</p>
-          <p class="govuk-body">You have been released before your sentence ends. You will serve the rest of your time in the community. This is called being on licence.</p>
-          <p class="govuk-body">Until your sentence ends, you must follow your licence conditions and keep in touch with your probation officer.</p>
-        {% endset %}
-        <div class="pop-summary-card__row">
-          <dt class="pop-summary-card__key">Sentence type</dt>
-          <dd class="pop-summary-card__value">
-            {{ licenceSentence.type }}
-            {{ whatDoesThisMean({
-              html: sentenceTypeExplanationHtml,
-              trackingId: "licence_sentence_type_what_does_this_mean",
-              classes: "pop-order-type-details"
-            }) }}
-          </dd>
-        </div>
-      {% endif %}
       {% if licenceSentence.startDate %}
         <div class="pop-summary-card__row">
-          <dt class="pop-summary-card__key">Start date</dt>
+          <dt class="pop-summary-card__key">Sentence start date</dt>
           <dd class="pop-summary-card__value">{{ licenceSentence.startDate }}</dd>
         </div>
       {% endif %}
       {% if licenceSentence.endDate %}
         <div class="pop-summary-card__row">
-          <dt class="pop-summary-card__key">End date</dt>
+          <dt class="pop-summary-card__key">Sentence end date</dt>
           <dd class="pop-summary-card__value">{{ licenceSentence.endDate }}</dd>
         </div>
       {% endif %}
@@ -69,6 +94,23 @@
         </div>
       {% endif %}
     </dl>
+  </div>
+  {% endif %}
+
+  {# Static for now: the licence conditions pages don't exist yet, so these aren't links. #}
+  <div class="govuk-grid-row pop-card-row govuk-!-margin-bottom-6">
+    <div class="govuk-grid-column-one-half">
+      <div class="pop-card pop-card--static">
+        <h2 class="govuk-heading-m pop-card__title">Your licence conditions</h2>
+        <p class="govuk-body pop-card__body">They are also called additional and bespoke licence conditions, these are specifically for you</p>
+      </div>
+    </div>
+    <div class="govuk-grid-column-one-half">
+      <div class="pop-card pop-card--static">
+        <h2 class="govuk-heading-m pop-card__title">Licence conditions for everyone</h2>
+        <p class="govuk-body pop-card__body">They are also called standard licence conditions, these are for everyone on licence</p>
+      </div>
+    </div>
   </div>
 
 {% endblock %}

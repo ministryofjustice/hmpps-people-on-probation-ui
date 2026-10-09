@@ -6,7 +6,8 @@
   text-decoration: none;
   height: 100%;
 
-  &:hover {
+  // Static cards (no destination yet) keep the card look but drop the link hover state.
+  &:not(&--static):hover {
     border-color: govuk-colour('blue');
 
     .pop-card__title {

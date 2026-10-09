@@ -50,16 +50,110 @@ describe('GET /licence', () => {
     expect(response.text).toContain('which includes your licence conditions')
     expect(response.text).toContain('href="/probation-agreement"')
     expect(response.text).toContain('Your sentence')
-    expect(response.text).toContain('Time in prison completed')
+    expect(response.text).not.toContain('Time in prison completed')
+    expect(response.text).toContain('You are on licence')
     expect(response.text).toContain('Until 14 March 2027')
     expect(response.text).toContain('Adult Custody')
     expect(response.text).not.toContain('ORA Adult Custody')
     expect(response.text).toContain('What does this mean?')
     expect(response.text).toContain('This is called being on licence.')
+    expect(response.text).toContain('Sentence start date')
+    expect(response.text).toContain('Sentence end date')
     expect(response.text).toContain('15 January 2022')
     expect(response.text).toContain('Total sentence length')
     expect(response.text).toContain('5 years, 2 months')
     expect(peopleOnProbationService.getSentences).toHaveBeenCalledWith('X123456')
+  })
+
+  describe('electronic monitoring tags', () => {
+    const renderLicence = async (licenceConditions: SentenceResponse['licenceConditions']) => {
+      peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence({ licenceConditions })] })
+
+      return request(app)
+        .get('/licence')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+    }
+
+    it.each([
+      ['EM01', 'You need to wear a GPS tag'],
+      ['LC104', 'You need to wear a trail monitoring tag'],
+      ['NLC13', 'You need to wear an alcohol monitoring tag'],
+    ])('shows the tag for a %s licence condition with its end date', async (code, text) => {
+      const response = await renderLicence([
+        licenceCondition,
+        { mainCategory: { code, description: 'Electronic monitoring' }, expectedEndDate: '2027-03-19' },
+      ])
+
+      expect(response.text).toContain(text)
+      expect(response.text).toContain('Until 19 March 2027')
+      expect(response.text).toContain('<img src="/assets/images/licence-tag.svg" alt=""')
+    })
+
+    it('shows one tag per monitoring licence condition', async () => {
+      const response = await renderLicence([
+        { mainCategory: { code: 'EM01', description: 'Electronic monitoring' }, expectedEndDate: '2027-03-19' },
+        { mainCategory: { code: 'NLC13', description: 'Electronic monitoring' }, expectedEndDate: '2026-12-01' },
+      ])
+
+      expect(response.text).toContain('You need to wear a GPS tag')
+      expect(response.text).toContain('Until 19 March 2027')
+      expect(response.text).toContain('You need to wear an alcohol monitoring tag')
+      expect(response.text).toContain('Until 1 December 2026')
+    })
+
+    it('omits the "Until" line for a tag with no end date', async () => {
+      const response = await renderLicence([{ mainCategory: { code: 'EM01', description: 'Electronic monitoring' } }])
+
+      expect(response.text).toContain('You need to wear a GPS tag')
+      expect(response.text).toMatch(/pop-licence-progress__item--tag pop-licence-progress__item--centred/)
+    })
+
+    it('shows no tag when no licence condition is a monitoring condition', async () => {
+      const response = await renderLicence([licenceCondition])
+
+      expect(response.text).not.toContain('You need to wear')
+      expect(response.text).not.toContain('licence-tag.svg')
+    })
+  })
+
+  it('shows the licence conditions heading and explanation between the sentence type and dates', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
+
+    const response = await request(app)
+      .get('/licence')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain(
+      '<h2 class="govuk-heading-l pop-requirements__section-heading">Licence conditions</h2>',
+    )
+    expect(response.text).toContain('data-tracking-id="licence_conditions_what_does_this_mean"')
+    expect(response.text).toContain('They tell you what you must and must not do while on licence.')
+    expect(response.text).toContain('This is called being recalled.')
+    expect(response.text).toContain('Ask your probation officer any questions you have.')
+
+    const sentenceType = response.text.indexOf('Sentence type')
+    const heading = response.text.indexOf('>Licence conditions</h2>')
+    const startDate = response.text.indexOf('Sentence start date')
+    expect(sentenceType).toBeLessThan(heading)
+    expect(heading).toBeLessThan(startDate)
+  })
+
+  it('shows the licence conditions cards without links', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
+
+    const response = await request(app)
+      .get('/licence')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Your licence conditions')
+    expect(response.text).toContain('They are also called additional and bespoke licence conditions')
+    expect(response.text).toContain('Licence conditions for everyone')
+    expect(response.text).toContain('They are also called standard licence conditions')
+    expect(response.text).toMatch(/<div class="pop-card pop-card--static">\s*<h2[^>]*>Your licence conditions/)
+    expect(response.text).not.toMatch(/<a [^>]*class="pop-card/)
   })
 
   it('marks the licence nav item as active', async () => {
@@ -87,9 +181,48 @@ describe('GET /licence', () => {
     expect(response.text).toContain('You are on licence')
     expect(response.text).not.toContain('Until ')
     expect(response.text).not.toContain('Sentence type')
-    expect(response.text).not.toContain('Start date')
-    expect(response.text).not.toContain('End date')
+    expect(response.text).not.toContain('Sentence start date')
+    expect(response.text).not.toContain('Sentence end date')
     expect(response.text).not.toContain('Total sentence length')
+    expect(response.text).not.toContain('Time until your licence ends')
+    expect(response.text).not.toContain('role="progressbar"')
+  })
+
+  it('shows the time until the licence ends as a percentage of the licence', async () => {
+    jest.useFakeTimers({ now: new Date('2026-07-01T12:00:00Z'), doNotFake: ['nextTick', 'setImmediate'] })
+    try {
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [licenceSentence({ startDate: '2026-01-01', expectedEndDate: '2026-12-31' })],
+      })
+
+      const response = await request(app)
+        .get('/licence')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(response.text).toContain('Time until your licence ends')
+      expect(response.text).toContain('Remaining: 6 months')
+      expect(response.text).toContain('role="progressbar"')
+      expect(response.text).toContain('aria-valuenow="50"')
+      expect(response.text).toContain('pop-progress__bar-area--bar-only')
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('omits the time until the licence ends when the start date is not populated', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [licenceSentence({ startDate: undefined })],
+    })
+
+    const response = await request(app)
+      .get('/licence')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Until 14 March 2027')
+    expect(response.text).not.toContain('Time until your licence ends')
+    expect(response.text).not.toContain('role="progressbar"')
   })
 
   it('redirects community orders to the requirements page', async () => {

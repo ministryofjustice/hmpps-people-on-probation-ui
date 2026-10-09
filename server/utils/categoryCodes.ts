@@ -20,3 +20,9 @@ export const RAR_CATEGORY_CODE = 'F'
 
 // Main category code that identifies a Prohibited Activity requirement.
 export const PROHIBITED_ACTIVITY_CATEGORY_CODE = 'R'
+
+// Main category codes (LicenceConditionResponse.mainCategory.code) for the electronic-monitoring
+// (tag) licence condition types, shown as "You need to wear a ... tag" on the licence page.
+export const LICENCE_GPS_TAG_CATEGORY_CODE = 'EM01'
+export const LICENCE_TRAIL_MONITORING_TAG_CATEGORY_CODE = 'LC104'
+export const LICENCE_ALCOHOL_TAG_CATEGORY_CODE = 'NLC13'

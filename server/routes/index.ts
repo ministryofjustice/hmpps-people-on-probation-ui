@@ -56,6 +56,8 @@ type OrderProgressView = {
 
 type LicenceProgressView = {
   expiryDate?: string
+  percentComplete?: number
+  remainingDuration?: string
 }
 
 function toNextAppointmentView(appointment?: AppointmentResponse): NextAppointmentView | null {
@@ -85,12 +87,16 @@ function toLicenceProgressView(sentences: SentenceResponse[]): LicenceProgressVi
   const sentence = sentences[0]
   if (!isLicenceSentence(sentence)) return null
 
-  return { expiryDate: formatDate(sentence.expectedEndDate) }
+  const expiryDate = formatDate(sentence.expectedEndDate)
+  if (!sentence.startDate || !sentence.expectedEndDate) return { expiryDate }
+
+  const { percentComplete, remainingDuration } = calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
+  return { expiryDate, percentComplete, remainingDuration }
 }
 
 function toOrderProgressView(sentences: SentenceResponse[]): OrderProgressView | null {
   const sentence = sentences[0]
-  // Licence sentences show the licence status (see toLicenceProgressView) instead of a progress bar.
+  // Licence sentences show the licence status and time remaining instead (see toLicenceProgressView).
   if (isLicenceSentence(sentence)) return null
   if (!sentence?.startDate || !sentence?.expectedEndDate) return null
 

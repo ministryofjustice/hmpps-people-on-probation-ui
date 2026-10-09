@@ -57,7 +57,11 @@
       {% if licenceProgress %}
         <div class="govuk-!-margin-bottom-6">
           <h2 class="govuk-heading-l">Your progress</h2>
-          {{ licenceStatus({ expiryDate: licenceProgress.expiryDate }) }}
+          {{ licenceStatus({
+            expiryDate: licenceProgress.expiryDate,
+            percentComplete: licenceProgress.percentComplete,
+            remainingDuration: licenceProgress.remainingDuration
+          }) }}
         </div>
       {% endif %}
 
