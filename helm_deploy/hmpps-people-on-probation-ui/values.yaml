@@ -1,6 +1,6 @@
 generic-service:
   nameOverride: hmpps-people-on-probation-ui
-  productId: 'HMPPS518' # productId for the product that this belongs too, i.e. DPS001, see README.md for details
+  productId: 'HMPPS562' # productId for Probation Account
 
   # the IRSA service account name for accessing AWS resources
   serviceAccountName: "hmpps-people-on-probation-ui"
