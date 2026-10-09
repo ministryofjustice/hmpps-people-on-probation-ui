@@ -6,7 +6,7 @@ import type { Services } from '../services'
 import { getSessionCrn } from '../auth/sessionStore'
 import { toAppointmentCardView } from './appointments'
 import type { AppointmentCardView } from './appointments'
-import { toRequirementView } from './requirements'
+import { toRequirementViews } from './requirements'
 import type { RequirementView } from './requirements'
 import { toGoalView } from './goals'
 import type { GoalView } from './goals'
@@ -65,7 +65,7 @@ function flattenForEmbedContext(raw: UserContext): Record<string, unknown> {
     next_appointment_time: nextAppt?.timeRange,
     next_appointment_location: nextAppt?.address?.[0],
     // RequirementView.label is what the requirements page prints as the
-    // section heading for each requirement (see requirements.ts toRequirementView).
+    // section heading for each requirement (see requirements.ts toRequirementViews).
     requirements: requirements
       .map(r => r.label)
       .filter((r): r is string => typeof r === 'string' && r.length > 0)
@@ -146,7 +146,7 @@ function sanitizePersonalDetails(personalDetails: PersonalDetailsResponse): Reco
   }
 }
 
-// toRequirementView is the exact function requirements.ts hands to the
+// toRequirementViews is the exact function requirements.ts hands to the
 // requirements page (see the `res.render('pages/requirements', ...)` call),
 // so the requirements here match what the page shows. lastUpdatedAt is only
 // ever shown on a single requirement's own detail page (never the requirements
@@ -158,7 +158,7 @@ function sanitizeSentence(sentence: SentenceResponse): Record<string, unknown> {
     startDate: sentence.startDate,
     expectedEndDate: sentence.expectedEndDate,
     mainOffence: sentence.mainOffence?.description ? { description: sentence.mainOffence.description } : undefined,
-    requirements: (sentence.requirements ?? []).map(toRequirementView).map(({ lastUpdatedAt, ...rest }) => rest),
+    requirements: toRequirementViews(sentence.requirements).map(({ lastUpdatedAt, ...rest }) => rest),
     // licenceConditions is never rendered anywhere in the UI — dropped entirely.
   }
 }

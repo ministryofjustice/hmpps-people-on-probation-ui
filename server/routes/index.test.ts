@@ -244,7 +244,7 @@ describe('GET /', () => {
         .expect(200)
     }
 
-    it('shows the licence status with the expiry date instead of the progress bar', async () => {
+    it('shows the licence status and time until the licence ends', async () => {
       const response = await renderHome({
         startDate: '2026-01-01',
         expectedEndDate: '2027-07-15',
@@ -254,13 +254,57 @@ describe('GET /', () => {
 
       expect(response.text).toContain('Your progress')
       expect(response.text).not.toContain('Progress in overall order')
-      expect(response.text).toContain('Time in prison completed')
+      expect(response.text).not.toContain('Time in prison completed')
       expect(response.text).toContain('You are on licence')
       expect(response.text).toContain('Until 15 July 2027')
       expect(response.text).not.toContain('pop-licence-progress__item--centred')
-      expect(response.text).toContain('<img src="/assets/images/progress-complete.svg" alt=""')
       expect(response.text).toContain('<img src="/assets/images/licence-pin.svg" alt=""')
+      expect(response.text).toContain('Time until your licence ends')
+      expect(response.text).toContain('Remaining: ')
+      expect(response.text).toContain('role="progressbar"')
+      expect(response.text).toContain('pop-progress__bar-area--bar-only')
+      expect(response.text).not.toContain('Completed: ')
+    })
+
+    it('shows the time until the licence ends as a percentage of the licence', async () => {
+      jest.useFakeTimers({ now: new Date('2026-07-01T12:00:00Z'), doNotFake: ['nextTick', 'setImmediate'] })
+      try {
+        const response = await renderHome({
+          startDate: '2026-01-01',
+          expectedEndDate: '2026-12-31',
+          requirements: [],
+          licenceConditions: [licenceCondition],
+        })
+
+        expect(response.text).toContain('aria-valuenow="50"')
+        expect(response.text).toContain('Remaining: 6 months')
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    it('omits the time until the licence ends when the start date is not populated', async () => {
+      const response = await renderHome({
+        expectedEndDate: '2027-07-15',
+        requirements: [],
+        licenceConditions: [licenceCondition],
+      })
+
+      expect(response.text).toContain('Until 15 July 2027')
+      expect(response.text).not.toContain('Time until your licence ends')
       expect(response.text).not.toContain('role="progressbar"')
+    })
+
+    it('does not show electronic monitoring tags on the home page', async () => {
+      const response = await renderHome({
+        startDate: '2026-01-01',
+        expectedEndDate: '2027-07-15',
+        requirements: [],
+        licenceConditions: [{ mainCategory: { code: 'EM01' }, expectedEndDate: '2027-03-19' }],
+      })
+
+      expect(response.text).toContain('You are on licence')
+      expect(response.text).not.toContain('You need to wear')
     })
 
     it('labels the requirements tile and nav item "Your licence"', async () => {
@@ -276,9 +320,9 @@ describe('GET /', () => {
     it('omits the expiry date when it is not populated', async () => {
       const response = await renderHome({ requirements: [], licenceConditions: [licenceCondition] })
 
-      expect(response.text).toContain('Time in prison completed')
       expect(response.text).toContain('You are on licence')
       expect(response.text).not.toContain('Until ')
+      expect(response.text).not.toContain('Time until your licence ends')
       expect(response.text).toContain('pop-licence-progress__item--centred')
       expect(response.text).not.toContain('role="progressbar"')
     })

@@ -12,6 +12,11 @@
     position: relative;
     width: 100%;
     height: 65px;
+
+    // No "Completed" line underneath, so only reserve room for the marker.
+    &--bar-only {
+      height: 30px;
+    }
   }
 
   &__track {
@@ -64,18 +69,14 @@
   }
 }
 
-// Licence sentences replace the progress bar with a two-step status list.
+// Licence sentences show a "You are on licence" status alongside the pin icon.
 .pop-licence-progress {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
   &__item {
     display: flex;
     align-items: flex-start;
     column-gap: 3px;
 
-    & + & {
+    &--tag {
       margin-top: govuk-spacing(4);
     }
 
@@ -94,10 +95,6 @@
 
   &__status {
     margin: 0;
-
-    &--complete {
-      padding-top: 3px;
-    }
   }
 
   &__date {

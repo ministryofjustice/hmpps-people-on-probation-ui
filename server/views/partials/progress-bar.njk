@@ -2,7 +2,7 @@
 {% set ariaLabel = params.label if params.label else (params.percentComplete + "% complete") %}
 {% set percentRemaining = 100 - params.percentComplete %}
 <div
-  class="pop-progress__bar-area"
+  class="pop-progress__bar-area{% if not params.completedDuration %} pop-progress__bar-area--bar-only{% endif %}"
   data-percent="{{ params.percentComplete }}"
   role="progressbar"
   aria-valuenow="{{ params.percentComplete }}"

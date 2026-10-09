@@ -1,29 +1,47 @@
+{% from "partials/progress-bar.njk" import progressBar %}
 {#
-  licenceStatus macro — the "Time in prison completed / You are on licence" steps shown in place of
-  the progress bar for licence sentences (home page and licence page).
+  licenceStatus macro — the "You are on licence" status and the time until the licence ends, shown in
+  place of the overall order progress bar for licence sentences (home page and licence page).
 
   Parameters:
     expiryDate (string): formatted licence end date. When missing the "Until" line is omitted and
                          the status is centred on the pin icon.
+    percentComplete (number): how far through the licence the person is. When missing the
+                              "Time until your licence ends" progress bar is omitted.
+    remainingDuration (string): time left until the licence ends, e.g. "4 months 26 days".
+    tags (array): electronic monitoring tags from the licence conditions, each with tagType
+                  (e.g. "a GPS") and an optional formatted endDate. Only the licence page passes these.
 #}
 {% macro licenceStatus(params) %}
-<ul class="pop-licence-progress">
-  <li class="pop-licence-progress__item">
+<div class="pop-licence-progress__item{% if not params.expiryDate %} pop-licence-progress__item--centred{% endif %}">
+  <span class="pop-licence-progress__icon">
+    <img src="/assets/images/licence-pin.svg" alt="" width="48" height="40">
+  </span>
+  <div>
+    <p class="govuk-body pop-licence-progress__status">You are on licence</p>
+    {% if params.expiryDate %}
+      <p class="govuk-body-s pop-licence-progress__date">Until {{ params.expiryDate }}</p>
+    {% endif %}
+  </div>
+</div>
+{% for tag in params.tags %}
+  <div class="pop-licence-progress__item pop-licence-progress__item--tag{% if not tag.endDate %} pop-licence-progress__item--centred{% endif %}">
     <span class="pop-licence-progress__icon">
-      <img src="/assets/images/progress-complete.svg" alt="" width="32" height="31">
-    </span>
-    <p class="govuk-body pop-licence-progress__status pop-licence-progress__status--complete">Time in prison completed</p>
-  </li>
-  <li class="pop-licence-progress__item{% if not params.expiryDate %} pop-licence-progress__item--centred{% endif %}">
-    <span class="pop-licence-progress__icon">
-      <img src="/assets/images/licence-pin.svg" alt="" width="48" height="40">
+      <img src="/assets/images/licence-tag.svg" alt="" width="41" height="22">
     </span>
     <div>
-      <p class="govuk-body pop-licence-progress__status">You are on licence</p>
-      {% if params.expiryDate %}
-        <p class="govuk-body-s pop-licence-progress__date">Until {{ params.expiryDate }}</p>
+      <p class="govuk-body pop-licence-progress__status">You need to wear {{ tag.tagType }} tag</p>
+      {% if tag.endDate %}
+        <p class="govuk-body-s pop-licence-progress__date">Until {{ tag.endDate }}</p>
       {% endif %}
     </div>
-  </li>
-</ul>
+  </div>
+{% endfor %}
+{% if params.percentComplete is defined %}
+  <h3 class="govuk-heading-s govuk-!-margin-top-4 govuk-!-margin-bottom-2">Time until your licence ends</h3>
+  <p class="govuk-body-s govuk-!-margin-bottom-2">Remaining: {{ params.remainingDuration }}</p>
+  <div class="pop-progress__row">
+    {{ progressBar({ percentComplete: params.percentComplete }) }}
+  </div>
+{% endif %}
 {% endmacro %}
