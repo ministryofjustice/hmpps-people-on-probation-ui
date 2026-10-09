@@ -152,7 +152,10 @@ describe('GET /licence', () => {
     expect(response.text).toContain('They are also called additional and bespoke licence conditions')
     expect(response.text).toContain('Licence conditions for everyone')
     expect(response.text).toContain('They are also called standard licence conditions')
-    expect(response.text).toMatch(/<div class="pop-card pop-card--static">\s*<h2[^>]*>Your licence conditions/)
+    expect(response.text).toMatch(/<div class="pop-card pop-card--static">\s*<h3[^>]*>Your licence conditions<\/h3>/)
+    expect(response.text).toMatch(
+      /<div class="pop-card pop-card--static">\s*<h3[^>]*>Licence conditions for everyone<\/h3>/,
+    )
     expect(response.text).not.toMatch(/<a [^>]*class="pop-card/)
   })
 
