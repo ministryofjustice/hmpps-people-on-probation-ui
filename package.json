@@ -8,7 +8,7 @@
     "prepare": "hmpps-precommit-hooks-prepare",
     "watch-ts": "tsc -w",
     "build": "node esbuild/esbuild",
-    "start": "node $NODE_OPTIONS dist/server.js | bunyan -o short",
+    "start": "node $NODE_OPTIONS dist/server.js",
     "start:dev": "node esbuild/esbuild --watch",
     "start-feature": " node $NODE_DEBUG_OPTION --env-file=feature.env dist/server.js | bunyan -o short",
     "start-feature:dev": "node esbuild/esbuild --watch --env feature.env",

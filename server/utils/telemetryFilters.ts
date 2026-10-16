@@ -11,7 +11,7 @@ const isFailure = (span: SpanInfo) => {
 }
 
 /** Wraps a filter so that failed spans are always kept. */
-export const keepFailures =
+const keepFailures =
   (filter: SpanFilterFn): SpanFilterFn =>
   span =>
     isFailure(span) || filter(span)

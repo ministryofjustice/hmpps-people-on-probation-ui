@@ -109,6 +109,15 @@ All variables are configured in `.env` (copy from `.env.example`). The key ones 
 | `ADMIN_AUTHORISED_ROLES` | HMPPS Auth roles (without `ROLE_`) allowed to use admin preview | — |
 | `ADMIN_RESTRICT_BY_USERNAME` | Use the username allowlist gate instead of the role gate (see [Admin preview](#admin-preview-preview-as-user)) | `false` |
 | `ADMIN_AUTHORISED_USERNAMES` | HMPPS Auth usernames allowed to use admin preview when `ADMIN_RESTRICT_BY_USERNAME=true` | — |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Azure Application Insights connection string; telemetry is only exported when set | — |
+| `DEBUG_TELEMETRY` | Log OpenTelemetry spans and logs to the console | `false` |
+
+### Telemetry dependencies
+
+Telemetry uses [`@ministryofjustice/hmpps-azure-telemetry`](https://github.com/ministryofjustice/hmpps-typescript-lib/tree/main/packages/azure-telemetry), initialised in `server/utils/telemetry.ts`.
+
+- `@opentelemetry/api` is pinned to the exact version that library requires as a peer dependency. Update the two together.
+- `package.json` `overrides` forces `@opentelemetry/core` to a version >= 2.8.0 to fix [GHSA-8988-4f7v-96qf](https://github.com/advisories/GHSA-8988-4f7v-96qf), because the library's OpenTelemetry dependencies pin an older 2.x version. Remove the override only once `npm ls @opentelemetry/core` shows no versions below 2.8.0 without it.
 
 ### Local authentication bypass
 

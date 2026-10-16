@@ -1,5 +1,5 @@
 // Initialise telemetry before anything else to allow for instrumentation of bunyan and express
-import './server/utils/azureAppInsights'
+import './server/utils/telemetry'
 
 import app from './server/index'
 import logger from './logger'
