@@ -8,7 +8,7 @@
     "prepare": "hmpps-precommit-hooks-prepare",
     "watch-ts": "tsc -w",
     "build": "node esbuild/esbuild",
-    "start": "node $NODE_OPTIONS dist/server.js | bunyan -o short",
+    "start": "node $NODE_OPTIONS dist/server.js",
     "start:dev": "node esbuild/esbuild --watch",
     "start-feature": " node $NODE_DEBUG_OPTION --env-file=feature.env dist/server.js | bunyan -o short",
     "start-feature:dev": "node esbuild/esbuild --watch --env feature.env",
@@ -35,11 +35,12 @@
     "@ministryofjustice/frontend": "^9.0.0",
     "@ministryofjustice/hmpps-audit-client": "1.1.3",
     "@ministryofjustice/hmpps-auth-clients": "^1.0.2",
+    "@ministryofjustice/hmpps-azure-telemetry": "1.1.0",
     "@ministryofjustice/hmpps-monitoring": "^1.0.2",
     "@ministryofjustice/hmpps-rest-client": "^1.1.0",
+    "@opentelemetry/api": "1.9.0",
     "@types/cookie-parser": "1.4.10",
     "@types/jsonwebtoken": "^9.0.10",
-    "applicationinsights": "^2.9.8",
     "bunyan": "^1.8.15",
     "bunyan-format": "^0.2.1",
     "compression": "^1.8.1",
@@ -104,6 +105,7 @@
   "overrides": {
     "@aws-sdk/xml-builder": {
       "fast-xml-parser": "^5.5.1"
-    }
+    },
+    "@opentelemetry/core": "2.12.0"
   }
 }
