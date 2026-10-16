@@ -89,6 +89,8 @@ export interface OffenceResponse {
 
 export interface SentenceResponse {
   type?: string
+  // nDelius disposal type code (e.g. '327'). Not yet returned by the API.
+  disposalCode?: string
   startDate?: string
   expectedEndDate?: string
   requirements: RequirementResponse[]

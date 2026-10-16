@@ -30,20 +30,18 @@
   {% if licenceSentence.type %}
   <div class="pop-summary-card pop-summary-card--flat">
     <dl class="pop-summary-card__details">
-      {% set sentenceTypeExplanationHtml %}
-        <p class="govuk-body">The court decided you had to spend time in prison. This is called being in custody.</p>
-        <p class="govuk-body">You have been released before your sentence ends. You will serve the rest of your time in the community. This is called being on licence.</p>
-        <p class="govuk-body">Until your sentence ends, you must follow your licence conditions and keep in touch with your probation officer.</p>
-      {% endset %}
       <div class="pop-summary-card__row">
         <dt class="pop-summary-card__key">Sentence type</dt>
         <dd class="pop-summary-card__value">
           {{ licenceSentence.type }}
-          {{ whatDoesThisMean({
-            html: sentenceTypeExplanationHtml,
-            trackingId: "licence_sentence_type_what_does_this_mean",
-            classes: "pop-order-type-details"
-          }) }}
+          {% if licenceSentence.typeExplanationTemplate %}
+            {% set sentenceTypeExplanationHtml %}{% include licenceSentence.typeExplanationTemplate %}{% endset %}
+            {{ whatDoesThisMean({
+              html: sentenceTypeExplanationHtml,
+              trackingId: "licence_sentence_type_what_does_this_mean",
+              classes: "pop-order-type-details"
+            }) }}
+          {% endif %}
         </dd>
       </div>
     </dl>

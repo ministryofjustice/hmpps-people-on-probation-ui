@@ -12,6 +12,7 @@ const licenceCondition = { mainCategory: { code: 'NLC8', description: 'Standard 
 
 const licenceSentence = (overrides: Partial<SentenceResponse> = {}): SentenceResponse => ({
   type: 'ORA Adult Custody (not PSS)',
+  disposalCode: '327',
   startDate: '2022-01-15',
   expectedEndDate: '2027-03-14',
   requirements: [],
@@ -138,6 +139,50 @@ describe('GET /licence', () => {
     const startDate = response.text.indexOf('Sentence start date')
     expect(sentenceType).toBeLessThan(heading)
     expect(heading).toBeLessThan(startDate)
+  })
+
+  describe('sentence type explanation', () => {
+    const renderLicence = async (disposalCode?: string) => {
+      peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence({ disposalCode })] })
+      return request(app)
+        .get('/licence')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+    }
+
+    it.each([
+      ['327', 'You must follow your licence conditions until your licence ends.'],
+      ['324', 'The court also added some additional time you need to serve on licence.'],
+      ['308', 'You have been released from prison into the community.'],
+      ['245', 'Your sentence includes some additional time you need to serve on licence'],
+    ])('shows the explanation for disposal code %s', async (disposalCode, expectedText) => {
+      const response = await renderLicence(disposalCode)
+
+      expect(response.text).toContain('data-tracking-id="licence_sentence_type_what_does_this_mean"')
+      expect(response.text).toContain(expectedText)
+    })
+
+    it.each([
+      ['327', true],
+      ['324', true],
+      ['245', true],
+      ['308', false],
+    ])('mentions Final Third for disposal code %s: %s', async (disposalCode, mentionsFinalThird) => {
+      const response = await renderLicence(disposalCode)
+
+      expect(response.text.includes('Final Third')).toBe(mentionsFinalThird)
+    })
+
+    it.each([
+      ['an uncategorised disposal code', '406'],
+      ['a category without an explanation', '340'],
+      ['no disposal code', undefined],
+    ])('shows the sentence type without an explanation for %s', async (_, disposalCode) => {
+      const response = await renderLicence(disposalCode)
+
+      expect(response.text).toContain('Sentence type')
+      expect(response.text).not.toContain('licence_sentence_type_what_does_this_mean')
+    })
   })
 
   it('shows the licence conditions cards without links', async () => {
