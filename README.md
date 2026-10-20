@@ -229,7 +229,8 @@ This app stays a pure BFF for documents: the People on Probation API owns the S3
 | `/probation-officer` | Probation officer name and office address |
 | `/details` | Personal, contact, and emergency contact details |
 | `/documents` | Documents uploaded for the citizen's CRN (see [Documents](#documents)) |
-| `/documents/:id` | View a single document, rendered with PDF.js |
+| `/documents/:id` | "Sensitive information" interruption page shown before any document is opened |
+| `/documents/:id/view` | View a single document, rendered with PDF.js |
 | `/admin/search` | Admin "preview as user" — search a CRN and start/end a preview session (see [Admin preview](#admin-preview-preview-as-user)) |
 | `/admin/documents/upload` | Admin document upload — search a CRN, preview, and confirm a document upload (see [Documents](#documents)) |
 
