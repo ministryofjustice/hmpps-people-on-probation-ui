@@ -3,12 +3,15 @@
   "package-manager": "auto",
   "registry": "https://registry.npmjs.org",
   "allowlist": [
-    // brace-expansion DoS (CVE-2026-14257) — devDependencies only.
-    // Patched in 5.0.8+; the 1.x/2.x lines were never fixed. Reaches us via
-    // minimatch@3.1.5 and minimatch@9.0.9, neither of which can consume v5
-    // (it exports { expand }, not a callable default), so no override is possible.
-    // Blocked on @eslint/eslintrc, eslint-plugin-import, babel-plugin-istanbul
-    // and jest moving to minimatch ^10. Remove this entry once they have.
-    "GHSA-mh99-v99m-4gvg"
+    // braces stack-exhaustion DoS — no patched release exists (all <=3.0.3).
+    // Reaches us via chokidar@3 (esbuild-plugin-copy, and nunjucks' optional
+    // peer) and micromatch (del -> globby -> fast-glob). Only build-time glob
+    // patterns we author are expanded; nunjucks watch mode is never enabled,
+    // so no user input reaches braces. Remove once a fixed version ships.
+    "GHSA-vfj7-8cjw-p6xm",
+    // sprintf-js DoS via unbounded precision — no patched release exists.
+    // devDependencies only: ts-jest -> babel-plugin-istanbul -> js-yaml@3 ->
+    // argparse@1 -> sprintf-js@1.0.3. Never handles user input.
+    "GHSA-hp3w-g68c-fv3c"
   ]
 }

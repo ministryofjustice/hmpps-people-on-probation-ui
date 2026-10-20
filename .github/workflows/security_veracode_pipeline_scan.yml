@@ -5,7 +5,52 @@ on:
     - cron: "9 10 * * MON-FRI" # Every weekday
 
 jobs:
+  # TEMP: The shared Veracode workflows build the Docker image themselves with a
+  # plain `docker build`, which can't supply the NODE_AUTH_TOKEN BuildKit secret
+  # needed to pull the private @justiceaiunit/chatbot-widget during `npm ci`.
+  # Build and package source.zip here instead, then hand it to the shared
+  # workflow via `veracode_package_artifact_name`. Revert to the plain shared
+  # call once the widget moves to a public / MoJ-scoped registry.
+  prepare-veracode-artifact:
+    name: Prepare Veracode artifact
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+      - name: Build docker image
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        with:
+          context: .
+          load: true
+          push: false
+          provenance: false
+          tags: veracode-scan:local
+          build-args: |
+            BUILD_NUMBER=${{ github.sha }}
+            GIT_REF=${{ github.sha }}
+            GIT_BRANCH=${{ github.head_ref || github.ref_name }}
+          secrets: |
+            NODE_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+      - name: Package application for Veracode
+        shell: bash
+        run: |
+          CONTAINER_ID=$(docker create veracode-scan:local)
+          docker cp "${CONTAINER_ID}:/app" ./temp_app
+          docker rm "${CONTAINER_ID}"
+          cd temp_app
+          zip -qr ../source.zip . -x "*node_modules*" -x "*agent.jar*" -x "*vendor/bundle*" -x "*.venv*"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: veracode-source
+          path: source.zip
+          retention-days: 1
   security-veracode-pipeline-scan:
+    needs: prepare-veracode-artifact
     permissions:
       contents: read
       actions: read
@@ -14,4 +59,5 @@ jobs:
     uses: ministryofjustice/hmpps-github-actions/.github/workflows/security_veracode_pipeline_scan.yml@v2 # WORKFLOW_VERSION
     with:
       channel_id: ${{ vars.SECURITY_ALERTS_SLACK_CHANNEL_ID || 'NO_SLACK' }}
+      veracode_package_artifact_name: veracode-source
     secrets: inherit
