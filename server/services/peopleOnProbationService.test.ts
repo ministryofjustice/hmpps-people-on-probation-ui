@@ -1,4 +1,4 @@
-import PeopleOnProbationService from './peopleOnProbationService'
+import PeopleOnProbationService, { MAX_EXTRA_PAST_APPOINTMENT_PAGES } from './peopleOnProbationService'
 import type PeopleOnProbationApiClient from '../data/peopleOnProbationApiClient'
 
 jest.mock('../data/index', () => ({ getAuthenticationClient: jest.fn() }))
@@ -57,6 +57,31 @@ describe('PeopleOnProbationService.getAllPastAppointments', () => {
     expect(getPastAppointments).toHaveBeenCalledTimes(4)
     expect(getPastAppointments).toHaveBeenCalledWith('X123456', 1, 200)
     expect(getPastAppointments).toHaveBeenCalledWith('X123456', 2, 200)
+  })
+
+  it('fails without fetching any more pages when the API caps the page size too low', async () => {
+    getPastAppointments
+      .mockResolvedValueOnce(pageOf(appointments(20), 1000))
+      .mockResolvedValueOnce(pageOf(appointments(20), 1000))
+
+    await expect(service.getAllPastAppointments('X123456')).rejects.toThrow(
+      'Past appointments need 49 more pages, over the limit of 10',
+    )
+    expect(getPastAppointments).toHaveBeenCalledTimes(2)
+  })
+
+  it('fetches up to the maximum number of extra pages', async () => {
+    getPastAppointments
+      .mockResolvedValueOnce(pageOf(appointments(20), 220))
+      .mockResolvedValueOnce(pageOf(appointments(20), 220))
+      .mockImplementation((_crn, page: number, size: number) =>
+        Promise.resolve(pageOf(appointments(size, page * size), 220)),
+      )
+
+    const result = await service.getAllPastAppointments('X123456')
+
+    expect(result).toHaveLength(220)
+    expect(getPastAppointments).toHaveBeenCalledTimes(2 + MAX_EXTRA_PAST_APPOINTMENT_PAGES)
   })
 
   it('returns no appointments when there are none', async () => {

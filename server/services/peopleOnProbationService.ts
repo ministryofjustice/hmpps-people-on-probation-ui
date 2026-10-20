@@ -8,6 +8,9 @@ import PeopleOnProbationApiClient, {
 } from '../data/peopleOnProbationApiClient'
 import { getAuthenticationClient } from '../data/index'
 
+// Most extra pages getAllPastAppointments will fetch in parallel if the API caps the page size.
+export const MAX_EXTRA_PAST_APPOINTMENT_PAGES = 10
+
 export default class PeopleOnProbationService {
   constructor(private readonly peopleOnProbationApiClient: PeopleOnProbationApiClient) {}
 
@@ -44,7 +47,14 @@ export default class PeopleOnProbationService {
     if (returnedCount >= total || returnedCount === 0) return all.content
 
     // Fewer than asked for: the API capped the page size at returnedCount, so page through the rest at that size.
-    const remainingPages = Array.from({ length: Math.ceil(total / returnedCount) - 1 }, (_, i) => i + 1)
+    // Fail rather than fan out without limit; stopping early would return too few and undercount.
+    const extraPages = Math.ceil(total / returnedCount) - 1
+    if (extraPages > MAX_EXTRA_PAST_APPOINTMENT_PAGES) {
+      throw new Error(
+        `Past appointments need ${extraPages} more pages, over the limit of ${MAX_EXTRA_PAST_APPOINTMENT_PAGES}`,
+      )
+    }
+    const remainingPages = Array.from({ length: extraPages }, (_, i) => i + 1)
     const rest = await Promise.all(remainingPages.map(page => this.getPastAppointments(crn, page, returnedCount)))
     return [...all.content, ...rest.flatMap(response => response.content)]
   }

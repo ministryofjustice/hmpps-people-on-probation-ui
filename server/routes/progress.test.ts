@@ -140,6 +140,32 @@ describe('GET /progress', () => {
     expect(response.text).toContain('>goal</a>')
   })
 
+  it('uses the singular for one RAR day', async () => {
+    mockData({ requirements: [rar({ completed: 1 })] })
+
+    const response = await renderProgress()
+
+    expect(response.text).toContain('You have completed 1 <a')
+    expect(response.text).toContain('>RAR day</a>')
+  })
+
+  it('takes the unit from the requirement rather than assuming hours and days', async () => {
+    mockData({ requirements: [unpaidWork({ unit: 'DAYS', completed: 3 }), rar({ unit: 'WEEKS', completed: 2 })] })
+
+    const response = await renderProgress()
+
+    expect(response.text).toContain('You have completed 3 days of')
+    expect(response.text).toContain('>RAR weeks</a>')
+  })
+
+  it('falls back to "units" when the requirement has no unit', async () => {
+    mockData({ requirements: [unpaidWork({ unit: undefined, completed: 4 })] })
+
+    const response = await renderProgress()
+
+    expect(response.text).toContain('You have completed 4 units of')
+  })
+
   it('shows 0 goals when there is no sentence plan yet', async () => {
     mockData()
     peopleOnProbationService.getSentencePlan.mockRejectedValue({ responseStatus: 404 })
@@ -161,6 +187,19 @@ describe('GET /progress', () => {
     expect(response.text).not.toContain('probation appointment')
     expect(response.text).not.toContain('You have achieved')
     expect(response.text).toContain('community payback (unpaid work)')
+  })
+
+  it('hides the attendance row when the past appointments are too many pages to fetch', async () => {
+    mockData()
+    peopleOnProbationService.getAllPastAppointments.mockRejectedValue(
+      new Error('Past appointments need 49 more pages, over the limit of 10'),
+    )
+
+    const response = await renderProgress()
+
+    expect(response.status).toBe(200)
+    expect(response.text).not.toContain('probation appointment')
+    expect(response.text).toContain('You have achieved 1')
   })
 
   it('shows the error page when nothing could be loaded', async () => {
@@ -207,7 +246,36 @@ describe('requirementProgress', () => {
       licenceConditions: [],
     }
 
-    expect(requirementProgress(sentence, 'unpaid-work')).toEqual({ completed: 15, href: '/requirements' })
+    expect(requirementProgress(sentence, 'unpaid-work')).toEqual({
+      completed: 15,
+      unit: 'HOURS',
+      href: '/requirements',
+    })
+  })
+
+  it('caps each requirement at its required amount, matching the requirement detail page', () => {
+    const sentence: SentenceResponse = {
+      requirements: [
+        unpaidWork({ required: 40, completed: 45, subCategory: { code: 'W01', description: 'Regular' } }),
+        unpaidWork({ required: 20, completed: 10, subCategory: { code: 'W02', description: 'Additional Hours' } }),
+      ],
+      licenceConditions: [],
+    }
+
+    expect(requirementProgress(sentence, 'unpaid-work')?.completed).toBe(50)
+  })
+
+  it('counts 0 for a requirement with no required amount, as its detail page shows no completed figure', () => {
+    const sentence: SentenceResponse = {
+      requirements: [rar({ required: undefined, completed: 5 })],
+      licenceConditions: [],
+    }
+
+    expect(requirementProgress(sentence, 'rar')).toEqual({
+      completed: 0,
+      unit: undefined,
+      href: '/requirements/rehabilitation-activity-requirement-rar',
+    })
   })
 
   it('is undefined when there is no sentence or no matching requirement', () => {

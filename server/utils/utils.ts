@@ -33,7 +33,7 @@ export const initialiseName = (fullName?: string): string | null => {
   return `${array[0][0]}. ${array.reverse()[0]}`
 }
 
-export const pluralise = (count: number, word: string) => `${count} ${count === 1 ? word : `${word}s`}`
+const pluralise = (count: number, word: string) => `${count} ${count === 1 ? word : `${word}s`}`
 
 export const formatDateWithDay = (dateStr?: string): string | undefined => {
   if (!dateStr) return undefined

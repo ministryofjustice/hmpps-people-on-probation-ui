@@ -5,7 +5,7 @@ import type { Services } from '../services'
 import logger from '../../logger'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
-import { pluralise } from '../utils/utils'
+import { formatUnit } from '../utils/utils'
 import type { AppointmentResponse, SentencePlanResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import { type RequirementKind, toRequirementViews } from './requirements'
 
@@ -30,24 +30,24 @@ const ICONS = {
 export const countAttendedAppointments = (appointments: AppointmentResponse[]): number =>
   appointments.filter(appointment => appointment.attended === true && !appointment.unpaidWork).length
 
-type RequirementProgress = { completed: number; href: string }
+type RequirementProgress = { completed: number; unit?: string; href: string }
 
 // Totals the completed units across every requirement of a kind (someone can have more than one
-// unpaid work requirement). Undefined when they have none, so the row isn't shown.
+// unpaid work requirement). Uses each requirement view's completed value, which is capped at the
+// required amount, so the total matches the requirement detail pages the row links to.
+// Undefined when they have none, so the row isn't shown.
 export const requirementProgress = (
   sentence: SentenceResponse | undefined,
   kind: RequirementKind,
 ): RequirementProgress | undefined => {
-  const requirements = sentence?.requirements ?? []
-  const views = toRequirementViews(requirements)
-  const matching = views.flatMap((view, index) =>
-    view.kind === kind ? [{ view, requirement: requirements[index] }] : [],
-  )
+  const matching = toRequirementViews(sentence?.requirements).filter(view => view.kind === kind)
   if (!matching.length) return undefined
 
   return {
-    completed: matching.reduce((sum, { requirement }) => sum + (requirement.completed ?? 0), 0),
-    href: matching.length === 1 ? `/requirements/${matching[0].view.slug}` : '/requirements',
+    completed: matching.reduce((sum, view) => sum + (view.completed ?? 0), 0),
+    // Requirements of the same kind share a unit (hours for unpaid work, days for RAR).
+    unit: matching.find(view => view.unit)?.unit,
+    href: matching.length === 1 ? `/requirements/${matching[0].slug}` : '/requirements',
   }
 }
 
@@ -103,7 +103,7 @@ export default function progressRoutes(services: Services): Router {
       if (unpaidWork) {
         rows.push({
           icon: ICONS.unpaidWork,
-          text: `You have completed ${pluralise(unpaidWork.completed, 'hour')} of`,
+          text: `You have completed ${unpaidWork.completed} ${formatUnit(unpaidWork.unit, unpaidWork.completed)} of`,
           linkText: 'community payback (unpaid work)',
           href: unpaidWork.href,
           trackingId: 'progress_unpaid_work_link',
@@ -126,7 +126,7 @@ export default function progressRoutes(services: Services): Router {
         rows.push({
           icon: ICONS.rar,
           text: `You have completed ${rar.completed}`,
-          linkText: rar.completed === 1 ? 'RAR day' : 'RAR days',
+          linkText: `RAR ${formatUnit(rar.unit, rar.completed)}`,
           href: rar.href,
           trackingId: 'progress_rar_link',
         })
