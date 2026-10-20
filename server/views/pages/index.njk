@@ -86,14 +86,20 @@
           </a>
         </div>
         <div class="govuk-grid-column-one-half">
+          <a href="/progress" class="pop-card">
+            <h2 class="govuk-heading-m pop-card__title">Progress and achievements</h2>
+            <p class="govuk-body pop-card__body">See a summary of your progress, including your attendance, requirements and goals</p>
+          </a>
+        </div>
+      </div>
+
+      <div class="govuk-grid-row pop-card-row {{ 'govuk-!-margin-bottom-4' if features.documents else 'govuk-!-margin-bottom-6' }}">
+        <div class="govuk-grid-column-one-half">
           <a href="/goals" class="pop-card">
             <h2 class="govuk-heading-m pop-card__title">Goals</h2>
             <p class="govuk-body pop-card__body">See the goals in your sentence plan</p>
           </a>
         </div>
-      </div>
-
-      <div class="govuk-grid-row pop-card-row govuk-!-margin-bottom-6">
         <div class="govuk-grid-column-one-half">
           <a href="{{ '/licence' if isLicence else '/requirements' }}" class="pop-card">
             {% if isLicence %}
@@ -105,15 +111,18 @@
             {% endif %}
           </a>
         </div>
-        {% if features.documents %}
+      </div>
+
+      {% if features.documents %}
+        <div class="govuk-grid-row pop-card-row govuk-!-margin-bottom-6">
           <div class="govuk-grid-column-one-half">
             <a href="/documents" class="pop-card">
               <h2 class="govuk-heading-m pop-card__title">Documents</h2>
               <p class="govuk-body pop-card__body">See documents added by you, your probation officer or the court</p>
             </a>
           </div>
-        {% endif %}
-      </div>
+        </div>
+      {% endif %}
 
       <h2 class="govuk-heading-l">Other information</h2>
       <ul class="govuk-list">
