@@ -1,0 +1,25 @@
+{% extends "../partials/layout.njk" %}
+
+{% set pageTitle = "Progress and achievements – Check your probation account – GOV.UK" %}
+{% set currentPage = "progress" %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-xl">Progress and achievements</h1>
+
+  {% if rows.length %}
+    <ul class="pop-progress-summary">
+      {% for row in rows %}
+        <li class="pop-progress-summary__row">
+          <span class="pop-progress-summary__icon">
+            <img src="{{ row.icon.src }}" alt="" width="{{ row.icon.width }}" height="{{ row.icon.height }}">
+          </span>
+          <p class="govuk-body-s pop-progress-summary__text">
+            {{ row.text }} <a class="govuk-link govuk-link--no-visited-state" href="{{ row.href }}" data-tracking-id="{{ row.trackingId }}">{{ row.linkText }}</a>
+          </p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+{% endblock %}

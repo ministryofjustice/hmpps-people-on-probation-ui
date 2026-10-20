@@ -20,6 +20,7 @@ import {
 } from '../utils/utils'
 import appointmentsRoutes from './appointments'
 import goalsRoutes from './goals'
+import progressRoutes from './progress'
 import requirementsRoutes from './requirements'
 import licenceRoutes from './licence'
 import probationOfficerRoutes from './probationOfficer'
@@ -136,6 +137,7 @@ export default function routes(services: Services): Router {
   })
 
   router.use('/appointments', appointmentsRoutes(services))
+  router.use('/progress', progressRoutes(services))
   router.use('/goals', goalsRoutes(services))
   router.use('/requirements', requirementsRoutes(services))
   router.use('/licence', licenceRoutes(services))

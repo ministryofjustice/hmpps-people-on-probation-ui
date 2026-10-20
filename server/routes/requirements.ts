@@ -45,6 +45,7 @@ export type RequirementView = {
   completedDuration?: string
   required?: number
   completed?: number
+  unit?: string
   remaining?: number
   remainingUnitLabel?: string
   startDate?: string
@@ -112,6 +113,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       showCourtOrderSignpost,
       required: requirement.required,
       completed,
+      unit: requirement.unit,
       remaining,
       remainingUnitLabel,
       percentComplete,

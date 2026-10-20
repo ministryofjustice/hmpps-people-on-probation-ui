@@ -22,6 +22,7 @@
   {% endif %}
   {% set citizenNav = citizenNav.concat([
     { href: "/appointments", text: "Appointments and activities", active: currentPage === "appointments" },
+    { href: "/progress", text: "Progress and achievements", active: currentPage === "progress" },
     { href: "/goals", text: "Goals", active: currentPage === "goals" },
     { href: "/licence", text: "Your licence", active: currentPage === "licence" } if isLicence else { href: "/requirements", text: "Order requirements", active: currentPage === "requirements" }
   ]) %}
