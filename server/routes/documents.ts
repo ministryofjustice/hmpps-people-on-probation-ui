@@ -33,7 +33,15 @@ export default function documentsRoutes(services: Services): Router {
     }
   })
 
-  router.get('/:id', async (req, res, next) => {
+  // Every link to a document lands here first: a warning that it may contain sensitive
+  // information, before the person chooses to open it. No API call - the document is only
+  // fetched (and ownership checked) once they continue.
+  router.get('/:id', (req, res) => {
+    if (!getSessionCrn(res.locals.user)) return res.redirect('/autherror')
+    return res.render('pages/document-interruption', { documentId: req.params.id })
+  })
+
+  router.get('/:id/view', async (req, res, next) => {
     try {
       const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
