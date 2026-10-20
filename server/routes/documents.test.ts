@@ -7,7 +7,10 @@ import nunjucksSetup from '../utils/nunjucksSetup'
 import setUpWebSession from '../middleware/setUpWebSession'
 import type { Services } from '../services'
 
-function buildApp({ signedIn = true }: { signedIn?: boolean } = {}) {
+function buildApp({
+  signedIn = true,
+  personReference = 'X123456',
+}: { signedIn?: boolean; personReference?: string | null } = {}) {
   const app = express()
   app.set('view engine', 'njk')
   nunjucksSetup(app)
@@ -24,7 +27,7 @@ function buildApp({ signedIn = true }: { signedIn?: boolean } = {}) {
       res.locals.user = {
         registeredUserDetails: {
           id: 'registered-user-id',
-          personReference: 'X123456',
+          ...(personReference ? { personReference } : {}),
           status: 'ACTIVE',
           createdAt: '2026-01-01T00:00:00Z',
         },
@@ -112,12 +115,22 @@ describe('GET /documents/:id', () => {
     expect(response.text).toContain('href="/documents/doc%201/view"')
   })
 
-  it('redirects to auth error when there is no person reference', async () => {
+  it('redirects to auth error when signed in without a person reference', async () => {
+    const { app } = buildApp({ personReference: null })
+
+    const response = await request(app).get('/documents/doc-1')
+
+    expect(response.status).toBe(302)
+    expect(response.headers.location).toBe('/autherror')
+  })
+
+  it('redirects to sign in when signed out', async () => {
     const { app } = buildApp({ signedIn: false })
 
     const response = await request(app).get('/documents/doc-1')
 
     expect(response.status).toBe(302)
+    expect(response.headers.location).toBe('/?returnTo=%2Fdocuments%2Fdoc-1')
   })
 })
 
