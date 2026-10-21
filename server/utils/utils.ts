@@ -104,6 +104,9 @@ export const formatRemainingDuration = (endDateStr: string): string => {
   return formatIntervalDuration(today, addDays(end, 1))
 }
 
+// True when the date is today or in the past.
+export const hasDateArrived = (dateStr: string): boolean => !isBefore(startOfDay(new Date()), parseLocalDate(dateStr))
+
 export type DateProgressResult = {
   percentComplete: number
   completedDuration: string

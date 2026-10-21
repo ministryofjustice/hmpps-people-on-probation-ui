@@ -2,7 +2,7 @@ import type { Express } from 'express'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import type { Services } from '../services'
-import type { SentenceProgressResponse } from '../data/peopleOnProbationApiClient'
+import type { RequirementResponse, SentenceProgressResponse } from '../data/peopleOnProbationApiClient'
 import config from '../config'
 import { toRequirementView } from './requirements'
 
@@ -1321,6 +1321,37 @@ describe('toRequirementView progress', () => {
     expect(view.percentComplete).toBe(100)
     expect(view.endDate).toBe('1 June 2026')
     expect(view.totalLength).toBe('12 months')
+  })
+
+  describe('ending today', () => {
+    const endsToday: RequirementResponse = {
+      ...mentalHealthTreatment,
+      actualStartDate: '2026-06-01',
+      expectedEndDate: undefined,
+    }
+
+    it('shows a requirement whose actual end date is today as complete, with nothing remaining', () => {
+      const view = toRequirementView({ ...endsToday, actualEndDate: '2026-07-01' })
+
+      expect(view.percentComplete).toBe(100)
+      expect(view.remainingDuration).toBe('0 days')
+      expect(view.endDate).toBe('1 July 2026')
+    })
+
+    it('leaves an expected end date of today as the last day still to go', () => {
+      const view = toRequirementView({ ...endsToday, expectedEndDate: '2026-07-01' })
+
+      expect(view.percentComplete).toBe(97)
+      expect(view.remainingDuration).toBe('1 day')
+    })
+
+    it('leaves a requirement with an actual end date still to come in progress', () => {
+      const view = toRequirementView({ ...endsToday, actualEndDate: '2026-07-31' })
+
+      // 30 of 61 days (1 June to 31 July, inclusive)
+      expect(view.percentComplete).toBe(49)
+      expect(view.remainingDuration).not.toBe('0 days')
+    })
   })
 
   it('shows no progress for a requirement measured in months with no dates, but keeps the time required', () => {

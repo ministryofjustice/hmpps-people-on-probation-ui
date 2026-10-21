@@ -10,6 +10,7 @@ import {
   formatDateTimeWithDay,
   formatSentenceType,
   formatUnit,
+  hasDateArrived,
   isDurationUnit,
   isLicenceSentence,
 } from '../utils/utils'
@@ -145,16 +146,20 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       startDate: fmtStart,
       endDate: fmtEnd,
     } = calculateDateProgress(startDate, endDate)
+    // An actual end date means the requirement has finished, so on that day it is complete. Date
+    // progress alone counts the end day as still to come (e.g. 97% and 1 day remaining). An
+    // expected end date of today is still the last day, so that case is left as it is.
+    const hasEnded = Boolean(requirement.actualEndDate) && hasDateArrived(requirement.actualEndDate)
     return {
       label,
       slug,
       kind,
       showCourtOrderSignpost,
-      percentComplete,
+      percentComplete: hasEnded ? 100 : percentComplete,
       completedDuration,
       // The court-ordered length (e.g. "12 months") when there is one, not the span between the dates.
       totalLength: requiredLength ?? totalLength,
-      remainingDuration,
+      remainingDuration: hasEnded ? '0 days' : remainingDuration,
       startDate: fmtStart,
       endDate: fmtEnd,
       lastUpdatedAt,

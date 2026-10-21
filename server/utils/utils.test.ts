@@ -10,6 +10,7 @@ import {
   formatRemainingDuration,
   formatIntervalDuration,
   formatUnit,
+  hasDateArrived,
   isDurationUnit,
   formatAddress,
   formatMapUrl,
@@ -214,6 +215,24 @@ describe('formatUnit', () => {
     ['lowercase input', 'hours', 2, 'hours'],
   ])('%s', (_: string, unit: string | undefined, amount: number, expected: string) => {
     expect(formatUnit(unit, amount)).toEqual(expected)
+  })
+})
+
+describe('hasDateArrived', () => {
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date('2026-07-01T12:00:00Z') })
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it.each([
+    ['2026-06-30', true],
+    ['2026-07-01', true],
+    ['2026-07-02', false],
+  ])('%s → %s', (dateStr: string, expected: boolean) => {
+    expect(hasDateArrived(dateStr)).toBe(expected)
   })
 })
 
