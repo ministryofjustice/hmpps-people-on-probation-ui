@@ -10,6 +10,7 @@ import {
   formatRemainingDuration,
   formatIntervalDuration,
   formatUnit,
+  isDurationUnit,
   formatAddress,
   formatMapUrl,
   formatPersonName,
@@ -213,6 +214,20 @@ describe('formatUnit', () => {
     ['lowercase input', 'hours', 2, 'hours'],
   ])('%s', (_: string, unit: string | undefined, amount: number, expected: string) => {
     expect(formatUnit(unit, amount)).toEqual(expected)
+  })
+})
+
+describe('isDurationUnit', () => {
+  it.each([
+    ['WEEKS', true],
+    ['MONTHS', true],
+    ['YEARS', true],
+    ['months', true],
+    ['HOURS', false],
+    ['DAYS', false],
+    [undefined, false],
+  ])('%s → %s', (unit: string | undefined, expected: boolean) => {
+    expect(isDurationUnit(unit)).toBe(expected)
   })
 })
 

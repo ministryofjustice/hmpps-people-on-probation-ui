@@ -130,6 +130,11 @@ export function calculateDateProgress(startDateStr: string, endDateStr: string):
   }
 }
 
+// Units where a requirement's `required` amount is a length of time rather than something counted.
+const DURATION_UNITS = ['WEEKS', 'MONTHS', 'YEARS']
+
+export const isDurationUnit = (unit?: string): boolean => DURATION_UNITS.includes(unit?.toUpperCase() ?? '')
+
 export const formatUnit = (unit: string | undefined, amount: number): string => {
   const label = unit?.toLowerCase() || 'units'
   if (amount === 1 && label.endsWith('s')) return label.slice(0, -1)

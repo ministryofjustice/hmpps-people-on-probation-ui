@@ -4,6 +4,7 @@ import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import type { Services } from '../services'
 import type { SentenceProgressResponse } from '../data/peopleOnProbationApiClient'
 import config from '../config'
+import { toRequirementView } from './requirements'
 
 let app: Express
 let peopleOnProbationService: { getSentences: jest.Mock; getDocuments: jest.Mock }
@@ -1288,5 +1289,85 @@ describe('GET /requirements/:slug', () => {
     expect(res.text).toContain('What does this mean?')
     expect(res.text).toContain('A prohibited activity is something the court has said you are not allowed to do.')
     expect(res.text).toContain('If you do something you are not allowed to do, you could be returned to court.')
+  })
+})
+
+describe('toRequirementView progress', () => {
+  beforeEach(() => {
+    fakeDate('2026-07-01T12:00:00Z')
+  })
+
+  const mentalHealthTreatment = {
+    mainCategory: { code: 'RM38', description: 'Mental Health Treatment' },
+    required: 12,
+    unit: 'MONTHS',
+    actualStartDate: '2026-01-01',
+    expectedEndDate: '2026-12-31',
+  }
+
+  it('uses the dates for a requirement measured in months with no completed amount', () => {
+    const view = toRequirementView(mentalHealthTreatment)
+
+    expect(view.percentComplete).toBe(50)
+    expect(view.completedDuration).toBe('6 months')
+    expect(view.remaining).toBeUndefined()
+    expect(view.remainingDuration).toBeDefined()
+    expect(view.totalLength).toBe('12 months')
+  })
+
+  it('uses the actual end date before the expected one, so a requirement ended early shows as complete', () => {
+    const view = toRequirementView({ ...mentalHealthTreatment, actualEndDate: '2026-06-01' })
+
+    expect(view.percentComplete).toBe(100)
+    expect(view.endDate).toBe('1 June 2026')
+    expect(view.totalLength).toBe('12 months')
+  })
+
+  it('shows no progress for a requirement measured in months with no dates, but keeps the time required', () => {
+    const view = toRequirementView({
+      ...mentalHealthTreatment,
+      actualStartDate: undefined,
+      expectedEndDate: undefined,
+    })
+
+    expect(view.percentComplete).toBeUndefined()
+    expect(view.totalLength).toBe('12 months')
+  })
+
+  it('uses the count for a requirement measured in months when a completed amount is recorded', () => {
+    const view = toRequirementView({ ...mentalHealthTreatment, completed: 3 })
+
+    expect(view.percentComplete).toBe(25)
+    expect(view.completedDuration).toBe('3 months')
+    expect(view.remaining).toBe(9)
+  })
+
+  it('still counts hours from 0 when no completed amount is recorded, even with dates', () => {
+    const view = toRequirementView({
+      mainCategory: { code: 'W', description: 'Unpaid Work' },
+      required: 40,
+      unit: 'HOURS',
+      actualStartDate: '2026-01-01',
+      expectedEndDate: '2026-12-31',
+    })
+
+    expect(view.percentComplete).toBe(0)
+    expect(view.completedDuration).toBe('0 hours')
+    expect(view.remaining).toBe(40)
+    expect(view.totalLength).toBe('40 hours')
+  })
+
+  it('renders the date-based progress and time required on the detail page', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [{ type: 'ORA Community Order', requirements: [mentalHealthTreatment], licenceConditions: [] }],
+    })
+
+    const res = await request(app)
+      .get('/requirements/mental-health-treatment')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('Completed: 6 months (50%)')
+    expect(res.text).toMatch(/Time required<\/dt>\s*<dd class="pop-summary-card__value">12 months/)
   })
 })
