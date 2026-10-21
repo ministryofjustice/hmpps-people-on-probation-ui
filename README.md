@@ -91,12 +91,17 @@ All variables are configured in `.env` (copy from `.env.example`). The key ones 
 | `HMPPS_AUTH_URL` | HMPPS Auth URL (for system token requests) | `https://sign-in-dev.hmpps.service.justice.gov.uk/auth` |
 | `CLIENT_CREDS_CLIENT_ID` | Client ID for system-to-API calls | — |
 | `CLIENT_CREDS_CLIENT_SECRET` | Client secret for system-to-API calls | — |
+| `ONE_LOGIN_ISSUER_URL` | GOV.UK One Login OIDC issuer URL (required in production) | — |
 | `ONE_LOGIN_CLIENT_ID` | GOV.UK One Login client ID | — |
 | `ONE_LOGIN_PRIVATE_KEY_BASE64` | Base64-encoded private key for One Login | — |
 | `ONE_LOGIN_PUBLIC_KEY_BASE64` | Base64-encoded public key for One Login | — |
+| `ONE_LOGIN_SCOPES` | One Login scopes requested at sign-in | `openid email phone` |
+| `ONE_LOGIN_VTR` | One Login vector of trust for every journey. `Cl.Cm` requires 2FA; `Cl` doesn't. The helm chart sets `Cl` in every environment | `Cl.Cm` |
 | `SESSION_SECRET` | Secret used to sign session cookies | — |
+| `WEB_SESSION_TIMEOUT_IN_MINUTES` | Session timeout | `30` |
 | `REDIS_ENABLED` | Enable Redis for session storage | `false` |
 | `REDIS_HOST` | Redis host | `localhost` |
+| `REDIS_TLS_ENABLED` | Connect to Redis over TLS | `false` |
 | `AUDIT_ENABLED` | Enable sending HMPPS audit events | `false` |
 | `FEEDBACK_BANNER_ENABLED` | Show the feedback phase banner and inject the SmartSurvey popup script | `false` |
 | `AUDIT_SQS_REGION` | AWS region for the HMPPS audit SQS queue | `eu-west-2` |
@@ -104,11 +109,19 @@ All variables are configured in `.env` (copy from `.env.example`). The key ones 
 | `AUDIT_SERVICE_NAME` | Service name included in HMPPS audit messages | `hmpps-probation-accounts` |
 | `FEATURE_ADMIN_PREVIEW` | Master switch for the `/admin` "preview as user" feature | `false` |
 | `FEATURE_DOCUMENTS` | Master switch for the citizen Documents area and admin document upload flow (see [Documents](#documents)) | `false` |
+| `FEATURE_LICENCE` | Master switch for people on licence. When off, anyone whose sentence has licence conditions sees the "You cannot use this service" page | `false` |
+| `FEATURE_MISSED_APPOINTMENT_ALERT` | Show the missed appointment banner on the home page | `false` |
+| `FEATURE_OFFENCE_DETAILS` | Show the "Offence" row on the requirements page | `false` |
+| `FEATURE_CHATBOT` | Master switch for the chatbot. It is only live when `POP_CHATBOT_API_URL` and `POP_CHATBOT_API_KEY` are also set | `true` |
+| `FEATURE_ANALYTICS` | Send analytics events | `true` |
+| `POP_CHATBOT_API_URL` | Chatbot backend URL | — |
+| `POP_CHATBOT_API_KEY` | Chatbot backend API key | — |
 | `AUTH_CODE_CLIENT_ID` | HMPPS Auth client ID for the admin sign-in (authorization code grant) | — |
 | `AUTH_CODE_CLIENT_SECRET` | HMPPS Auth client secret for the admin sign-in | — |
 | `ADMIN_AUTHORISED_ROLES` | HMPPS Auth roles (without `ROLE_`) allowed to use admin preview | — |
 | `ADMIN_RESTRICT_BY_USERNAME` | Use the username allowlist gate instead of the role gate (see [Admin preview](#admin-preview-preview-as-user)) | `false` |
 | `ADMIN_AUTHORISED_USERNAMES` | HMPPS Auth usernames allowed to use admin preview when `ADMIN_RESTRICT_BY_USERNAME=true` | — |
+| `ADMIN_ALLOW_ALL_USERS` | Dev only: let anyone who can sign in to HMPPS Auth use the admin screens. Ignored outside dev | `false` |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | Azure Application Insights connection string; telemetry is only exported when set | — |
 | `DEBUG_TELEMETRY` | Log OpenTelemetry spans and logs to the console | `false` |
 
@@ -218,15 +231,45 @@ This app stays a pure BFF for documents: the People on Probation API owns the S3
 
 `FEATURE_DOCUMENTS` depends on the People on Probation API's document endpoints and the S3 bucket/IRSA role provisioned via `cloud-platform-environments` — not every environment has both yet, so this stays off until each environment's infrastructure is ready.
 
+## Requirement progress
+
+Each requirement's progress bar (`toRequirementView` in `server/routes/requirements.ts`) is worked out from whatever data nDelius has for it, in this order:
+
+| Data available | Progress shown |
+|---|---|
+| A required amount and a completed amount | Counted: completed ÷ required, with completed capped at required |
+| A unit of weeks, months or years, no completed amount, and start and end dates | Dates: how far today is between the start and end dates |
+| A unit of hours or days (or no unit), and a required amount but no completed amount | Counted from 0 |
+| Start and end dates only | Dates |
+| Anything else | No progress bar, details only |
+
+Hours and days (unpaid work, RAR) are counted, so a missing completed amount means none done yet. For weeks, months or years (for example Mental Health Treatment), the required amount is how long the requirement lasts and nDelius doesn't record a completed amount, so the dates are the only measure of progress. `isDurationUnit` in `server/utils/utils.ts` decides which units are lengths of time.
+
+"Time required" always shows the court-ordered amount (for example "12 months") when there is one, even when the bar is based on the dates.
+
+Dates used:
+- **Start:** `actualStartDate`, then `expectedStartDate`, then `imposedDate`.
+- **End:** `actualEndDate`, then `expectedEndDate`. A requirement that ended early shows its real end date and reaches 100% on that date.
+
+The "Progress and achievements" page (`/progress`) totals unpaid work hours and RAR days from the same values, so its figures match the requirement detail pages.
+
 ## Application pages
 
 | Path | Description |
 |---|---|
-| `/` | Home — next appointment, missed appointment, and order progress summary |
-| `/appointments` | Appointments and activities (future and past) |
-| `/progress` | Your probation progress — overall order and requirement progress bars |
+| `/` | Home — next appointment, missed appointment, and order progress summary. Redirects to `/chat` when the chatbot is live |
+| `/home` | Home, when the chatbot is live (otherwise `/` is home) |
+| `/chat` | Full-screen chatbot, when the chatbot is live |
+| `/welcome` | "Welcome to your online probation account", shown after sign-in on a first visit or after 30 days away |
+| `/appointments` | Appointments and activities (upcoming and past tabs) |
+| `/progress` | Progress and achievements — attended appointments, unpaid work hours, achieved goals and RAR days |
+| `/goals` | Goals in the sentence plan (current, future and achieved tabs) |
 | `/requirements` | Order requirements and charge details |
-| `/probation-officer` | Probation officer name and office address |
+| `/requirements/:slug` | A single requirement's progress and details (see [Requirement progress](#requirement-progress)) |
+| `/licence` | Licence sentence, progress and licence conditions, for people on licence (when `FEATURE_LICENCE` is on) |
+| `/probation-officer` | Probation officer name, and the office's phone number, address and a link to more details |
+| `/probation-agreement` | Probation agreement |
+| `/feedback` | Give feedback about probation accounts |
 | `/details` | Personal, contact, and emergency contact details |
 | `/documents` | Documents uploaded for the citizen's CRN (see [Documents](#documents)) |
 | `/documents/:id` | "Sensitive information" interruption page shown before any document is opened |
