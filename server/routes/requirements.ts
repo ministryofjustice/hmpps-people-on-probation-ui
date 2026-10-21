@@ -10,6 +10,8 @@ import {
   formatDateTimeWithDay,
   formatSentenceType,
   formatUnit,
+  hasDateArrived,
+  isDurationUnit,
   isLicenceSentence,
 } from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
@@ -97,15 +99,25 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
   const lastUpdatedAt = formatDateTimeWithDay(requirement.lastUpdatedAt)
 
   const startDate = requirement.actualStartDate ?? requirement.expectedStartDate ?? requirement.imposedDate
-  const endDate = requirement.expectedEndDate ?? requirement.actualEndDate
+  // A requirement that has ended (including early) has an actual end date; until then, use the expected one.
+  const endDate = requirement.actualEndDate ?? requirement.expectedEndDate
 
-  if (requirement.required && requirement.required > 0) {
+  const hasRequired = Boolean(requirement.required && requirement.required > 0)
+  const hasCompleted = requirement.completed !== undefined && requirement.completed !== null
+  // The court-ordered amount, e.g. "40 hours" or "12 months".
+  const requiredLength = hasRequired
+    ? `${requirement.required} ${formatUnit(requirement.unit, requirement.required)}`
+    : undefined
+
+  // Hours and days are counted, so a missing completed amount means none done yet. For weeks,
+  // months or years, `required` is how long the requirement lasts and nDelius never records a
+  // completed amount, so progress comes from the dates instead (unless one is recorded).
+  if (hasRequired && (hasCompleted || !isDurationUnit(requirement.unit))) {
     const completed = Math.min(requirement.completed ?? 0, requirement.required)
     const remaining = Math.max(requirement.required - completed, 0)
     const percentComplete = Math.round((completed / requirement.required) * 100)
     const remainingUnitLabel = formatUnit(requirement.unit, remaining)
     const completedLabel = formatUnit(requirement.unit, completed)
-    const totalUnitLabel = formatUnit(requirement.unit, requirement.required)
     return {
       label,
       slug,
@@ -120,7 +132,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       completedDuration: `${completed} ${completedLabel}`,
       startDate: formatDate(startDate) ?? startDate,
       endDate: formatDate(endDate) ?? endDate,
-      totalLength: `${requirement.required} ${totalUnitLabel}`,
+      totalLength: requiredLength,
       lastUpdatedAt,
     }
   }
@@ -134,27 +146,34 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
       startDate: fmtStart,
       endDate: fmtEnd,
     } = calculateDateProgress(startDate, endDate)
+    // An actual end date means the requirement has finished, so on that day it is complete. Date
+    // progress alone counts the end day as still to come (e.g. 97% and 1 day remaining). An
+    // expected end date of today is still the last day, so that case is left as it is.
+    const hasEnded = Boolean(requirement.actualEndDate) && hasDateArrived(requirement.actualEndDate)
     return {
       label,
       slug,
       kind,
       showCourtOrderSignpost,
-      percentComplete,
+      percentComplete: hasEnded ? 100 : percentComplete,
       completedDuration,
-      totalLength,
-      remainingDuration,
+      // The court-ordered length (e.g. "12 months") when there is one, not the span between the dates.
+      totalLength: requiredLength ?? totalLength,
+      remainingDuration: hasEnded ? '0 days' : remainingDuration,
       startDate: fmtStart,
       endDate: fmtEnd,
       lastUpdatedAt,
     }
   }
 
-  // No count and no end date (e.g. accredited programmes): nothing to measure progress against.
+  // No count and no end date (e.g. accredited programmes), or a duration with no dates: nothing to
+  // measure progress against.
   return {
     label,
     slug,
     kind,
     showCourtOrderSignpost,
+    totalLength: requiredLength,
     startDate: formatDate(startDate) ?? startDate,
     endDate: formatDate(endDate) ?? endDate,
     lastUpdatedAt,

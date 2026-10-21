@@ -104,6 +104,9 @@ export const formatRemainingDuration = (endDateStr: string): string => {
   return formatIntervalDuration(today, addDays(end, 1))
 }
 
+// True when the date is today or in the past.
+export const hasDateArrived = (dateStr: string): boolean => !isBefore(startOfDay(new Date()), parseLocalDate(dateStr))
+
 export type DateProgressResult = {
   percentComplete: number
   completedDuration: string
@@ -129,6 +132,11 @@ export function calculateDateProgress(startDateStr: string, endDateStr: string):
     endDate: formatDate(endDateStr) ?? endDateStr,
   }
 }
+
+// Units where a requirement's `required` amount is a length of time rather than something counted.
+const DURATION_UNITS = ['WEEKS', 'MONTHS', 'YEARS']
+
+export const isDurationUnit = (unit?: string): boolean => DURATION_UNITS.includes(unit?.toUpperCase() ?? '')
 
 export const formatUnit = (unit: string | undefined, amount: number): string => {
   const label = unit?.toLowerCase() || 'units'
