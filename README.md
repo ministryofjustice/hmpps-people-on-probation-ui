@@ -231,6 +231,17 @@ This app stays a pure BFF for documents: the People on Probation API owns the S3
 
 `FEATURE_DOCUMENTS` depends on the People on Probation API's document endpoints and the S3 bucket/IRSA role provisioned via `cloud-platform-environments` — not every environment has both yet, so this stays off until each environment's infrastructure is ready.
 
+## Requirement types
+
+The requirement types shown with a user-friendly label (for example "Address your mental health" for nDelius main category `P`, Mental Health Treatment) are listed in `REQUIREMENT_TYPES` in `server/utils/requirementTypes.ts`. Each entry has its label, its nDelius main category codes, whether the detail page points to the court order ("Where to find details"), and whether it has a "What this means" explanation. A code that isn't listed is shown under its nDelius description, with no explanation.
+
+- **To add a type:** add an entry to `REQUIREMENT_TYPES`.
+- **To add or change an explanation:** edit or add `server/views/partials/requirement-explanations/<kind>.njk`, which holds only the explanation's content, and set `hasExplanation: true` for that type. A test fails if a type with an explanation has no template, or a template exists for a type without one.
+
+The analytics tracking ID for each explanation is worked out from its kind, for example `requirement_detail_gps_tag_what_does_this_mean`.
+
+Separately, `server/utils/categoryCodes.ts` lists the codes behind the appointments page's "Why this might happen" guidance: tag codes (requirement and licence condition) and codes for requirements whose appointments come from other providers.
+
 ## Requirement progress
 
 Each requirement's progress bar (`toRequirementView` in `server/routes/requirements.ts`) is worked out from whatever data nDelius has for it, in this order:
