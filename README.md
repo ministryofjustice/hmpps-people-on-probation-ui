@@ -233,10 +233,28 @@ This app stays a pure BFF for documents: the People on Probation API owns the S3
 
 ## Requirement types
 
-The requirement types shown with a user-friendly label (for example "Address your mental health" for nDelius main category `P`, Mental Health Treatment) are listed in `REQUIREMENT_TYPES` in `server/utils/requirementTypes.ts`. Each entry has its label, its nDelius main category codes, whether the detail page points to the court order ("Where to find details"), and whether it has a "What this means" explanation. A code that isn't listed is shown under its nDelius description, with no explanation.
+The requirement types shown with a user-friendly label (for example "Address your mental health" for nDelius main category `P`, Mental Health Treatment) are listed in `REQUIREMENT_TYPES` in `server/utils/requirementTypes.ts`. Each entry has its label, its nDelius main category codes, whether the detail page points to the court order ("Where to find details"), whether it has a "What this means" explanation, and whether it has a "Help with this requirement" panel. A code that isn't listed is shown under its nDelius description, with no explanation or help.
+
+| Label | Codes | nDelius description | Court order link | Help |
+|---|---|---|---|---|
+| Wear a GPS tag | `RM59` | Location Monitoring (GPS Tagging) | Yes | Yes |
+| Wear an alcohol tag | `T` | Alcohol Abstinence & Electronic Monitoring (AAMR) | Yes | Yes |
+| Follow a curfew | `RM49` | Curfew (Electronic Monitored) | Yes | Yes |
+| Community payback (unpaid work) | `W` | Unpaid Work | No | Yes (Community Campus) |
+| Rehabilitation Activity Requirement (RAR) | `F` | Rehabilitation Activity Requirement (RAR) | No | No |
+| Things you are not allowed to do | `R` | Prohibited Activity | Yes | Yes |
+| Programme requirement | `RM38`, `7` | RAR/GAR Accredited Programmes; Court - Accredited Programme | No | No |
+| Address your mental health | `P` | Mental Health Treatment | No | No |
+| Address drug use | `G` | Drug Rehabilitation | No | No |
+| Address alcohol use | `H` | Alcohol Treatment | No | No |
+| Areas or places you must not enter | `X` | Exclusion | Yes | Yes |
+| Address you must live in | `3` | Residential | Yes | Yes |
+
+Every type has a "What this means" explanation. Requirements with main category code `RAR` (not `F`) are an administrative record created in MPOP and are never shown to the person (`ADMINISTRATIVE_RAR_CATEGORY_CODE` in `server/utils/categoryCodes.ts`).
 
 - **To add a type:** add an entry to `REQUIREMENT_TYPES`.
 - **To add or change an explanation:** edit or add `server/views/partials/requirement-explanations/<kind>.njk`, which holds only the explanation's content, and set `hasExplanation: true` for that type. A test fails if a type with an explanation has no template, or a template exists for a type without one.
+- **To add or change help:** edit or add `server/views/partials/requirement-help/<kind>.njk` and set `hasHelp: true` for that type. The same test applies. The panel itself is the `helpPanel` macro (`server/views/macros/helpPanel.njk`) and is always shown at the bottom of the detail page.
 
 The analytics tracking ID for each explanation is worked out from its kind, for example `requirement_detail_gps_tag_what_does_this_mean`.
 
