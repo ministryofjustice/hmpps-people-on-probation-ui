@@ -661,7 +661,7 @@ describe('GET /requirements', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('Court order')
+      expect(res.text).toContain('Court order</dt>')
       expect(res.text).toContain('href="/documents/doc-1">View your court order</a>')
       expect(peopleOnProbationService.getDocuments).toHaveBeenCalledWith('X123456')
     })
@@ -696,7 +696,7 @@ describe('GET /requirements', () => {
       expect(peopleOnProbationService.getDocuments).not.toHaveBeenCalled()
     })
 
-    it('shows the fallback plain-text signpost, without a link, when the documents feature is off', async () => {
+    it('hides the court order row when the documents feature is off', async () => {
       config.features.documents = false
       fakeDate('2025-01-01')
       peopleOnProbationService.getSentences.mockResolvedValue({
@@ -722,13 +722,13 @@ describe('GET /requirements', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('Court order')
-      expect(res.text).toContain('You can find this information in your court order')
+      expect(res.text).not.toContain('Court order</dt>')
+      expect(res.text).not.toContain('You can find this information in your court order')
       expect(res.text).not.toContain('View your court order')
       expect(peopleOnProbationService.getDocuments).not.toHaveBeenCalled()
     })
 
-    it('shows the fallback plain-text signpost, without a link, when sentence dates are missing so there is no overall order card', async () => {
+    it('hides the court order row, and its card, when there is no document and no overall order card', async () => {
       config.features.documents = true
       fakeDate('2025-01-01')
       peopleOnProbationService.getSentences.mockResolvedValue({
@@ -754,11 +754,12 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).not.toContain('Overall order')
-      expect(res.text).toContain('Court order')
-      expect(res.text).toContain('You can find this information in your court order')
+      expect(res.text).not.toContain('Court order</dt>')
+      expect(res.text).not.toContain('You can find this information in your court order')
+      expect(res.text).not.toContain('pop-summary-card--flat')
     })
 
-    it('shows the fallback plain-text signpost, without a link, when the documents API returns no matching document', async () => {
+    it('hides the court order row when the documents API returns no matching document', async () => {
       config.features.documents = true
       fakeDate('2025-01-01')
       peopleOnProbationService.getSentences.mockResolvedValue({
@@ -785,8 +786,8 @@ describe('GET /requirements', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('Court order')
-      expect(res.text).toContain('You can find this information in your court order')
+      expect(res.text).not.toContain('Court order</dt>')
+      expect(res.text).not.toContain('You can find this information in your court order')
       expect(res.text).not.toContain('View your court order')
     })
   })
