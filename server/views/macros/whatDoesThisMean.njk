@@ -1,5 +1,5 @@
 {#
-  whatDoesThisMean macro — wraps the repeated govukDetails "What does this mean?" pattern.
+  whatDoesThisMean macro — wraps the repeated govukDetails "What this means" pattern.
 
   Parameters:
     html (string, required):     The explanation content.
@@ -10,7 +10,7 @@
 
 {% macro whatDoesThisMean(params) %}
   {{ govukDetails({
-    summaryText: "What does this mean?",
+    summaryText: "What this means",
     html: params.html,
     classes: params.classes,
     attributes: { "data-tracking-id": params.trackingId }

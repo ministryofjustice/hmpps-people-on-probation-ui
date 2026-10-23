@@ -55,7 +55,7 @@ describe('GET /licence', () => {
     expect(response.text).toContain('Until 14 March 2027')
     expect(response.text).toContain('Adult Custody')
     expect(response.text).not.toContain('ORA Adult Custody')
-    expect(response.text).toContain('What does this mean?')
+    expect(response.text).toContain('What this means')
     expect(response.text).toContain('This is called being on licence.')
     expect(response.text).toContain('Sentence start date')
     expect(response.text).toContain('Sentence end date')

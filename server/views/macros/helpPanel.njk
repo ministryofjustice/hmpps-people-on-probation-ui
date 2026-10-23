@@ -1,0 +1,17 @@
+{#
+  helpPanel macro — a "Help with this requirement" panel: a blue tab heading over a light blue box.
+
+  Parameters:
+    html (string, required): The help content.
+#}
+{% macro helpPanel(params) %}
+  <section class="pop-help-panel" aria-labelledby="help-panel-heading">
+    <h2 class="pop-help-panel__heading" id="help-panel-heading">
+      <span class="pop-help-panel__icon" aria-hidden="true">i</span>
+      Help with this requirement
+    </h2>
+    <div class="pop-help-panel__body">
+      {{ params.html | safe }}
+    </div>
+  </section>
+{% endmacro %}

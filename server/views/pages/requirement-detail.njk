@@ -1,7 +1,23 @@
 {% extends "../partials/layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "../macros/whatDoesThisMean.njk" import whatDoesThisMean %}
+{% from "../macros/helpPanel.njk" import helpPanel %}
 {% from "partials/progress-bar.njk" import progressBar %}
+
+{% macro dateRows(requirement) %}
+  {% if requirement.startDate %}
+    <div class="pop-summary-card__row">
+      <dt class="pop-summary-card__key">Start date</dt>
+      <dd class="pop-summary-card__value">{{ requirement.startDate }}</dd>
+    </div>
+  {% endif %}
+  {% if requirement.endDate %}
+    <div class="pop-summary-card__row">
+      <dt class="pop-summary-card__key">End date</dt>
+      <dd class="pop-summary-card__value">{{ requirement.endDate }}</dd>
+    </div>
+  {% endif %}
+{% endmacro %}
 
 {% set pageTitle = requirement.label + " – Check your probation account – GOV.UK" %}
 {% set currentPage = "requirements" %}
@@ -15,60 +31,12 @@
   <span class="govuk-caption-l">Order requirements</span>
   <h1 class="govuk-heading-xl govuk-!-margin-bottom-2">{{ requirement.label }}</h1>
 
-  {% if requirement.kind == "gps-tag" %}
-    {% set explanationHtml %}
-      <p class="govuk-body">A GPS tag tracks your location. It checks that you:</p>
-      <ul class="govuk-list govuk-list--bullet">
-        <li>do not go into banned areas</li>
-        <li>go to your appointments</li>
-        <li>follow your curfew</li>
-      </ul>
-      <p class="govuk-body">You must keep your tag charged and you need to do this for at least 1 hour a day. You will still need to wear the tag even when it is charging.</p>
-      <p class="govuk-body">It is important to remember if you do not follow the rules about your tag, you could go back to court.</p>
-    {% endset %}
-    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_gps_tag_what_does_this_mean" }) }}
-  {% elif requirement.kind == "unpaid-work" %}
-    {% set explanationHtml %}
-      <p class="govuk-body">Community payback (unpaid work) is sometimes called community service.</p>
-      <p class="govuk-body">Jobs you might be asked to do as part of Community payback include:</p>
-      <ul class="govuk-list govuk-list--bullet">
-        <li>removing graffiti</li>
-        <li>cleaning up rubbish</li>
-        <li>helping local charities</li>
-        <li>painting local buildings</li>
-      </ul>
-      <p class="govuk-body">When deciding what job you will do, your probation officer will bear in mind things about you and your sentence that might affect where you can work and what work you can do.</p>
-      <p class="govuk-body">It is important to remember if you do not go to your Community payback or say no to taking part, you could go back to court.</p>
-    {% endset %}
-    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_unpaid_work_what_does_this_mean" }) }}
-  {% elif requirement.kind == "rar" %}
-    {% set explanationHtml %}
-      <p class="govuk-body">Rehabilitation Activity Requirements (RAR) are activities set by your probation officer that you must take part in. Your probation officer will talk to you about the goals you have which will help them decide what activities would be best for you.</p>
-      <p class="govuk-body">For example, this might mean you need to go to meetings with support workers who can help you, or do some courses to help you learn important life skills.</p>
-      <p class="govuk-body">It is important to remember that if you do not take part in Rehabilitation Activity Requirements (RAR), you could go back to court.</p>
-    {% endset %}
-    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_rar_what_does_this_mean" }) }}
-  {% elif requirement.kind == "curfew" %}
-    {% set explanationHtml %}
-      <p class="govuk-body">A curfew means you must stay at a specific address agreed with the court. You must stay there at certain times of the day and night.</p>
-      <p class="govuk-body">Your curfew is often checked with a tag. You can find out where you must stay and when in your court order.</p>
-      <p class="govuk-body">It is important to remember if you do not follow your curfew you could go back to court.</p>
-    {% endset %}
-    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_curfew_what_does_this_mean" }) }}
-  {% elif requirement.kind == "prohibited-activity" %}
-    {% set explanationHtml %}
-      <p class="govuk-body">A prohibited activity is something the court has said you are not allowed to do.</p>
-      <p class="govuk-body">What you are not allowed to do often relates to your offence.</p>
-      <p class="govuk-body">For example, the court could say you are not allowed to:</p>
-      <ul class="govuk-list govuk-list--bullet">
-        <li>contact a person</li>
-        <li>do a certain thing, like go to the pub</li>
-        <li>go to events, like a football match</li>
-      </ul>
-      <p class="govuk-body">You should check your order to find out what you are not allowed to do.</p>
-      <p class="govuk-body">If you do something you are not allowed to do, you could be returned to court.</p>
-    {% endset %}
-    {{ whatDoesThisMean({ html: explanationHtml, trackingId: "requirement_detail_prohibited_activity_what_does_this_mean" }) }}
+  {% if requirement.explanationTemplate %}
+    {% set explanationHtml %}{% include requirement.explanationTemplate %}{% endset %}
+    {{ whatDoesThisMean({
+      html: explanationHtml,
+      trackingId: "requirement_detail_" + (requirement.kind | replace("-", "_")) + "_what_does_this_mean"
+    }) }}
   {% endif %}
 
   {% if requirement.lastUpdatedAt %}
@@ -82,6 +50,7 @@
 
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
       <dl class="pop-summary-card__details">
+        {{ dateRows(requirement) }}
         <div class="pop-summary-card__row">
           <dt class="pop-summary-card__key">Days completed</dt>
           <dd class="pop-summary-card__value">{{ requirement.completedDuration }}</dd>
@@ -109,54 +78,32 @@
 
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
       <dl class="pop-summary-card__details">
-        {% if requirement.kind == "unpaid-work" and requirement.required %}
+        {{ dateRows(requirement) }}
+        {% if requirement.totalLength %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">Time required</dt>
             <dd class="pop-summary-card__value">{{ requirement.totalLength }}</dd>
           </div>
-        {% else %}
-          {% if requirement.startDate %}
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">Start date and time</dt>
-              <dd class="pop-summary-card__value">{{ requirement.startDate }}</dd>
-            </div>
-          {% endif %}
-          {% if requirement.endDate %}
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">End date and time</dt>
-              <dd class="pop-summary-card__value">{{ requirement.endDate }}</dd>
-            </div>
-          {% endif %}
-          {% if requirement.totalLength %}
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">Time required</dt>
-              <dd class="pop-summary-card__value">{{ requirement.totalLength }}</dd>
-            </div>
-          {% endif %}
-          {% if requirement.showCourtOrderSignpost %}
-            <div class="pop-summary-card__row">
-              <dt class="pop-summary-card__key">Where to find details</dt>
-              <dd class="pop-summary-card__value">
-                {% if courtOrderDocumentId %}
-                  <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
-                {% else %}
-                  You can find this information in your court order
-                {% endif %}
-              </dd>
-            </div>
-          {% endif %}
+        {% endif %}
+        {% if requirement.showCourtOrderSignpost %}
+          <div class="pop-summary-card__row">
+            <dt class="pop-summary-card__key">Where to find details</dt>
+            <dd class="pop-summary-card__value">
+              {% if courtOrderDocumentId %}
+                <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
+              {% else %}
+                You can find this information in your court order
+              {% endif %}
+            </dd>
+          </div>
         {% endif %}
       </dl>
     </div>
   {% endif %}
 
-  {% if requirement.kind == "unpaid-work" %}
-    <div class="govuk-inset-text guidance-panel">
-      <p class="govuk-body govuk-!-margin-bottom-0">
-        You can complete up to 30% of your community payback hours online through
-        <a class="govuk-link govuk-link--no-visited-state" href="https://www.communitycampus.online/#/sign-in" target="_blank" rel="noopener noreferrer" data-tracking-id="community_campus_link">Community Campus<span class="govuk-visually-hidden"> (opens in new tab)</span></a>
-      </p>
-    </div>
+  {% if requirement.helpTemplate %}
+    {% set helpHtml %}{% include requirement.helpTemplate %}{% endset %}
+    {{ helpPanel({ html: helpHtml }) }}
   {% endif %}
 
 {% endblock %}

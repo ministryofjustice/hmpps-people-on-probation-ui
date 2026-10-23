@@ -16,14 +16,14 @@ import {
 } from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
 import { findDocumentIdByType } from '../utils/documentTypes'
+import { ADMINISTRATIVE_RAR_CATEGORY_CODE, TAG_CATEGORY_CODES } from '../utils/categoryCodes'
 import {
-  GPS_TAG_CATEGORY_CODE,
-  CURFEW_CATEGORY_CODE,
-  UNPAID_WORK_CATEGORY_CODE,
-  RAR_CATEGORY_CODE,
-  PROHIBITED_ACTIVITY_CATEGORY_CODE,
-  TAG_CATEGORY_CODES,
-} from '../utils/categoryCodes'
+  explanationTemplate,
+  getRequirementType,
+  helpTemplate,
+  TAG_REQUIREMENT_KINDS,
+  type RequirementKind as KnownRequirementKind,
+} from '../utils/requirementTypes'
 
 type OverallOrderView = {
   charge?: string
@@ -36,13 +36,15 @@ type OverallOrderView = {
   percentComplete: number
 }
 
-export type RequirementKind = 'unpaid-work' | 'rar' | 'gps-tag' | 'curfew' | 'prohibited-activity' | 'other'
+export type RequirementKind = KnownRequirementKind | 'other'
 
 export type RequirementView = {
   label: string
   slug: string
   kind: RequirementKind
   showCourtOrderSignpost: boolean
+  explanationTemplate?: string
+  helpTemplate?: string
   percentComplete?: number
   completedDuration?: string
   required?: number
@@ -64,38 +66,23 @@ export function slugify(label: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-const REQUIREMENT_KIND_LABELS: Record<Exclude<RequirementKind, 'other'>, string> = {
-  'unpaid-work': 'Community payback (unpaid work)',
-  rar: 'Rehabilitation Activity Requirement (RAR)',
-  'gps-tag': 'GPS tag',
-  curfew: 'Curfew',
-  'prohibited-activity': 'Prohibited Activity',
-}
-
-function classifyRequirement(requirement: RequirementResponse): RequirementKind {
-  switch (requirement.mainCategory?.code) {
-    case UNPAID_WORK_CATEGORY_CODE:
-      return 'unpaid-work'
-    case RAR_CATEGORY_CODE:
-      return 'rar'
-    case GPS_TAG_CATEGORY_CODE:
-      return 'gps-tag'
-    case CURFEW_CATEGORY_CODE:
-      return 'curfew'
-    case PROHIBITED_ACTIVITY_CATEGORY_CODE:
-      return 'prohibited-activity'
-    default:
-      return 'other'
-  }
-}
-
 export function toRequirementView(requirement: RequirementResponse): RequirementView {
-  const kind = classifyRequirement(requirement)
-  const defaultLabel = requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
-  const label = kind === 'other' ? defaultLabel : REQUIREMENT_KIND_LABELS[kind]
+  const code = requirement.mainCategory?.code
+  const type = getRequirementType(code)
+  const kind: RequirementKind = type?.kind ?? 'other'
+  const label =
+    type?.label || requirement.mainCategory?.description || requirement.subCategory?.description || 'Requirement'
   const slug = slugify(label)
-  const showCourtOrderSignpost =
-    TAG_CATEGORY_CODES.includes(requirement.mainCategory?.code) || kind === 'prohibited-activity'
+  // Tag codes without a type of their own still point to the court order.
+  const showCourtOrderSignpost = type ? type.showCourtOrderSignpost : TAG_CATEGORY_CODES.includes(code)
+  const common = {
+    label,
+    slug,
+    kind,
+    showCourtOrderSignpost,
+    explanationTemplate: explanationTemplate(type),
+    helpTemplate: helpTemplate(type),
+  }
   const lastUpdatedAt = formatDateTimeWithDay(requirement.lastUpdatedAt)
 
   const startDate = requirement.actualStartDate ?? requirement.expectedStartDate ?? requirement.imposedDate
@@ -119,10 +106,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     const remainingUnitLabel = formatUnit(requirement.unit, remaining)
     const completedLabel = formatUnit(requirement.unit, completed)
     return {
-      label,
-      slug,
-      kind,
-      showCourtOrderSignpost,
+      ...common,
       required: requirement.required,
       completed,
       unit: requirement.unit,
@@ -151,10 +135,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     // expected end date of today is still the last day, so that case is left as it is.
     const hasEnded = Boolean(requirement.actualEndDate) && hasDateArrived(requirement.actualEndDate)
     return {
-      label,
-      slug,
-      kind,
-      showCourtOrderSignpost,
+      ...common,
       percentComplete: hasEnded ? 100 : percentComplete,
       completedDuration,
       // The court-ordered length (e.g. "12 months") when there is one, not the span between the dates.
@@ -169,10 +150,7 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
   // No count and no end date (e.g. accredited programmes), or a duration with no dates: nothing to
   // measure progress against.
   return {
-    label,
-    slug,
-    kind,
-    showCourtOrderSignpost,
+    ...common,
     totalLength: requiredLength,
     startDate: formatDate(startDate) ?? startDate,
     endDate: formatDate(endDate) ?? endDate,
@@ -180,9 +158,15 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
   }
 }
 
+// MPOP creates an administrative 'RAR' requirement (see ADMINISTRATIVE_RAR_CATEGORY_CODE) that
+// the person doesn't need to know about, so it's left out of everything shown to them.
+export const shownRequirements = (requirements: RequirementResponse[] = []): RequirementResponse[] =>
+  requirements.filter(requirement => requirement.mainCategory?.code !== ADMINISTRATIVE_RAR_CATEGORY_CODE)
+
 // Requirements sharing a label (e.g. Unpaid Work "Regular" and "Additional Hours") get the
 // sub-category appended so each has its own card and detail page.
-export function toRequirementViews(requirements: RequirementResponse[] = []): RequirementView[] {
+export function toRequirementViews(allRequirements: RequirementResponse[] = []): RequirementView[] {
+  const requirements = shownRequirements(allRequirements)
   const views = requirements.map(toRequirementView)
   const labelCounts = views.reduce<Record<string, number>>(
     (counts, view) => ({ ...counts, [view.label]: (counts[view.label] ?? 0) + 1 }),
@@ -237,7 +221,7 @@ export default function requirementsRoutes(services: Services): Router {
 
       const requirements = toRequirementViews(sentence?.requirements)
 
-      const mostRecentUpdate = (sentence?.requirements ?? [])
+      const mostRecentUpdate = shownRequirements(sentence?.requirements)
         .map(r => r.lastUpdatedAt)
         .filter(Boolean)
         .sort()
@@ -270,16 +254,21 @@ export default function requirementsRoutes(services: Services): Router {
       const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
       const sentence = sentenceProgress.sentences[0]
 
-      const requirement = toRequirementViews(sentence?.requirements).find(r => r.slug === req.params.slug)
+      const requirements = toRequirementViews(sentence?.requirements)
+      const requirement = requirements.find(r => r.slug === req.params.slug)
 
       if (!requirement) return next()
+
+      // The curfew explanation links to the rules for wearing a tag, when the person also has a tag
+      // requirement: the first one found in TAG_REQUIREMENT_KINDS order (GPS first).
+      const tagSlug = TAG_REQUIREMENT_KINDS.map(kind => requirements.find(r => r.kind === kind)).find(Boolean)?.slug
 
       let courtOrderDocumentId: string | undefined
       if (config.features.documents && requirement.showCourtOrderSignpost) {
         courtOrderDocumentId = await findDocumentIdByType(services, crn, 'COURT_ORDER')
       }
 
-      return res.render('pages/requirement-detail', { requirement, courtOrderDocumentId })
+      return res.render('pages/requirement-detail', { requirement, courtOrderDocumentId, tagSlug })
     } catch (error) {
       return next(error)
     }

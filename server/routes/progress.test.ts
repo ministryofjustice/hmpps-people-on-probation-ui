@@ -278,6 +278,19 @@ describe('requirementProgress', () => {
     })
   })
 
+  it('ignores the administrative RAR requirement from MPOP', () => {
+    const sentence: SentenceResponse = {
+      requirements: [{ mainCategory: { code: 'RAR', description: 'Rehabilitation Activity Requirement' } }, rar()],
+      licenceConditions: [],
+    }
+
+    expect(requirementProgress(sentence, 'rar')).toEqual({
+      completed: 9,
+      unit: 'DAYS',
+      href: '/requirements/rehabilitation-activity-requirement-rar',
+    })
+  })
+
   it('is undefined when there is no sentence or no matching requirement', () => {
     expect(requirementProgress(undefined, 'rar')).toBeUndefined()
     expect(requirementProgress({ requirements: [unpaidWork()], licenceConditions: [] }, 'rar')).toBeUndefined()
