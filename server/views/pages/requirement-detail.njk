@@ -45,7 +45,8 @@
     </div>
   {% endif %}
 
-  {% if requirement.kind == "rar" and requirement.percentComplete is defined %}
+  {# RAR's days block needs a day count; a RAR measured by dates uses the general progress section. #}
+  {% if requirement.kind == "rar" and requirement.remaining is defined %}
     <h2 class="govuk-heading-l pop-requirements__section-heading">Details</h2>
 
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">

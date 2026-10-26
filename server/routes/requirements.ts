@@ -11,7 +11,7 @@ import {
   formatSentenceType,
   formatUnit,
   hasDateArrived,
-  isDurationUnit,
+  estimateEndDate,
   isLicenceSentence,
 } from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
@@ -96,10 +96,14 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     ? `${requirement.required} ${formatUnit(requirement.unit, requirement.required)}`
     : undefined
 
-  // Hours and days are counted, so a missing completed amount means none done yet. For weeks,
-  // months or years, `required` is how long the requirement lasts and nDelius never records a
-  // completed amount, so progress comes from the dates instead (unless one is recorded).
-  if (hasRequired && (hasCompleted || !isDurationUnit(requirement.unit))) {
+  // Progress, using the first of these that the data allows:
+  // 1. A completed amount is recorded: count it against the required amount.
+  // 2. Unpaid work and RAR (countsProgress) are always counted: no completed amount means none done yet.
+  // 3. Start and end dates: how far today is between them.
+  // 4. A required length of time (days, weeks, months, years) and an actual start date, but no end
+  //    date: an estimated end (actual start + required). See below.
+  // 5. Otherwise: no progress, just the details.
+  if (hasRequired && (hasCompleted || type?.countsProgress)) {
     const completed = Math.min(requirement.completed ?? 0, requirement.required)
     const remaining = Math.max(requirement.required - completed, 0)
     const percentComplete = Math.round((completed / requirement.required) * 100)
@@ -147,8 +151,33 @@ export function toRequirementView(requirement: RequirementResponse): Requirement
     }
   }
 
-  // No count and no end date (e.g. accredited programmes), or a duration with no dates: nothing to
-  // measure progress against.
+  // An estimate only: it assumes the requirement runs without a break from its actual start, so it
+  // isn't shown as the end date, and it never reaches 100% - only nDelius (an actual end date) can say
+  // a requirement has ended. Not used without an actual start, as it may not have begun yet.
+  const estimatedEndDate =
+    hasRequired && requirement.actualStartDate
+      ? estimateEndDate(requirement.actualStartDate, requirement.required, requirement.unit)
+      : undefined
+  if (estimatedEndDate) {
+    const {
+      percentComplete,
+      completedDuration,
+      remainingDuration,
+      startDate: fmtStart,
+    } = calculateDateProgress(requirement.actualStartDate, estimatedEndDate)
+    return {
+      ...common,
+      percentComplete: Math.min(percentComplete, 99),
+      completedDuration,
+      totalLength: requiredLength,
+      // Past the estimated end ('0 days'), there's nothing meaningful to say is remaining.
+      remainingDuration: remainingDuration === '0 days' ? undefined : remainingDuration,
+      startDate: fmtStart,
+      lastUpdatedAt,
+    }
+  }
+
+  // No count and no dates to measure against (e.g. accredited programmes): just the details.
   return {
     ...common,
     totalLength: requiredLength,

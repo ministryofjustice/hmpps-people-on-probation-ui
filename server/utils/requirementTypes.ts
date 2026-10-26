@@ -38,6 +38,9 @@ export type RequirementType = {
   showCourtOrderSignpost: boolean
   hasExplanation: boolean
   hasHelp?: boolean
+  // Progress is counted (hours or days done one at a time), so a missing completed amount means none
+  // done yet, rather than falling back to the dates. See toRequirementView.
+  countsProgress?: boolean
 }
 
 export const REQUIREMENT_TYPES: RequirementType[] = [
@@ -73,6 +76,7 @@ export const REQUIREMENT_TYPES: RequirementType[] = [
     showCourtOrderSignpost: false,
     hasExplanation: true,
     hasHelp: true,
+    countsProgress: true,
   },
   {
     kind: 'rar',
@@ -80,6 +84,7 @@ export const REQUIREMENT_TYPES: RequirementType[] = [
     codes: [RAR_CATEGORY_CODE],
     showCourtOrderSignpost: false,
     hasExplanation: true,
+    countsProgress: true,
   },
   {
     kind: 'prohibited-activity',

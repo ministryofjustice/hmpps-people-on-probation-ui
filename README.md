@@ -262,21 +262,30 @@ Separately, `server/utils/categoryCodes.ts` lists the codes behind the appointme
 
 ## Requirement progress
 
-Each requirement's progress bar (`toRequirementView` in `server/routes/requirements.ts`) is worked out from whatever data nDelius has for it, in this order:
+Each requirement's progress bar (`toRequirementView` in `server/routes/requirements.ts`) is worked out from whatever data nDelius has for it, using the first rule that applies:
 
-| Data available | Progress shown |
-|---|---|
-| A required amount and a completed amount | Counted: completed ÷ required, with completed capped at required |
-| A unit of weeks, months or years, no completed amount, and start and end dates | Dates: how far today is between the start and end dates |
-| A unit of hours or days (or no unit), and a required amount but no completed amount | Counted from 0 |
-| Start and end dates only | Dates |
-| Anything else | No progress bar, details only |
+| # | Data available | Progress shown |
+|---|---|---|
+| 1 | A required amount and a completed amount | Counted: completed ÷ required, with completed capped at required |
+| 2 | Unpaid work or RAR, with a required amount but no completed amount | Counted from 0 |
+| 3 | Start and end dates | Dates: how far today is between the start and end dates |
+| 4 | A required length of time (days, weeks, months or years) and an actual start date, but no end date | Estimated: dates up to an estimated end (actual start + required), never above 99% |
+| 5 | Anything else | No progress bar, details only |
 
-Hours and days (unpaid work, RAR) are counted, so a missing completed amount means none done yet. For weeks, months or years (for example Mental Health Treatment), the required amount is how long the requirement lasts and nDelius doesn't record a completed amount, so the dates are the only measure of progress. `isDurationUnit` in `server/utils/utils.ts` decides which units are lengths of time.
+Unpaid work and RAR are done an hour or a day at a time, so a missing completed amount means none done yet (`countsProgress` in `server/utils/requirementTypes.ts`). For every other type, such as a tag worn for 120 days or a 12-month mental health requirement, the required amount is how long the requirement lasts, so without a completed amount the dates are used, whatever the unit.
+
+The estimate (rule 4) assumes the requirement runs without a break from its actual start, so:
+- it is only used with an actual start date, not an expected or imposed one, as the requirement may not have begun
+- the estimated end isn't shown as the end date
+- it stops at 99%, and hides the remaining time once the estimated end has passed, because only nDelius (an actual end date) can say a requirement has ended
+
+`estimateEndDate` in `server/utils/utils.ts` works out the estimated end, counting the start day: 120 days from 11 February ends on 10 June. Hours aren't a length of time, so they're never estimated.
+
+RAR's "Days completed" and "Maximum days on order" block is used only when RAR has a day count. A RAR measured by dates uses the general progress section.
 
 "Time required" always shows the court-ordered amount (for example "12 months") when there is one, even when the bar is based on the dates.
 
-Dates used:
+Dates used (rule 3):
 - **Start:** `actualStartDate`, then `expectedStartDate`, then `imposedDate`.
 - **End:** `actualEndDate`, then `expectedEndDate`. A requirement that ended early shows its real end date and reaches 100% on that date.
 
