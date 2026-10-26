@@ -7,6 +7,9 @@ import {
   isBefore,
   isAfter,
   addDays,
+  add,
+  subDays,
+  type Duration,
   differenceInDays,
   intervalToDuration,
 } from 'date-fns'
@@ -133,10 +136,16 @@ export function calculateDateProgress(startDateStr: string, endDateStr: string):
   }
 }
 
-// Units where a requirement's `required` amount is a length of time rather than something counted.
-const DURATION_UNITS = ['WEEKS', 'MONTHS', 'YEARS']
+// Units in which a requirement's `required` amount is a length of time, and how to add one to a date.
+const TIME_UNITS: Record<string, keyof Duration> = { DAYS: 'days', WEEKS: 'weeks', MONTHS: 'months', YEARS: 'years' }
 
-export const isDurationUnit = (unit?: string): boolean => DURATION_UNITS.includes(unit?.toUpperCase() ?? '')
+// The last day of a requirement that runs for `amount` units from its start, counting the start day:
+// 120 days from 11 February ends on 10 June. Undefined when the unit isn't a length of time (e.g. hours).
+export const estimateEndDate = (startDateStr: string, amount: number, unit?: string): string | undefined => {
+  const durationKey = TIME_UNITS[unit?.toUpperCase() ?? '']
+  if (!durationKey) return undefined
+  return format(subDays(add(parseLocalDate(startDateStr), { [durationKey]: amount }), 1), 'yyyy-MM-dd')
+}
 
 export const formatUnit = (unit: string | undefined, amount: number): string => {
   const label = unit?.toLowerCase() || 'units'

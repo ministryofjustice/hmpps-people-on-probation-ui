@@ -1785,3 +1785,162 @@ describe('administrative RAR requirement from MPOP', () => {
       .expect(404)
   })
 })
+
+describe('progress rules', () => {
+  beforeEach(() => {
+    fakeDate('2026-07-01T12:00:00Z')
+  })
+
+  const alcoholTag = (overrides: Partial<RequirementResponse> = {}): RequirementResponse => ({
+    mainCategory: { code: 'T', description: 'Alcohol Abstinence & Electronic Monitoring (AAMR)' },
+    required: 120,
+    unit: 'DAYS',
+    ...overrides,
+  })
+
+  it('uses the dates when there is no completed amount, whatever the unit (an ended alcohol tag in days)', () => {
+    const view = toRequirementView(
+      alcoholTag({
+        imposedDate: '2026-02-11',
+        expectedStartDate: '2026-02-11',
+        expectedEndDate: '2026-06-10',
+        actualStartDate: '2026-02-11',
+        actualEndDate: '2026-06-10',
+      }),
+    )
+
+    expect(view.percentComplete).toBe(100)
+    expect(view.remainingDuration).toBe('0 days')
+    expect(view.remaining).toBeUndefined()
+    expect(view.totalLength).toBe('120 days')
+  })
+
+  it('counts a completed amount when one is recorded, whatever the type', () => {
+    const view = toRequirementView(
+      alcoholTag({ completed: 30, actualStartDate: '2026-02-11', expectedEndDate: '2026-06-10' }),
+    )
+
+    expect(view.percentComplete).toBe(25)
+    expect(view.remaining).toBe(90)
+  })
+
+  it('always counts unpaid work and RAR, treating no completed amount as none done', () => {
+    const dates = { actualStartDate: '2026-01-01', expectedEndDate: '2026-12-31' }
+    const unpaidWork = toRequirementView({
+      mainCategory: { code: 'W', description: 'Unpaid Work' },
+      required: 40,
+      unit: 'HOURS',
+      ...dates,
+    })
+    const rar = toRequirementView({
+      mainCategory: { code: 'F', description: 'RAR' },
+      required: 20,
+      unit: 'DAYS',
+      ...dates,
+    })
+
+    expect(unpaidWork.percentComplete).toBe(0)
+    expect(unpaidWork.remaining).toBe(40)
+    expect(rar.percentComplete).toBe(0)
+    expect(rar.remaining).toBe(20)
+  })
+
+  describe('estimated end from actual start and required length', () => {
+    it('estimates progress when there is an actual start but no end date', () => {
+      // 60 days from 1 June ends on 30 July; 1 July is day 31 of 60.
+      const view = toRequirementView(alcoholTag({ required: 60, actualStartDate: '2026-06-01' }))
+
+      expect(view.percentComplete).toBe(50)
+      expect(view.remainingDuration).toBeDefined()
+      expect(view.startDate).toBe('1 June 2026')
+      expect(view.endDate).toBeUndefined()
+      expect(view.totalLength).toBe('60 days')
+    })
+
+    it('stops at 99% past the estimated end, with no remaining time, as only nDelius can say it has ended', () => {
+      const view = toRequirementView(alcoholTag({ required: 30, actualStartDate: '2026-01-01' }))
+
+      expect(view.percentComplete).toBe(99)
+      expect(view.remainingDuration).toBeUndefined()
+      expect(view.endDate).toBeUndefined()
+    })
+
+    it('works for months', () => {
+      const view = toRequirementView({
+        mainCategory: { code: 'P', description: 'Mental Health Treatment' },
+        required: 12,
+        unit: 'MONTHS',
+        actualStartDate: '2026-01-01',
+      })
+
+      expect(view.percentComplete).toBe(50)
+      expect(view.totalLength).toBe('12 months')
+    })
+
+    it('is not used with only an expected start date', () => {
+      const view = toRequirementView(alcoholTag({ expectedStartDate: '2026-06-01', imposedDate: '2026-05-01' }))
+
+      expect(view.percentComplete).toBeUndefined()
+      expect(view.totalLength).toBe('120 days')
+    })
+
+    it('is not used for hours, which are not a length of time', () => {
+      const view = toRequirementView({
+        mainCategory: { code: '7', description: 'Court - Accredited Programme' },
+        required: 30,
+        unit: 'HOURS',
+        actualStartDate: '2026-06-01',
+      })
+
+      expect(view.percentComplete).toBeUndefined()
+    })
+  })
+
+  it('shows a RAR measured by dates in the general progress section, not the days block', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [
+            {
+              mainCategory: { code: 'F', description: 'RAR' },
+              actualStartDate: '2026-01-01',
+              expectedEndDate: '2026-12-31',
+            },
+          ],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/rehabilitation-activity-requirement-rar')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('role="progressbar"')
+    expect(res.text).not.toContain('Days completed')
+  })
+
+  it('shows an estimated progress bar without an end date row', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          requirements: [alcoholTag({ required: 60, actualStartDate: '2026-06-01' })],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements/wear-an-alcohol-tag')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('role="progressbar"')
+    expect(res.text).toContain('>Start date<')
+    expect(res.text).not.toContain('>End date<')
+    expect(res.text).toMatch(/>Time required<\/dt>\s*<dd class="pop-summary-card__value">60 days/)
+  })
+})

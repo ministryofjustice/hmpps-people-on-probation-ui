@@ -11,7 +11,7 @@ import {
   formatIntervalDuration,
   formatUnit,
   hasDateArrived,
-  isDurationUnit,
+  estimateEndDate,
   formatAddress,
   formatMapUrl,
   formatPersonName,
@@ -236,17 +236,21 @@ describe('hasDateArrived', () => {
   })
 })
 
-describe('isDurationUnit', () => {
+describe('estimateEndDate', () => {
   it.each([
-    ['WEEKS', true],
-    ['MONTHS', true],
-    ['YEARS', true],
-    ['months', true],
-    ['HOURS', false],
-    ['DAYS', false],
-    [undefined, false],
-  ])('%s → %s', (unit: string | undefined, expected: boolean) => {
-    expect(isDurationUnit(unit)).toBe(expected)
+    ['2026-02-11', 120, 'DAYS', '2026-06-10'],
+    ['2026-02-11', 1, 'DAYS', '2026-02-11'],
+    ['2026-01-01', 2, 'WEEKS', '2026-01-14'],
+    ['2026-01-15', 12, 'MONTHS', '2027-01-14'],
+    ['2026-01-31', 1, 'MONTHS', '2026-02-27'],
+    ['2026-03-01', 1, 'YEARS', '2027-02-28'],
+    ['2026-02-11', 120, 'days', '2026-06-10'],
+  ])('%s + %s %s ends on %s', (start: string, amount: number, unit: string, expected: string) => {
+    expect(estimateEndDate(start, amount, unit)).toEqual(expected)
+  })
+
+  it.each([['HOURS'], [undefined], ['UNKNOWN']])('is undefined for unit %p, which is not a length of time', unit => {
+    expect(estimateEndDate('2026-02-11', 120, unit)).toBeUndefined()
   })
 })
 
