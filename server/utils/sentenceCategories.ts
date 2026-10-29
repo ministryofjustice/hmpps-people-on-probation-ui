@@ -79,7 +79,10 @@ const DISPOSAL_TYPES_BY_CATEGORY: Record<SentenceCategory, DisposalType[]> = {
   ],
   // Other sentences served in the community, such as youth rehabilitation, referral and parenting
   // orders, legacy orders, and orders from other jurisdictions. They're distinct order types, so
-  // the community order explanation doesn't apply, and they have none of their own yet.
+  // the community order explanation doesn't apply. Until there is content for them (being confirmed
+  // with the content team), this category isn't in CATEGORIES_WITH_EXPLANATION and they get no
+  // explanation, the same as an unknown code. It's kept as a category so that adding content later
+  // only needs a template and an entry in CATEGORIES_WITH_EXPLANATION, not re-listing the codes.
   'other-community-sentence': [
     ['204', 'CJA - Youth Rehabilitation Order'],
     ['205', 'Community Rehabilitation Order'],
