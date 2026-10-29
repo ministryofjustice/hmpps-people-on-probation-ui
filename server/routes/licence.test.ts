@@ -12,7 +12,7 @@ const licenceCondition = { mainCategory: { code: 'NLC8', description: 'Standard 
 
 const licenceSentence = (overrides: Partial<SentenceResponse> = {}): SentenceResponse => ({
   type: 'ORA Adult Custody (not PSS)',
-  disposalCode: '327',
+  typeCode: '327',
   startDate: '2022-01-15',
   expectedEndDate: '2027-03-14',
   requirements: [],
@@ -142,8 +142,8 @@ describe('GET /licence', () => {
   })
 
   describe('sentence type explanation', () => {
-    const renderLicence = async (disposalCode?: string) => {
-      peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence({ disposalCode })] })
+    const renderLicence = async (typeCode?: string) => {
+      peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence({ typeCode })] })
       return request(app)
         .get('/licence')
         .set('Cookie', await createAppSessionCookie('X123456'))
@@ -155,8 +155,8 @@ describe('GET /licence', () => {
       ['324', 'The court also added some additional time you need to serve on licence.'],
       ['308', 'You have been released from prison into the community.'],
       ['245', 'Your sentence includes some additional time you need to serve on licence'],
-    ])('shows the explanation for disposal code %s', async (disposalCode, expectedText) => {
-      const response = await renderLicence(disposalCode)
+    ])('shows the explanation for disposal code %s', async (typeCode, expectedText) => {
+      const response = await renderLicence(typeCode)
 
       expect(response.text).toContain('data-tracking-id="licence_sentence_type_what_does_this_mean"')
       expect(response.text).toContain(expectedText)
@@ -167,8 +167,8 @@ describe('GET /licence', () => {
       ['324', true],
       ['245', true],
       ['308', false],
-    ])('mentions Final Third for disposal code %s: %s', async (disposalCode, mentionsFinalThird) => {
-      const response = await renderLicence(disposalCode)
+    ])('mentions Final Third for disposal code %s: %s', async (typeCode, mentionsFinalThird) => {
+      const response = await renderLicence(typeCode)
 
       expect(response.text.includes('Final Third')).toBe(mentionsFinalThird)
     })
@@ -177,8 +177,8 @@ describe('GET /licence', () => {
       ['an uncategorised disposal code', '406'],
       ['a category without an explanation', '340'],
       ['no disposal code', undefined],
-    ])('shows the sentence type without an explanation for %s', async (_, disposalCode) => {
-      const response = await renderLicence(disposalCode)
+    ])('shows the sentence type without an explanation for %s', async (_, typeCode) => {
+      const response = await renderLicence(typeCode)
 
       expect(response.text).toContain('Sentence type')
       expect(response.text).not.toContain('licence_sentence_type_what_does_this_mean')

@@ -126,10 +126,10 @@ const CATEGORY_BY_CODE = new Map<string, SentenceCategory>(
   ),
 )
 
-export const getSentenceCategory = (disposalCode?: string): SentenceCategory | undefined =>
-  disposalCode ? CATEGORY_BY_CODE.get(disposalCode.trim().toUpperCase()) : undefined
+export const getSentenceCategory = (typeCode?: string): SentenceCategory | undefined =>
+  typeCode ? CATEGORY_BY_CODE.get(typeCode.trim().toUpperCase()) : undefined
 
-// Categories with a "What does this mean?" explanation, each in
+// Categories with a "What this means" explanation, each in
 // views/partials/sentence-type-explanations/<category>.njk. Add a category here once its
 // template exists.
 const CATEGORIES_WITH_EXPLANATION: SentenceCategory[] = [
@@ -139,8 +139,8 @@ const CATEGORIES_WITH_EXPLANATION: SentenceCategory[] = [
   'special-custodial',
 ]
 
-export const getSentenceTypeExplanationTemplate = (disposalCode?: string): string | undefined => {
-  const category = getSentenceCategory(disposalCode)
+export const getSentenceTypeExplanationTemplate = (typeCode?: string): string | undefined => {
+  const category = getSentenceCategory(typeCode)
   return category && CATEGORIES_WITH_EXPLANATION.includes(category)
     ? `partials/sentence-type-explanations/${category}.njk`
     : undefined

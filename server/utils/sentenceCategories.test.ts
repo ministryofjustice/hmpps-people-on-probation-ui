@@ -8,16 +8,16 @@ describe('getSentenceCategory', () => {
     ['245', 'special-custodial'],
     ['340', 'community-order'],
     ['330', 'suspended-sentence-order'],
-  ])('categorises disposal code %s as %s', (disposalCode, expected) => {
-    expect(getSentenceCategory(disposalCode)).toEqual(expected)
+  ])('categorises disposal code %s as %s', (typeCode, expected) => {
+    expect(getSentenceCategory(typeCode)).toEqual(expected)
   })
 
   it('ignores case and surrounding whitespace', () => {
     expect(getSentenceCategory(' ni1 ')).toEqual('life')
   })
 
-  it.each([undefined, '', '406', 'UNKNOWN'])('returns undefined for %p', disposalCode => {
-    expect(getSentenceCategory(disposalCode)).toBeUndefined()
+  it.each([undefined, '', '406', 'UNKNOWN'])('returns undefined for %p', typeCode => {
+    expect(getSentenceCategory(typeCode)).toBeUndefined()
   })
 })
 
