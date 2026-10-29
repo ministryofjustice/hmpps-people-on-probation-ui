@@ -175,6 +175,7 @@ describe('GET /licence', () => {
 
     it.each([
       ['an uncategorised disposal code', '406'],
+      ['OU22, which covers both determinate and indeterminate detention', 'OU22'],
       ['a category without an explanation', '340'],
       ['no disposal code', undefined],
     ])('shows the sentence type without an explanation for %s', async (_, typeCode) => {

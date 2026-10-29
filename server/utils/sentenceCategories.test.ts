@@ -12,6 +12,15 @@ describe('getSentenceCategory', () => {
     expect(getSentenceCategory(typeCode)).toEqual(expected)
   })
 
+  it('categorises OU23 (s.53(2) or s.250 detention) as standard determinate', () => {
+    expect(getSentenceCategory('OU23')).toEqual('standard-determinate')
+  })
+
+  it('leaves OU22 uncategorised, as it covers both s.53(1) (indeterminate) and s.250 (determinate) detention', () => {
+    expect(getSentenceCategory('OU22')).toBeUndefined()
+    expect(getSentenceTypeExplanationTemplate('OU22', 'licence')).toBeUndefined()
+  })
+
   it('ignores case and surrounding whitespace', () => {
     expect(getSentenceCategory(' ni1 ')).toEqual('life')
   })

@@ -45,7 +45,9 @@ const DISPOSAL_TYPES_BY_CATEGORY: Record<SentenceCategory, DisposalType[]> = {
     ['OU14', 'Borstal'],
     ['OU15', 'Youth Custody (migration)'],
     ['OU21', 'Adult Custody (Migration)'],
-    ['OU22', 'Detained S53(1) or S250 (s.91)'],
+    // OU22 "Detained S53(1) or S250 (s.91)" is deliberately left out: s.53(1) is detention at His
+    // Majesty's pleasure (indeterminate) and s.250/s.91 is determinate, and the code alone can't tell
+    // them apart, so it gets no explanation rather than possibly the wrong one.
     ['OU23', 'Detained S53(2) or S250 (s.91)'],
   ],
   'extended-determinate': [
