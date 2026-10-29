@@ -12,6 +12,10 @@
     // sprintf-js DoS via unbounded precision — no patched release exists.
     // devDependencies only: ts-jest -> babel-plugin-istanbul -> js-yaml@3 ->
     // argparse@1 -> sprintf-js@1.0.3. Never handles user input.
-    "GHSA-hp3w-g68c-fv3c"
+    "GHSA-hp3w-g68c-fv3c",
+    // deepmerge prototype poisoning — no patched release exists (all <=4.3.1).
+    // devDependencies only: jest -> jest-config -> deepmerge. Only merges jest
+    // config we author; never handles user input.
+    "GHSA-gcqx-w48m-w2h4"
   ]
 }

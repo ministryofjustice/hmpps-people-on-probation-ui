@@ -47,6 +47,12 @@ RUN npm prune --no-audit --no-fund --omit=dev
 # Stage: copy production assets and dependencies
 FROM base
 
+# npm and corepack are only needed to build. Removing them from the runtime image
+# drops their bundled dependencies (undici, picomatch, http-cache-semantics), which
+# container scans flag and which often have no patched npm release.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
 COPY --from=build --chown=appuser:appgroup \
         /app/package.json \
         /app/package-lock.json \
@@ -62,4 +68,4 @@ EXPOSE 3000
 ENV NODE_ENV='production'
 USER 2000
 
-CMD [ "npm", "start" ]
+CMD [ "node", "dist/server.js" ]
