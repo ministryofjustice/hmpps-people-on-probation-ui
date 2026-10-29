@@ -1,6 +1,5 @@
-// Groups nDelius disposal (sentence) types into the categories we explain to people on probation,
-// based on the "ND sentence codes". Lookups are by disposal type code;
-// descriptions are kept alongside for readability.
+// Groups nDelius disposal (sentence) types into the categories we explain to people on probation.
+// Lookups are by disposal type code; descriptions are kept alongside for readability.
 
 export type SentenceCategory =
   | 'standard-determinate'
@@ -129,19 +128,24 @@ const CATEGORY_BY_CODE = new Map<string, SentenceCategory>(
 export const getSentenceCategory = (typeCode?: string): SentenceCategory | undefined =>
   typeCode ? CATEGORY_BY_CODE.get(typeCode.trim().toUpperCase()) : undefined
 
-// Categories with a "What this means" explanation, each in
+// The page a sentence type is explained on: the licence page for custodial sentences, the requirements
+// page for orders served in the community.
+export type SentenceTypeExplanationPage = 'licence' | 'order'
+
+// Categories with a "What this means" explanation on each page, each in
 // views/partials/sentence-type-explanations/<category>.njk. Add a category here once its
 // template exists.
-const CATEGORIES_WITH_EXPLANATION: SentenceCategory[] = [
-  'standard-determinate',
-  'extended-determinate',
-  'life',
-  'special-custodial',
-]
+const CATEGORIES_WITH_EXPLANATION: Record<SentenceTypeExplanationPage, SentenceCategory[]> = {
+  licence: ['standard-determinate', 'extended-determinate', 'life', 'special-custodial'],
+  order: ['community-order', 'suspended-sentence-order'],
+}
 
-export const getSentenceTypeExplanationTemplate = (typeCode?: string): string | undefined => {
+export const getSentenceTypeExplanationTemplate = (
+  typeCode: string | undefined,
+  page: SentenceTypeExplanationPage,
+): string | undefined => {
   const category = getSentenceCategory(typeCode)
-  return category && CATEGORIES_WITH_EXPLANATION.includes(category)
+  return category && CATEGORIES_WITH_EXPLANATION[page].includes(category)
     ? `partials/sentence-type-explanations/${category}.njk`
     : undefined
 }

@@ -22,21 +22,35 @@ describe('getSentenceCategory', () => {
 })
 
 describe('getSentenceTypeExplanationTemplate', () => {
-  it('returns the template for a category with an explanation', () => {
-    expect(getSentenceTypeExplanationTemplate('327')).toEqual(
-      'partials/sentence-type-explanations/standard-determinate.njk',
+  it.each([
+    ['327', 'standard-determinate'],
+    ['324', 'extended-determinate'],
+    ['308', 'life'],
+    ['245', 'special-custodial'],
+  ])('returns the licence page template for %s', (typeCode, category) => {
+    expect(getSentenceTypeExplanationTemplate(typeCode, 'licence')).toEqual(
+      `partials/sentence-type-explanations/${category}.njk`,
     )
   })
 
-  it('returns undefined for a category without an explanation yet', () => {
-    expect(getSentenceTypeExplanationTemplate('340')).toBeUndefined()
+  it.each([
+    ['340', 'community-order'],
+    ['329', 'community-order'],
+    ['341', 'suspended-sentence-order'],
+    ['330', 'suspended-sentence-order'],
+  ])('returns the requirements page template for %s', (typeCode, category) => {
+    expect(getSentenceTypeExplanationTemplate(typeCode, 'order')).toEqual(
+      `partials/sentence-type-explanations/${category}.njk`,
+    )
   })
 
-  it('returns undefined for an uncategorised disposal code', () => {
-    expect(getSentenceTypeExplanationTemplate('406')).toBeUndefined()
+  it('keeps each page to its own categories', () => {
+    expect(getSentenceTypeExplanationTemplate('340', 'licence')).toBeUndefined()
+    expect(getSentenceTypeExplanationTemplate('327', 'order')).toBeUndefined()
   })
 
-  it('returns undefined when there is no disposal code', () => {
-    expect(getSentenceTypeExplanationTemplate(undefined)).toBeUndefined()
+  it.each([['406'], [undefined]])('returns undefined for an uncategorised or missing code (%p)', typeCode => {
+    expect(getSentenceTypeExplanationTemplate(typeCode, 'licence')).toBeUndefined()
+    expect(getSentenceTypeExplanationTemplate(typeCode, 'order')).toBeUndefined()
   })
 })

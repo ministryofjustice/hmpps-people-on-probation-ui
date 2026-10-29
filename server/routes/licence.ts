@@ -67,7 +67,7 @@ export default function licenceRoutes(services: Services): Router {
 
       const licenceSentence: LicenceSentenceView = {
         type: formatLicenceSentenceType(sentence.type),
-        typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode),
+        typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode, 'licence'),
         startDate: formatDate(sentence.startDate),
         endDate: formatDate(sentence.expectedEndDate),
         totalLength: progress?.totalLength,
