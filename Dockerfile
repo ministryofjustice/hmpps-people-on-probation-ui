@@ -1,11 +1,9 @@
 # Stage: base image
 FROM ghcr.io/ministryofjustice/hmpps-node:24-alpine AS base
 
-# Patch OS packages and the globally-installed npm (which bundles undici) ahead of
-# base image refreshes, so container scans don't flag already-fixed CVEs.
-RUN apk upgrade --no-cache && \
-    npm install -g --no-audit --no-fund npm@11.21.1 && \
-    npm cache clean --force
+# Patch OS packages ahead of base image refreshes, so container scans don't flag
+# already-fixed CVEs.
+RUN apk upgrade --no-cache
 
 ARG BUILD_NUMBER
 ARG GIT_REF
@@ -28,6 +26,10 @@ ARG BUILD_NUMBER
 ARG GIT_REF
 ARG GIT_BRANCH
 
+# Upgrade npm for the build only; the runtime stage removes npm entirely.
+RUN npm install -g --no-audit --no-fund npm@11.21.1 && \
+    npm cache clean --force
+
 COPY package*.json .allowed-scripts.mjs .npmrc ./
 # TEMP: NODE_AUTH_TOKEN is mounted as a BuildKit secret because the private
 # @justiceaiunit/chatbot-widget package lives in JAIU's GitHub Packages and
@@ -47,6 +49,13 @@ RUN npm prune --no-audit --no-fund --omit=dev
 # Stage: copy production assets and dependencies
 FROM base
 
+# npm, corepack and yarn are only needed to build. Removing them from the runtime
+# image drops their bundled dependencies (undici, picomatch, http-cache-semantics),
+# which container scans flag and which often have no patched npm release.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+           /usr/local/bin/yarn /usr/local/bin/yarnpkg
+
 COPY --from=build --chown=appuser:appgroup \
         /app/package.json \
         /app/package-lock.json \
@@ -62,4 +71,4 @@ EXPOSE 3000
 ENV NODE_ENV='production'
 USER 2000
 
-CMD [ "npm", "start" ]
+CMD [ "node", "dist/server.js" ]
