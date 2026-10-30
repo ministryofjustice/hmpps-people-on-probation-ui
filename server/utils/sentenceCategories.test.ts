@@ -53,22 +53,21 @@ describe('getSentenceTypeExplanationTemplate', () => {
     )
   })
 
-  it.each([['201'], ['329'], ['340']])('explains community order code %s on the requirements page', typeCode => {
-    expect(getSentenceTypeExplanationTemplate(typeCode, 'order')).toEqual(
-      'partials/sentence-type-explanations/community-order.njk',
-    )
-  })
-
   it.each([
+    ['201', 'CJA Community Order'],
+    ['329', 'ORA Community Order'],
+    ['340', 'SA2020 Community Order'],
     ['204', 'CJA Youth Rehabilitation Order'],
     ['331', 'ORA Youth Rehabilitation Order'],
     ['342', 'SA2020 Youth Rehab Order'],
     ['221', 'Parenting Order'],
     ['332', 'Referral Order'],
     ['234', 'Scottish Community Order'],
-  ])('gives other community sentence %s (%s) no explanation, as it is not a community order', typeCode => {
-    expect(getSentenceCategory(typeCode)).toEqual('other-community-sentence')
-    expect(getSentenceTypeExplanationTemplate(typeCode, 'order')).toBeUndefined()
+  ])('explains community sentence %s (%s) with the community order explanation', typeCode => {
+    expect(getSentenceCategory(typeCode)).toEqual('community-order')
+    expect(getSentenceTypeExplanationTemplate(typeCode, 'order')).toEqual(
+      'partials/sentence-type-explanations/community-order.njk',
+    )
   })
 
   it('keeps each page to its own categories', () => {

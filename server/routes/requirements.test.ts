@@ -600,7 +600,7 @@ describe('GET /requirements', () => {
       expect(res.text).toContain('Your order is a community order.')
     })
 
-    it('shows no community order explanation for a different community sentence, such as a Youth Rehabilitation Order', async () => {
+    it('shows the community order explanation for other community sentences, such as a Youth Rehabilitation Order', async () => {
       fakeDate('2025-01-01')
       const sentence = sentenceWithDates('2024-01-01', '2026-01-01')
       sentence.sentences[0].type = 'SA2020 Youth Rehab Order'
@@ -613,8 +613,7 @@ describe('GET /requirements', () => {
         .expect(200)
 
       expect(res.text).toContain('Youth Rehab Order')
-      expect(res.text).not.toContain('Your order is a community order.')
-      expect(res.text).not.toContain('What this means')
+      expect(res.text).toContain('Your order is a community order.')
     })
 
     it('shows no explanation without a type code, even if the label matches', async () => {

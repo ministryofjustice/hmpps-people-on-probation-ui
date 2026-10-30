@@ -7,7 +7,6 @@ export type SentenceCategory =
   | 'life'
   | 'special-custodial'
   | 'community-order'
-  | 'other-community-sentence'
   | 'suspended-sentence-order'
 
 type DisposalType = [code: string, description: string]
@@ -71,19 +70,11 @@ const DISPOSAL_TYPES_BY_CATEGORY: Record<SentenceCategory, DisposalType[]> = {
     ['242', 'Special Cust Sentence (S236aCJA)'],
     ['245', 'Special Cust Sentence (S278CJA)'],
   ],
-  // Only the community order itself. "Your order is a community order" is accurate for these.
+  // Every sentence served in the community, including youth rehabilitation, referral and parenting
+  // orders, legacy orders, and orders from other jurisdictions. Content has confirmed they all use
+  // the same community order explanation.
   'community-order': [
     ['201', 'CJA - Community Order'],
-    ['329', 'ORA Community Order'],
-    ['340', 'SA2020 Community Order'],
-  ],
-  // Other sentences served in the community, such as youth rehabilitation, referral and parenting
-  // orders, legacy orders, and orders from other jurisdictions. They're distinct order types, so
-  // the community order explanation doesn't apply. Until there is content for them (being confirmed
-  // with the content team), this category isn't in CATEGORIES_WITH_EXPLANATION and they get no
-  // explanation, the same as an unknown code. It's kept as a category so that adding content later
-  // only needs a template and an entry in CATEGORIES_WITH_EXPLANATION, not re-listing the codes.
-  'other-community-sentence': [
     ['204', 'CJA - Youth Rehabilitation Order'],
     ['205', 'Community Rehabilitation Order'],
     ['206', 'Community Punishment Order'],
@@ -114,8 +105,10 @@ const DISPOSAL_TYPES_BY_CATEGORY: Record<SentenceCategory, DisposalType[]> = {
     ['238', 'Restriction of Liberty Order'],
     ['239', 'Scottish DTTO'],
     ['244', 'Probation Order - IoM (CJA1963)'],
+    ['329', 'ORA Community Order'],
     ['331', 'ORA Youth Rehabilitation Order'],
     ['332', 'Referral Orders - YOS'],
+    ['340', 'SA2020 Community Order'],
     ['342', 'SA2020 Youth Rehab Order'],
     ['430', 'Attendance Centre Order'],
     ['OU38', 'DTTO - intensity not specified'],
