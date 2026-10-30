@@ -3,16 +3,6 @@
   "package-manager": "auto",
   "registry": "https://registry.npmjs.org",
   "allowlist": [
-    // braces stack-exhaustion DoS — no patched release exists (all <=3.0.3).
-    // Reaches us via chokidar@3 (esbuild-plugin-copy, and nunjucks' optional
-    // peer) and micromatch (del -> globby -> fast-glob). Only build-time glob
-    // patterns we author are expanded; nunjucks watch mode is never enabled,
-    // so no user input reaches braces. Remove once a fixed version ships.
-    "GHSA-vfj7-8cjw-p6xm",
-    // sprintf-js DoS via unbounded precision — no patched release exists.
-    // devDependencies only: ts-jest -> babel-plugin-istanbul -> js-yaml@3 ->
-    // argparse@1 -> sprintf-js@1.0.3. Never handles user input.
-    "GHSA-hp3w-g68c-fv3c",
     // deepmerge prototype poisoning — no patched release exists (all <=4.3.1).
     // devDependencies only: jest -> jest-config -> deepmerge. Only merges jest
     // config we author; never handles user input.
