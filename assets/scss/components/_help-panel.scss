@@ -1,0 +1,48 @@
+// "Help with this requirement" panel on the requirement detail page: a blue tab heading that
+// overlaps the top half of a light blue box.
+$pop-help-panel-tab-height: 36px;
+
+.pop-help-panel {
+  margin-bottom: govuk-spacing(6);
+
+  &__heading {
+    @include govuk-font($size: 19, $weight: bold);
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    box-sizing: border-box;
+    // The tab stops short of the box's right edge.
+    width: calc(100% - 11px);
+    min-height: $pop-help-panel-tab-height;
+    margin: 0;
+    padding: 0 govuk-spacing(2) 0 5px;
+    color: govuk-colour("white");
+    background-color: $govuk-brand-colour;
+  }
+
+  &__icon {
+    @include govuk-font($size: 16, $weight: bold);
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 19px;
+    height: 18px;
+    color: $govuk-brand-colour;
+    background: url("/assets/images/help-panel-icon-circle.svg") no-repeat center / 19px 18px;
+  }
+
+  &__body {
+    // The box starts halfway down the tab, so the tab overlaps its top edge by half its height.
+    margin-top: calc($pop-help-panel-tab-height / -2);
+    padding: calc($pop-help-panel-tab-height / 2 + govuk-spacing(4)) 17px 17px;
+    border: 1px solid #cecece;
+    background-color: #f4f8fb;
+
+    > :last-child {
+      margin-bottom: 0;
+    }
+  }
+}

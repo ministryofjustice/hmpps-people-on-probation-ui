@@ -427,6 +427,56 @@ describe('GET /', () => {
   })
 })
 
+describe('home page cards', () => {
+  const originalDocumentsFlag = config.features.documents
+
+  afterEach(() => {
+    config.features.documents = originalDocumentsFlag
+  })
+
+  const renderHome = async () => {
+    peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [] })
+    peopleOnProbationService.getPastAppointments.mockResolvedValue({ content: [] })
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [{ requirements: [{ mainCategory: { code: 'W' } }], licenceConditions: [] }],
+    })
+
+    return request(app)
+      .get('/')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+  }
+
+  const cardHrefs = (html: string) => [...html.matchAll(/<a href="([^"]+)" class="pop-card">/g)].map(m => m[1])
+
+  it('shows the progress card second, with its nav item', async () => {
+    config.features.documents = true
+
+    const response = await renderHome()
+
+    expect(cardHrefs(response.text)).toEqual(['/appointments', '/progress', '/goals', '/requirements', '/documents'])
+    expect(response.text).toContain('See a summary of your progress, including your attendance, requirements and goals')
+    expect(response.text).toMatch(/href="\/progress"[^>]*>\s*Progress and achievements/)
+  })
+
+  it('lays the cards out two per row', async () => {
+    config.features.documents = true
+
+    const response = await renderHome()
+
+    expect(response.text.match(/class="govuk-grid-row pop-card-row/g)).toHaveLength(3)
+  })
+
+  it('keeps rows balanced when the documents card is off', async () => {
+    config.features.documents = false
+
+    const response = await renderHome()
+
+    expect(cardHrefs(response.text)).toEqual(['/appointments', '/progress', '/goals', '/requirements'])
+    expect(response.text.match(/class="govuk-grid-row pop-card-row/g)).toHaveLength(2)
+  })
+})
+
 describe('GET /welcome', () => {
   it('shows the interstitial for a first-time user with no previous login', async () => {
     const response = await request(app)

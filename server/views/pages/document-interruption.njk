@@ -1,0 +1,30 @@
+{% extends "../partials/layout.njk" %}
+{% from "moj/components/interruption-card/macro.njk" import interruptionCard %}
+
+{% set pageTitle = "Sensitive information – Check your probation account – GOV.UK" %}
+{% set currentPage = "documents" %}
+
+{% block content %}
+
+  {% call interruptionCard({
+    heading: "Sensitive information",
+    primaryAction: {
+      text: "Continue to view document",
+      href: "/documents/" + (documentId | urlencode) + "/view",
+      attributes: { "data-tracking-id": "document_interruption_continue" }
+    },
+    secondaryAction: {
+      text: "Go back to documents list",
+      href: "/documents"
+    }
+  }) %}
+    <p class="govuk-body">This document may include information about:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>your offence</li>
+      <li>what you need to do while on probation</li>
+      <li>your personal details or circumstances</li>
+    </ul>
+    <p class="govuk-body">You might want to look at this document in a safe place where others will not see it.</p>
+  {% endcall %}
+
+{% endblock %}

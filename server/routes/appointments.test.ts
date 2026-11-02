@@ -859,12 +859,60 @@ describe('GET /appointments', () => {
     expect(response.text).toContain('Why this might happen')
   })
 
-  it('shows the plain inset text with no reveal when only RAR/unpaid work main categories are present', async () => {
+  it.each([
+    ['F', 'Rehabilitation Activity Requirement (RAR)'],
+    ['7', 'Court - Accredited Programme'],
+    ['RM38', 'RAR/GAR Accredited Programmes'],
+  ])('shows the other-channel appointments guidance for requirement code %s (%s)', async code => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [{ requirements: [{ mainCategory: { code } }], licenceConditions: [] }],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Appointments outside the Probation Service are sent through other channels')
+  })
+
+  it('no longer treats RM37 as an other-channel requirement', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [{ requirements: [{ mainCategory: { code: 'RM37' } }], licenceConditions: [] }],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Appointments outside the Probation Service are sent through other channels')
+  })
+
+  it.each([
+    ['EM01', 'GPS tag'],
+    ['LC104', 'trail monitoring tag'],
+    ['NLC13', 'alcohol monitoring tag'],
+  ])('shows the tag appointments guidance for licence condition code %s (%s)', async code => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [{ requirements: [], licenceConditions: [{ mainCategory: { code } }] }],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Tag appointments are sent by the electronic monitoring service')
+    expect(response.text).toContain('Why this might happen')
+  })
+
+  it('shows the plain inset text with no reveal when only unpaid work main categories are present', async () => {
     peopleOnProbationService.getSentences.mockResolvedValue({
       sentences: [
         {
-          requirements: [{ mainCategory: { code: 'F', description: 'RAR' } }],
-          licenceConditions: [{ mainCategory: { code: 'W', description: 'Unpaid work' } }],
+          requirements: [{ mainCategory: { code: 'W', description: 'Unpaid work' } }],
+          licenceConditions: [],
         },
       ],
     })

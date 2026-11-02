@@ -1,6 +1,12 @@
 # Stage: base image
 FROM ghcr.io/ministryofjustice/hmpps-node:24-alpine AS base
 
+# Patch OS packages and the globally-installed npm (which bundles undici) ahead of
+# base image refreshes, so container scans don't flag already-fixed CVEs.
+RUN apk upgrade --no-cache && \
+    npm install -g --no-audit --no-fund npm@11.21.1 && \
+    npm cache clean --force
+
 ARG BUILD_NUMBER
 ARG GIT_REF
 ARG GIT_BRANCH

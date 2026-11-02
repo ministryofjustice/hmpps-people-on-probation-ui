@@ -7,6 +7,9 @@ import {
   isBefore,
   isAfter,
   addDays,
+  add,
+  subDays,
+  type Duration,
   differenceInDays,
   intervalToDuration,
 } from 'date-fns'
@@ -104,6 +107,9 @@ export const formatRemainingDuration = (endDateStr: string): string => {
   return formatIntervalDuration(today, addDays(end, 1))
 }
 
+// True when the date is today or in the past.
+export const hasDateArrived = (dateStr: string): boolean => !isBefore(startOfDay(new Date()), parseLocalDate(dateStr))
+
 export type DateProgressResult = {
   percentComplete: number
   completedDuration: string
@@ -128,6 +134,17 @@ export function calculateDateProgress(startDateStr: string, endDateStr: string):
     startDate: formatDate(startDateStr) ?? startDateStr,
     endDate: formatDate(endDateStr) ?? endDateStr,
   }
+}
+
+// Units in which a requirement's `required` amount is a length of time, and how to add one to a date.
+const TIME_UNITS: Record<string, keyof Duration> = { DAYS: 'days', WEEKS: 'weeks', MONTHS: 'months', YEARS: 'years' }
+
+// The last day of a requirement that runs for `amount` units from its start, counting the start day:
+// 120 days from 11 February ends on 10 June. Undefined when the unit isn't a length of time (e.g. hours).
+export const estimateEndDate = (startDateStr: string, amount: number, unit?: string): string | undefined => {
+  const durationKey = TIME_UNITS[unit?.toUpperCase() ?? '']
+  if (!durationKey) return undefined
+  return format(subDays(add(parseLocalDate(startDateStr), { [durationKey]: amount }), 1), 'yyyy-MM-dd')
 }
 
 export const formatUnit = (unit: string | undefined, amount: number): string => {
@@ -169,14 +186,8 @@ export const sanitiseOfficeLocationUrl = (url?: string | null): string | undefin
   }
 }
 
-const SENTENCE_TYPE_OVERRIDES: Record<string, string> = {
-  'ora adult custody (not pss)': 'Licence',
-}
-
 export const formatSentenceType = (type?: string): string | undefined => {
   if (!type) return undefined
-  const override = SENTENCE_TYPE_OVERRIDES[type.toLowerCase()]
-  if (override) return override
   return type.replace(/^SA2020\s+/i, '')
 }
 

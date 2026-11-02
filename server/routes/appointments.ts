@@ -16,7 +16,7 @@ import {
   APPOINTMENTS_OVERVIEW_SIZE,
 } from '../utils/utils'
 import type { AppointmentResponse, PageMetadataResponse } from '../data/peopleOnProbationApiClient'
-import { TAG_CATEGORY_CODES, OTHER_CHANNEL_CATEGORY_CODES } from '../utils/categoryCodes'
+import { TAG_CATEGORY_CODES, LICENCE_TAG_CATEGORY_CODES, OTHER_CHANNEL_CATEGORY_CODES } from '../utils/categoryCodes'
 
 export type AppointmentsTab = 'upcoming' | 'past'
 
@@ -394,7 +394,9 @@ export default function appointmentsRoutes(services: Services): Router {
         ...sentence.requirements.map(r => r.mainCategory?.code),
         ...sentence.licenceConditions.map(lc => lc.mainCategory?.code),
       ])
-      const hasTagAppointments = mainCategoryCodes.some(code => TAG_CATEGORY_CODES.includes(code))
+      const hasTagAppointments = mainCategoryCodes.some(
+        code => TAG_CATEGORY_CODES.includes(code) || LICENCE_TAG_CATEGORY_CODES.includes(code),
+      )
       const hasOtherChannelAppointments = mainCategoryCodes.some(code => OTHER_CHANNEL_CATEGORY_CODES.includes(code))
 
       const appointmentsToShow = activeTabAppointments.content

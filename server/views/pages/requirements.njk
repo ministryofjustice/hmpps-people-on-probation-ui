@@ -17,16 +17,15 @@
     See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/probation-agreement">probation agreement</a>.
   </p>
 
-  {% if showCourtOrderSignpost %}
+  {# Only when there is a court order document to link to. Without one, the row has nothing for the
+     person to act on, and each requirement's own page still says where to find its details. #}
+  {% set showCourtOrderRow = showCourtOrderSignpost and courtOrderDocumentId %}
+  {% if showCourtOrderRow %}
     {% set courtOrderRow %}
       <div class="pop-summary-card__row">
         <dt class="pop-summary-card__key">Court order</dt>
         <dd class="pop-summary-card__value">
-          {% if courtOrderDocumentId %}
-            <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
-          {% else %}
-            You can find this information in your court order
-          {% endif %}
+          <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
         </dd>
       </div>
     {% endset %}
@@ -54,41 +53,8 @@
           </div>
         {% endif %}
         {% if overallOrder.type %}
-          {% if overallOrder.type | lower == "community order" %}
-            {% set orderTypeExplanationHtml %}
-              <p class="govuk-body">Your order is a community order. It lets you stay in the community to serve your sentence instead of going to prison.</p>
-              <p class="govuk-body">The court could ask you to:</p>
-              <ul class="govuk-list govuk-list--bullet">
-                <li>do unpaid work, which is sometimes called community service</li>
-                <li>go to appointments</li>
-                <li>take part in activities to stop you from offending again</li>
-                <li>get treatment or support</li>
-              </ul>
-              <p class="govuk-body">It is important to remember if you do not follow the rules of your order you could go back to court.</p>
-              <p class="govuk-body">The court might decide to:</p>
-              <ul class="govuk-list govuk-list--bullet">
-                <li>give you more strict rules to follow in the community</li>
-                <li>add more time to your order</li>
-              </ul>
-            {% endset %}
-          {% elif overallOrder.type | lower == "suspended sentence order" %}
-            {% set orderTypeExplanationHtml %}
-              <p class="govuk-body">Your sentence is called a suspended sentence. It is a prison sentence, but the court has decided to give you some rules to follow in the community instead so that you do not go to prison.</p>
-              <p class="govuk-body">The court could ask you to:</p>
-              <ul class="govuk-list govuk-list--bullet">
-                <li>do unpaid work, which is sometimes called community service</li>
-                <li>go to appointments</li>
-                <li>take part in activities to stop you from offending again</li>
-                <li>get treatment or support</li>
-              </ul>
-              <p class="govuk-body">It is important to remember if you do not follow the rules of your order you could go back to court.</p>
-              <p class="govuk-body">The court might decide to:</p>
-              <ul class="govuk-list govuk-list--bullet">
-                <li>send you to prison</li>
-                <li>give you more strict rules to follow in the community</li>
-                <li>add more time to your order</li>
-              </ul>
-            {% endset %}
+          {% if overallOrder.typeExplanationTemplate %}
+            {% set orderTypeExplanationHtml %}{% include overallOrder.typeExplanationTemplate %}{% endset %}
           {% endif %}
           <div class="pop-summary-card__row">
             <dt class="pop-summary-card__key">Order type</dt>
@@ -125,7 +91,7 @@
         {{ courtOrderRow | safe }}
       </dl>
     </div>
-  {% elif showCourtOrderSignpost %}
+  {% elif showCourtOrderRow %}
     <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
       <dl class="pop-summary-card__details">
         {{ courtOrderRow | safe }}

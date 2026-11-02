@@ -1,0 +1,4 @@
+{# Links to the person's tag requirement only when they have one (tagSlug, set by the requirements route). #}
+<p class="govuk-body">A <strong>curfew</strong> means you must stay at a specific address.</p>
+<p class="govuk-body">Your curfew is often checked with a tag. This means you will also have to {% if tagSlug %}<a class="govuk-link" href="/requirements/{{ tagSlug }}" data-tracking-id="requirement_detail_curfew_tag_rules_link">follow the rules for wearing a tag</a>{% else %}follow the rules for wearing a tag{% endif %}.</p>
+<p class="govuk-body">It is important to remember if you do not follow your curfew you could go back to court.</p>

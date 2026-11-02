@@ -1,0 +1,27 @@
+// "Progress and achievements" page: one row per achievement, with an icon in a fixed-width
+// column so the text lines up regardless of each icon's own size.
+.pop-progress-summary {
+  list-style: none;
+  margin: 0 0 govuk-spacing(6);
+  padding: 0;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid $govuk-border-colour;
+  }
+
+  &__icon {
+    display: flex;
+    flex: 0 0 65px;
+    align-items: center;
+    padding: govuk-spacing(2) 0;
+  }
+
+  &__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: govuk-spacing(2) 0;
+  }
+}

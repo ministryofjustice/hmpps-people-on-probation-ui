@@ -8,10 +8,12 @@ $govuk-page-width: $moj-page-width;
 @import "@ministryofjustice/frontend/moj/all";
 
 @import './components/progress';
+@import './components/progress-summary';
 @import './components/hub-cards';
 @import './components/summary-card';
 @import './components/timeout-warning';
 @import './components/goal-card';
+@import './components/help-panel';
 @import './components/requirement-card';
 @import './components/document-viewer';
 @import './components/show-details';

@@ -10,6 +10,8 @@ import {
   formatRemainingDuration,
   formatIntervalDuration,
   formatUnit,
+  hasDateArrived,
+  estimateEndDate,
   formatAddress,
   formatMapUrl,
   formatPersonName,
@@ -216,6 +218,42 @@ describe('formatUnit', () => {
   })
 })
 
+describe('hasDateArrived', () => {
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date('2026-07-01T12:00:00Z') })
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it.each([
+    ['2026-06-30', true],
+    ['2026-07-01', true],
+    ['2026-07-02', false],
+  ])('%s → %s', (dateStr: string, expected: boolean) => {
+    expect(hasDateArrived(dateStr)).toBe(expected)
+  })
+})
+
+describe('estimateEndDate', () => {
+  it.each([
+    ['2026-02-11', 120, 'DAYS', '2026-06-10'],
+    ['2026-02-11', 1, 'DAYS', '2026-02-11'],
+    ['2026-01-01', 2, 'WEEKS', '2026-01-14'],
+    ['2026-01-15', 12, 'MONTHS', '2027-01-14'],
+    ['2026-01-31', 1, 'MONTHS', '2026-02-27'],
+    ['2026-03-01', 1, 'YEARS', '2027-02-28'],
+    ['2026-02-11', 120, 'days', '2026-06-10'],
+  ])('%s + %s %s ends on %s', (start: string, amount: number, unit: string, expected: string) => {
+    expect(estimateEndDate(start, amount, unit)).toEqual(expected)
+  })
+
+  it.each([['HOURS'], [undefined], ['UNKNOWN']])('is undefined for unit %p, which is not a length of time', unit => {
+    expect(estimateEndDate('2026-02-11', 120, unit)).toBeUndefined()
+  })
+})
+
 describe('formatAddress', () => {
   it('returns empty array for undefined', () => {
     expect(formatAddress(undefined)).toEqual([])
@@ -352,10 +390,6 @@ describe('formatSentenceType', () => {
   it('strips the SA2020 prefix', () => {
     expect(formatSentenceType('SA2020 Suspended Sentence Order')).toEqual('Suspended Sentence Order')
     expect(formatSentenceType('SA2020 Community Order')).toEqual('Community Order')
-  })
-
-  it('maps ORA Adult Custody (not PSS) to Licence', () => {
-    expect(formatSentenceType('ORA Adult Custody (not PSS)')).toEqual('Licence')
   })
 
   it('leaves other sentence types unchanged', () => {
