@@ -7,9 +7,30 @@
  * markup, rewrites the few idioms that only make sense on screen, and marks
  * helpline numbers so the voice reads them digit by digit.
  *
- * English only: the SSML language is fixed to en-GB and the idioms below are
- * English. Revisit if the chatbot's Welsh mode is ever wired to voice.
+ * English and Welsh: the SSML language and the spoken idioms follow the
+ * language of the reply, which the chatbot reports with each answer.
  */
+
+export type SpeechLanguage = 'en' | 'cy'
+
+export const SPEECH_LANGUAGES: readonly SpeechLanguage[] = ['en', 'cy']
+
+export function isSpeechLanguage(value: unknown): value is SpeechLanguage {
+  return typeof value === 'string' && (SPEECH_LANGUAGES as readonly string[]).includes(value)
+}
+
+/** BCP-47 locale Azure expects for each reply language. */
+export const SPEECH_LOCALES: Record<SpeechLanguage, string> = {
+  en: 'en-GB',
+  cy: 'cy-GB',
+}
+
+// "24/7" is a screen idiom; spoken it needs words. The Welsh wording is a
+// draft pending review by a Welsh speaker.
+const ALL_DAY_EVERY_DAY: Record<SpeechLanguage, string> = {
+  en: '24 hours a day, 7 days a week',
+  cy: '24 awr y dydd, 7 diwrnod yr wythnos',
+}
 
 // UK landline/mobile/freephone with optional spaces (0113 496 0000, 0808 2000 247),
 // emergency/short codes (999, 111, 101), the Samaritans' 116 123, and 5-digit SMS
@@ -29,7 +50,7 @@ export function escapeXml(text: string): string {
 }
 
 /** Markdown reply -> plain text that reads naturally when spoken. */
-export function markdownToSpeechText(markdown: string): string {
+export function markdownToSpeechText(markdown: string, language: SpeechLanguage = 'en'): string {
   let text = markdown.replace(/\r\n/g, '\n')
   text = text.replace(/<[^>]+>/g, '') // any raw HTML (the chatbot shouldn't emit it, but don't read it out)
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [link text](url) -> link text
@@ -39,7 +60,7 @@ export function markdownToSpeechText(markdown: string): string {
   text = text.replace(/^#{1,6}\s*/gm, '') // # heading -> heading
   text = text.replace(/^\s*[-*+]\s+/gm, '') // - bullet -> its own line
   text = text.replace(/^\s*\d+\.\s+/gm, '') // 1. item -> its own line
-  text = text.replace(/24\/7/g, '24 hours a day, 7 days a week')
+  text = text.replace(/24\/7/g, ALL_DAY_EVERY_DAY[language])
   text = text.replace(/\s*\(([^)]*)\)/g, ', $1,') // (aside) -> , aside,
   text = text.replace(/,\s*([.!?])/g, '$1')
   text = text.replace(/,\s*,/g, ',')
@@ -53,8 +74,8 @@ export function markdownToSpeechText(markdown: string): string {
  * Full SSML document for one reply: one <p> per paragraph or list item, a short
  * pause between them, helpline numbers read as telephone digits.
  */
-export function buildSpeechSsml(markdown: string, voice: string): string {
-  const paragraphs = markdownToSpeechText(markdown)
+export function buildSpeechSsml(markdown: string, voice: string, language: SpeechLanguage = 'en'): string {
+  const paragraphs = markdownToSpeechText(markdown, language)
     .split(/\n+/)
     .map(p => p.trim())
     .filter(Boolean)
@@ -67,7 +88,7 @@ export function buildSpeechSsml(markdown: string, voice: string): string {
     })
     .join(PARAGRAPH_BREAK)
   return (
-    '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-GB">' +
+    `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${SPEECH_LOCALES[language]}">` +
     `<voice name="${escapeXml(voice)}">${body}</voice></speak>`
   )
 }

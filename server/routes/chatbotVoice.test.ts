@@ -1,6 +1,6 @@
 import express, { Express } from 'express'
 import request from 'supertest'
-import chatbotVoiceRoutes, { MAX_AUDIO_BYTES, MAX_SPEECH_TEXT_LENGTH } from './chatbotVoice'
+import chatbotVoiceRoutes, { identifiedLanguage, MAX_AUDIO_BYTES, MAX_SPEECH_TEXT_LENGTH } from './chatbotVoice'
 import type { AuthenticatedUserSession } from '../auth/sessionStore'
 import config from '../config'
 import logger from '../../logger'
@@ -57,6 +57,7 @@ describe('chatbot voice routes', () => {
     config.popChatbotVoice.speechKey = 'speech-key'
     config.popChatbotVoice.speechRegion = 'uksouth'
     config.popChatbotVoice.voice = 'en-GB-RyanNeural'
+    config.popChatbotVoice.voiceCy = 'cy-GB-NiaNeural'
   })
 
   afterEach(() => {
@@ -159,6 +160,36 @@ describe('chatbot voice routes', () => {
       expect(init.body).toContain('24 hours a day, 7 days a week')
     })
 
+    it('reads Welsh replies with the Welsh voice and locale', async () => {
+      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        status: 200,
+        body: streamOf([Buffer.from('cy-audio')]),
+      } as unknown as Response)
+
+      await request(buildApp())
+        .post('/api/chatbot/voice/speak')
+        .send({ text: '**Samariaid**: 116 123 (am ddim, 24/7)', language: 'cy' })
+        .expect(200)
+
+      const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+      expect(init.body).toContain('xml:lang="cy-GB"')
+      expect(init.body).toContain('<voice name="cy-GB-NiaNeural">')
+      expect(init.body).toContain('<say-as interpret-as="telephone">116 123</say-as>')
+      expect(init.body).toContain('24 awr y dydd, 7 diwrnod yr wythnos')
+    })
+
+    it('rejects a language other than en or cy before calling Azure', async () => {
+      const fetchSpy = jest.spyOn(global, 'fetch')
+      const res = await request(buildApp())
+        .post('/api/chatbot/voice/speak')
+        .send({ text: 'hi', language: 'fr' })
+        .expect(400)
+      expect(res.body).toEqual({ error: 'language must be en or cy' })
+      await request(buildApp()).post('/api/chatbot/voice/speak').send({ text: 'hi', language: 7 }).expect(400)
+      expect(fetchSpy).not.toHaveBeenCalled()
+    })
+
     it('returns a generic 502 and logs only the status when Azure fails, never the text', async () => {
       jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: false,
@@ -221,13 +252,17 @@ describe('chatbot voice routes', () => {
       expect(fetchSpy).not.toHaveBeenCalled()
     })
 
-    it('forwards the audio to fast transcription in en-GB and returns the transcript', async () => {
+    it('asks fast transcription to identify English or Welsh and returns the transcript and language', async () => {
       const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: true,
         status: 200,
         json: jest.fn().mockResolvedValue({
           durationMilliseconds: 2900,
           combinedPhrases: [{ text: "Who's my probation officer" }, { text: "and what's their phone number?" }],
+          phrases: [
+            { text: "Who's my probation officer", locale: 'en-GB', durationMilliseconds: 1400 },
+            { text: "and what's their phone number?", locale: 'en-GB', durationMilliseconds: 1500 },
+          ],
         }),
       } as unknown as Response)
 
@@ -237,7 +272,11 @@ describe('chatbot voice routes', () => {
         .send(Buffer.from('fake-opus-bytes'))
         .expect(200)
 
-      expect(res.body).toEqual({ text: "Who's my probation officer and what's their phone number?", durationMs: 2900 })
+      expect(res.body).toEqual({
+        text: "Who's my probation officer and what's their phone number?",
+        durationMs: 2900,
+        language: 'en',
+      })
       expect(res.headers['cache-control']).toBe('no-store')
 
       const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
@@ -246,10 +285,35 @@ describe('chatbot voice routes', () => {
       )
       expect(init.headers).toEqual({ 'Ocp-Apim-Subscription-Key': 'speech-key' })
       const form = init.body as FormData
-      expect(JSON.parse(form.get('definition') as string)).toEqual({ locales: ['en-GB'], profanityFilterMode: 'None' })
+      expect(JSON.parse(form.get('definition') as string)).toEqual({
+        locales: ['en-GB', 'cy-GB'],
+        profanityFilterMode: 'None',
+      })
       const audio = form.get('audio') as Blob
       expect(audio.type).toBe('audio/webm')
       expect(Buffer.from(await audio.arrayBuffer()).toString()).toBe('fake-opus-bytes')
+    })
+
+    it('reports Welsh when most of the recording was identified as cy-GB', async () => {
+      jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue({
+          durationMilliseconds: 4000,
+          combinedPhrases: [{ text: 'Pryd mae fy apwyntiad nesaf? Thank you.' }],
+          phrases: [
+            { text: 'Pryd mae fy apwyntiad nesaf?', locale: 'cy-gb', durationMilliseconds: 3000 },
+            { text: 'Thank you.', locale: 'en-GB', durationMilliseconds: 1000 },
+          ],
+        }),
+      } as unknown as Response)
+
+      const res = await request(buildApp())
+        .post('/api/chatbot/voice/transcribe')
+        .set('Content-Type', 'audio/mp4')
+        .send(Buffer.from('aac'))
+        .expect(200)
+      expect(res.body).toEqual({ text: 'Pryd mae fy apwyntiad nesaf? Thank you.', durationMs: 4000, language: 'cy' })
     })
 
     it('returns a generic 502 and does not log the transcript when Azure fails', async () => {
@@ -302,6 +366,33 @@ describe('chatbot voice routes', () => {
         body: streamOf([Buffer.from('x')]),
       } as unknown as Response)
       await request(app).post('/api/chatbot/voice/speak').send({ text: 'hi' }).expect(200)
+    })
+  })
+
+  describe('identifiedLanguage', () => {
+    it('defaults to English when Azure tagged nothing', () => {
+      expect(identifiedLanguage({})).toBe('en')
+      expect(identifiedLanguage({ phrases: [] })).toBe('en')
+      expect(identifiedLanguage({ phrases: [{ text: 'hm' }] })).toBe('en')
+    })
+
+    it('weighs phrases by spoken time, not by count', () => {
+      expect(
+        identifiedLanguage({
+          phrases: [
+            { locale: 'cy-GB', durationMilliseconds: 5000 },
+            { locale: 'en-GB', durationMilliseconds: 400 },
+            { locale: 'en-GB', durationMilliseconds: 400 },
+          ],
+        }),
+      ).toBe('cy')
+    })
+
+    it('counts untimed phrases and breaks a tie towards English', () => {
+      expect(identifiedLanguage({ phrases: [{ locale: 'cy-GB' }, { locale: 'en-GB' }] })).toBe('en')
+      expect(identifiedLanguage({ phrases: [{ locale: 'cy-GB' }, { locale: 'cy-GB' }, { locale: 'en-GB' }] })).toBe(
+        'cy',
+      )
     })
   })
 })

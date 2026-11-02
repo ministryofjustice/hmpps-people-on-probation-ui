@@ -1,7 +1,7 @@
 import express, { Router, Request, Response, NextFunction } from 'express'
 import config, { isChatbotVoiceEnabled } from '../config'
 import logger from '../../logger'
-import { buildSpeechSsml } from '../utils/speechSsml'
+import { buildSpeechSsml, isSpeechLanguage, SPEECH_LOCALES, SpeechLanguage } from '../utils/speechSsml'
 import FixedWindowRateLimiter from '../utils/fixedWindowRateLimiter'
 
 // A chatbot reply is typically 200-600 characters and the longest canned
@@ -10,10 +10,12 @@ import FixedWindowRateLimiter from '../utils/fixedWindowRateLimiter'
 // Azure account (synthesis is billed per character).
 export const MAX_SPEECH_TEXT_LENGTH = 3000
 
-// The widget caps a recording at 60s. At the bitrates browsers record at
-// (Chrome WebM/Opus ~32kbps, Safari MP4/AAC ~64kbps) that's under 500KB, so
-// 2MB leaves headroom for uncompressed WAV from less common browsers.
-export const MAX_AUDIO_BYTES = 2 * 1024 * 1024
+// The widget caps a recording at ten minutes (a voice message, not a sound
+// bite: people who find typing hard may need time to say what they mean). At
+// the bitrates browsers record at (Chrome WebM/Opus ~32-48kbps, Safari MP4/AAC
+// up to ~128kbps) ten minutes is under 10MB, so 16MB leaves headroom.
+export const MAX_RECORDING_SECONDS = 600
+export const MAX_AUDIO_BYTES = 16 * 1024 * 1024
 
 // What MediaRecorder produces across browsers, plus WAV. Azure fast
 // transcription accepts all of these directly, so no server-side transcoding.
@@ -28,7 +30,11 @@ export const AUDIO_CONTENT_TYPES = [
   'audio/x-wav',
 ]
 
-const UPSTREAM_TIMEOUT_MS = 20_000
+// Synthesis of one reply takes well under a second; transcription of a long
+// recording takes roughly a tenth of its length, so ten minutes of audio needs
+// a minute or more.
+const TTS_UPSTREAM_TIMEOUT_MS = 20_000
+const STT_UPSTREAM_TIMEOUT_MS = 120_000
 const TTS_OUTPUT_FORMAT = 'audio-24khz-48kbitrate-mono-mp3'
 
 // Per user, per route, per pod (see FixedWindowRateLimiter). Generous for a
@@ -48,6 +54,33 @@ function speechUrls(region: string) {
   }
 }
 
+type TranscriptionPayload = {
+  durationMilliseconds?: number
+  combinedPhrases?: Array<{ text?: string }>
+  phrases?: Array<{ text?: string; locale?: string; durationMilliseconds?: number }>
+}
+
+function voiceFor(language: SpeechLanguage): string {
+  return language === 'cy' ? config.popChatbotVoice.voiceCy : config.popChatbotVoice.voice
+}
+
+/**
+ * Which of our two languages Azure heard. Fast transcription tags each phrase
+ * with the locale it identified (lower- or mixed-case); a recording is treated
+ * as Welsh when most of its spoken time is tagged cy-GB. English is the default
+ * when nothing was tagged — an empty or unintelligible recording.
+ */
+export function identifiedLanguage(payload: TranscriptionPayload): SpeechLanguage {
+  const spokenMs: Record<SpeechLanguage, number> = { en: 0, cy: 0 }
+  for (const phrase of payload.phrases ?? []) {
+    const language: SpeechLanguage = (phrase.locale ?? '').toLowerCase().startsWith('cy') ? 'cy' : 'en'
+    // Phrases without a duration still count for something, so a tag-only
+    // payload is not ignored.
+    spokenMs[language] += Math.max(phrase.durationMilliseconds ?? 0, 1)
+  }
+  return spokenMs.cy > spokenMs.en ? 'cy' : 'en'
+}
+
 function retryLater(res: Response, retryAfterSeconds: number): void {
   res.setHeader('Retry-After', String(retryAfterSeconds))
   res.status(429).json({ error: 'Too many requests' })
@@ -58,8 +91,14 @@ function retryLater(res: Response, retryAfterSeconds: number): void {
  * Both proxy to Azure AI Speech with the key held server-side; the browser only
  * ever talks to this origin.
  *
- *   POST /api/chatbot/voice/speak       { text }        -> audio/mpeg
- *   POST /api/chatbot/voice/transcribe  <raw audio body> -> { text, durationMs }
+ *   POST /api/chatbot/voice/speak       { text, language? }  -> audio/mpeg
+ *   POST /api/chatbot/voice/transcribe  <raw audio body>     -> { text, durationMs, language }
+ *
+ * `language` is 'en' or 'cy'. Transcription asks Azure to identify which of the
+ * two the recording is in (one language per recording) and reports it, so the
+ * widget can send the text to the chat in that language and later ask for the
+ * reply to be read in the matching voice. Nothing else is inferred from the
+ * audio: no speaker identification, no profiling.
  *
  * The chat itself is untouched: a transcript goes through the normal /chat
  * route as typed text, so guardrails, context and evals all apply unchanged.
@@ -84,7 +123,7 @@ export default function chatbotVoiceRoutes(): Router {
   })
 
   router.post('/speak', async (req: Request, res: Response) => {
-    const { speechKey, speechRegion, voice } = config.popChatbotVoice
+    const { speechKey, speechRegion } = config.popChatbotVoice
     const { user } = res.locals
 
     const verdict = speakLimiter.consume(user.userId)
@@ -102,9 +141,15 @@ export default function chatbotVoiceRoutes(): Router {
       res.status(413).json({ error: 'text is too long' })
       return
     }
+    const language: SpeechLanguage = req.body?.language === undefined ? 'en' : req.body.language
+    if (!isSpeechLanguage(language)) {
+      res.status(400).json({ error: 'language must be en or cy' })
+      return
+    }
+    const voice = voiceFor(language)
 
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
+    const timer = setTimeout(() => controller.abort(), TTS_UPSTREAM_TIMEOUT_MS)
     req.on('close', () => controller.abort())
 
     try {
@@ -116,7 +161,7 @@ export default function chatbotVoiceRoutes(): Router {
           'X-Microsoft-OutputFormat': TTS_OUTPUT_FORMAT,
           'User-Agent': 'hmpps-people-on-probation-ui',
         },
-        body: buildSpeechSsml(text, voice),
+        body: buildSpeechSsml(text, voice, language),
         signal: controller.signal,
       })
 
@@ -188,11 +233,11 @@ export default function chatbotVoiceRoutes(): Router {
       const form = new FormData()
       // Profanity is left as spoken: the chat guardrails run on the text and
       // need to see what the user actually said, not a masked version.
-      form.append('definition', JSON.stringify({ locales: ['en-GB'], profanityFilterMode: 'None' }))
+      form.append('definition', JSON.stringify({ locales: Object.values(SPEECH_LOCALES), profanityFilterMode: 'None' }))
       form.append('audio', new Blob([new Uint8Array(req.body)], { type: contentType }), 'audio')
 
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS)
+      const timer = setTimeout(() => controller.abort(), STT_UPSTREAM_TIMEOUT_MS)
       req.on('close', () => controller.abort())
 
       try {
@@ -212,17 +257,14 @@ export default function chatbotVoiceRoutes(): Router {
           return
         }
 
-        const payload = (await upstream.json()) as {
-          durationMilliseconds?: number
-          combinedPhrases?: Array<{ text?: string }>
-        }
+        const payload = (await upstream.json()) as TranscriptionPayload
         const text = (payload.combinedPhrases ?? [])
           .map(phrase => phrase.text ?? '')
           .join(' ')
           .trim()
 
         res.setHeader('Cache-Control', 'no-store')
-        res.json({ text, durationMs: payload.durationMilliseconds ?? null })
+        res.json({ text, durationMs: payload.durationMilliseconds ?? null, language: identifiedLanguage(payload) })
       } catch (err) {
         const aborted = (err as { name?: string }).name === 'AbortError'
         if (aborted) logger.warn('Speech transcription proxy aborted (timeout or client disconnect)')

@@ -178,8 +178,9 @@ const config = {
   popChatbotVoice: {
     speechKey: process.env.POP_CHATBOT_SPEECH_KEY,
     speechRegion: get('POP_CHATBOT_SPEECH_REGION', '') as string,
-    // The en-GB neural voice every spoken reply uses. English only for now.
+    // Neural voices for spoken replies, one per language the chatbot answers in.
     voice: get('POP_CHATBOT_SPEECH_VOICE', 'en-GB-RyanNeural') as string,
+    voiceCy: get('POP_CHATBOT_SPEECH_VOICE_CY', 'cy-GB-NiaNeural') as string,
   },
   ingressUrl: get('INGRESS_URL', 'http://localhost:3000', requiredInProduction),
   environmentName: get('ENVIRONMENT_NAME', ''),

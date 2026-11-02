@@ -77,6 +77,16 @@ describe('buildSpeechSsml', () => {
   it('fixes the document language to British English', () => {
     expect(buildSpeechSsml('Hello', 'en-GB-RyanNeural')).toMatch(/^<speak version="1.0" [^>]*xml:lang="en-GB">/)
   })
+
+  it('switches the document language and the spoken idioms for Welsh replies', () => {
+    const ssml = buildSpeechSsml('**Samariaid**: 116 123 (am ddim, 24/7)', 'cy-GB-NiaNeural', 'cy')
+    expect(ssml).toMatch(/^<speak version="1.0" [^>]*xml:lang="cy-GB">/)
+    expect(ssml).toContain('<voice name="cy-GB-NiaNeural">')
+    expect(ssml).toContain(
+      'Samariaid: <say-as interpret-as="telephone">116 123</say-as>, am ddim, 24 awr y dydd, 7 diwrnod yr wythnos.',
+    )
+    expect(ssml).not.toContain('24 hours')
+  })
 })
 
 describe('escapeXml', () => {
