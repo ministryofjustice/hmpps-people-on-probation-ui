@@ -170,6 +170,17 @@ const config = {
     // yet — the proxy will fall back to sending user_context in the body.
     userTokenSecret: process.env.POP_CHATBOT_USER_TOKEN_SECRET,
   },
+  // Azure AI Speech, for the chatbot's voice input/output (see
+  // server/routes/chatbotVoice.ts). Text-to-speech and fast transcription are
+  // both addressed by region + key — {region}.tts.speech.microsoft.com and
+  // {region}.api.cognitive.microsoft.com — so one region var covers both.
+  // Leave either unset to keep voice dark in an environment.
+  popChatbotVoice: {
+    speechKey: process.env.POP_CHATBOT_SPEECH_KEY,
+    speechRegion: get('POP_CHATBOT_SPEECH_REGION', '') as string,
+    // The en-GB neural voice every spoken reply uses. English only for now.
+    voice: get('POP_CHATBOT_SPEECH_VOICE', 'en-GB-RyanNeural') as string,
+  },
   ingressUrl: get('INGRESS_URL', 'http://localhost:3000', requiredInProduction),
   environmentName: get('ENVIRONMENT_NAME', ''),
   feedbackBanner: {
@@ -184,6 +195,11 @@ const config = {
     // widget can be dark-launched (creds present, flag off) or emergency-
     // killed (flag off, creds untouched) without a redeploy.
     chatbot: get('FEATURE_CHATBOT', 'true') === 'true',
+    // Voice input/output for the chatbot (speak a question, hear the answer).
+    // Off by default: it is new and it sends the user's microphone audio to
+    // Azure AI Speech, so each environment opts in explicitly once the speech
+    // key is in place and the privacy notice covers it.
+    chatbotVoice: get('FEATURE_CHATBOT_VOICE', 'false') === 'true',
     analytics: get('FEATURE_ANALYTICS', 'true') === 'true',
     // Master switch for the /admin HMPPS-Auth-based "preview as user" feature.
     // Off by default: it's new and security-sensitive, and depends on an
@@ -213,5 +229,19 @@ const config = {
 // can never disagree — e.g. flag on but creds unset in preprod/local, which
 // would otherwise redirect to a /chat with no Chat nav item and a dead backend.
 export const chatbotEnabled = Boolean(config.features.chatbot && config.popChatbot.apiUrl && config.popChatbot.apiKey)
+
+// Voice needs the chatbot itself live, its own flag, and the Azure Speech
+// credentials. Evaluated per call (not at load) so the voice routes and the
+// Permissions-Policy header can be unit-tested by toggling config.
+export function isChatbotVoiceEnabled(): boolean {
+  return Boolean(
+    config.features.chatbot &&
+    config.popChatbot.apiUrl &&
+    config.popChatbot.apiKey &&
+    config.features.chatbotVoice &&
+    config.popChatbotVoice.speechKey &&
+    config.popChatbotVoice.speechRegion,
+  )
+}
 
 export default config

@@ -67,6 +67,11 @@ generic-service:
     hmpps-people-on-probation-ui-chatbot:
       POP_CHATBOT_API_KEY: 'POP_CHATBOT_API_KEY'
       POP_CHATBOT_USER_TOKEN_SECRET: 'POP_CHATBOT_USER_TOKEN_SECRET'
+      # Chatbot voice (Azure AI Speech). Uncomment per environment only AFTER the
+      # key has been added to this secret in that namespace: a secretKeyRef to a
+      # missing key stops the pod from starting. Pair with FEATURE_CHATBOT_VOICE
+      # and POP_CHATBOT_SPEECH_REGION in the values-<env>.yaml env block.
+      # POP_CHATBOT_SPEECH_KEY: 'POP_CHATBOT_SPEECH_KEY'
     sqs-hmpps-audit-secret:
       AUDIT_SQS_QUEUE_URL: 'sqs_queue_url'
     hmpps-people-on-probation-ui-auth-code:

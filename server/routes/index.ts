@@ -25,6 +25,7 @@ import licenceRoutes from './licence'
 import probationOfficerRoutes from './probationOfficer'
 import detailsRoutes from './details'
 import chatbotRoutes from './chatbot'
+import chatbotVoiceRoutes from './chatbotVoice'
 import expectationsRoutes from './expectations'
 import feedbackRoutes from './feedback'
 import adminRoutes from './admin'
@@ -142,6 +143,7 @@ export default function routes(services: Services): Router {
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
   router.use('/api/chatbot', chatbotRoutes(services))
+  router.use('/api/chatbot/voice', chatbotVoiceRoutes())
   router.use('/probation-agreement', expectationsRoutes(services))
   router.use('/feedback', feedbackRoutes(services))
 
