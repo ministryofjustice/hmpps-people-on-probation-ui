@@ -134,7 +134,7 @@ describe('GET /requirements', () => {
       expect(res.text).not.toContain('SA2020')
     })
 
-    it('maps "ORA Adult Custody (not PSS)" to Licence', async () => {
+    it('shows "ORA Adult Custody (not PSS)" unchanged, as only SA2020 is stripped', async () => {
       fakeDate('2025-01-01')
       peopleOnProbationService.getSentences.mockResolvedValue({
         sentences: [
@@ -154,8 +154,7 @@ describe('GET /requirements', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('Licence')
-      expect(res.text).not.toContain('ORA Adult Custody')
+      expect(res.text).toContain('ORA Adult Custody (not PSS)')
     })
   })
 
@@ -571,6 +570,7 @@ describe('GET /requirements', () => {
       fakeDate('2025-01-01')
       const sentence = sentenceWithDates('2024-01-01', '2026-01-01')
       sentence.sentences[0].type = 'SA2020 Community Order'
+      sentence.sentences[0].typeCode = '340'
       peopleOnProbationService.getSentences.mockResolvedValue(sentence)
 
       const res = await request(app)
@@ -584,10 +584,11 @@ describe('GET /requirements', () => {
       )
     })
 
-    it('matches the SA2020 Community Order type case-insensitively', async () => {
+    it('picks the explanation by type code, so other community order types get it too, keeping their label', async () => {
       fakeDate('2025-01-01')
       const sentence = sentenceWithDates('2024-01-01', '2026-01-01')
-      sentence.sentences[0].type = 'sa2020 community order'
+      sentence.sentences[0].type = 'ORA Community Order'
+      sentence.sentences[0].typeCode = '329'
       peopleOnProbationService.getSentences.mockResolvedValue(sentence)
 
       const res = await request(app)
@@ -595,13 +596,46 @@ describe('GET /requirements', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('What this means')
+      expect(res.text).toContain('ORA Community Order')
+      expect(res.text).toContain('Your order is a community order.')
+    })
+
+    it('shows the community order explanation for other community sentences, such as a Youth Rehabilitation Order', async () => {
+      fakeDate('2025-01-01')
+      const sentence = sentenceWithDates('2024-01-01', '2026-01-01')
+      sentence.sentences[0].type = 'SA2020 Youth Rehab Order'
+      sentence.sentences[0].typeCode = '342'
+      peopleOnProbationService.getSentences.mockResolvedValue(sentence)
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Youth Rehab Order')
+      expect(res.text).toContain('Your order is a community order.')
+    })
+
+    it('shows no explanation without a type code, even if the label matches', async () => {
+      fakeDate('2025-01-01')
+      const sentence = sentenceWithDates('2024-01-01', '2026-01-01')
+      sentence.sentences[0].type = 'SA2020 Community Order'
+      peopleOnProbationService.getSentences.mockResolvedValue(sentence)
+
+      const res = await request(app)
+        .get('/requirements')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('Community Order')
+      expect(res.text).not.toContain('What this means')
     })
 
     it('shows the "What this means" explanation for an SA2020 Suspended Sentence Order', async () => {
       fakeDate('2025-01-01')
       const sentence = sentenceWithDates('2024-01-01', '2026-01-01')
       sentence.sentences[0].type = 'SA2020 Suspended Sentence Order'
+      sentence.sentences[0].typeCode = '341'
       peopleOnProbationService.getSentences.mockResolvedValue(sentence)
 
       const res = await request(app)

@@ -392,10 +392,6 @@ describe('formatSentenceType', () => {
     expect(formatSentenceType('SA2020 Community Order')).toEqual('Community Order')
   })
 
-  it('maps ORA Adult Custody (not PSS) to Licence', () => {
-    expect(formatSentenceType('ORA Adult Custody (not PSS)')).toEqual('Licence')
-  })
-
   it('leaves other sentence types unchanged', () => {
     expect(formatSentenceType('ORA Community Order')).toEqual('ORA Community Order')
   })

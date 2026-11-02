@@ -260,6 +260,19 @@ The analytics tracking ID for each explanation is worked out from its kind, for 
 
 Separately, `server/utils/categoryCodes.ts` lists the codes behind the appointments page's "Why this might happen" guidance: tag codes (requirement and licence condition) and codes for requirements whose appointments come from other providers.
 
+## Sentence type explanations
+
+The "What this means" explanation under the sentence type is chosen by the sentence's `typeCode` (the nDelius disposal type code, for example `327`), not by its name. `server/utils/sentenceCategories.ts` groups the codes into categories.
+
+| Page | Categories explained |
+|---|---|
+| `/licence` (sentence type) | Standard determinate, extended determinate, life (including IPP), special custodial |
+| `/requirements` (order type) | Community order, suspended sentence order |
+
+Each page only shows its own categories. To add or change an explanation, edit or add `server/views/partials/sentence-type-explanations/<category>.njk` and add the category to that page's list in `CATEGORIES_WITH_EXPLANATION`.
+
+The sentence type itself is shown as nDelius describes it, except that the requirements page removes an "SA2020 " prefix, and the licence page removes an "ORA " or "SA2020 " prefix and anything in brackets at the end (for example "ORA Adult Custody (not PSS)" shows as "Adult Custody").
+
 ## Requirement progress
 
 Each requirement's progress bar (`toRequirementView` in `server/routes/requirements.ts`) is worked out from whatever data nDelius has for it, using the first rule that applies:

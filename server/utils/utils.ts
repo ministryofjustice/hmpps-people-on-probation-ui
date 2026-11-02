@@ -186,14 +186,8 @@ export const sanitiseOfficeLocationUrl = (url?: string | null): string | undefin
   }
 }
 
-const SENTENCE_TYPE_OVERRIDES: Record<string, string> = {
-  'ora adult custody (not pss)': 'Licence',
-}
-
 export const formatSentenceType = (type?: string): string | undefined => {
   if (!type) return undefined
-  const override = SENTENCE_TYPE_OVERRIDES[type.toLowerCase()]
-  if (override) return override
   return type.replace(/^SA2020\s+/i, '')
 }
 

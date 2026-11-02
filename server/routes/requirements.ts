@@ -16,6 +16,7 @@ import {
 } from '../utils/utils'
 import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
 import { findDocumentIdByType } from '../utils/documentTypes'
+import { getSentenceTypeExplanationTemplate } from '../utils/sentenceCategories'
 import { ADMINISTRATIVE_RAR_CATEGORY_CODE, TAG_CATEGORY_CODES } from '../utils/categoryCodes'
 import {
   explanationTemplate,
@@ -28,6 +29,7 @@ import {
 type OverallOrderView = {
   charge?: string
   type?: string
+  typeExplanationTemplate?: string
   startDate?: string
   endDate?: string
   totalLength?: string
@@ -239,6 +241,7 @@ export default function requirementsRoutes(services: Services): Router {
         overallOrder = {
           charge: sentence.mainOffence?.description,
           type: formatSentenceType(sentence?.type),
+          typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode, 'order'),
           startDate,
           endDate,
           totalLength,

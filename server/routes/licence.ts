@@ -7,6 +7,7 @@ import { getSessionCrn } from '../auth/sessionStore'
 import type { LicenceConditionResponse } from '../data/peopleOnProbationApiClient'
 import { calculateDateProgress, formatDate, formatLicenceSentenceType, isLicenceSentence } from '../utils/utils'
 import { findDocumentIdByType } from '../utils/documentTypes'
+import { getSentenceTypeExplanationTemplate } from '../utils/sentenceCategories'
 import {
   LICENCE_ALCOHOL_TAG_CATEGORY_CODE,
   LICENCE_GPS_TAG_CATEGORY_CODE,
@@ -28,6 +29,7 @@ type LicenceTagView = {
 
 type LicenceSentenceView = {
   type?: string
+  typeExplanationTemplate?: string
   startDate?: string
   endDate?: string
   totalLength?: string
@@ -65,6 +67,7 @@ export default function licenceRoutes(services: Services): Router {
 
       const licenceSentence: LicenceSentenceView = {
         type: formatLicenceSentenceType(sentence.type),
+        typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode, 'licence'),
         startDate: formatDate(sentence.startDate),
         endDate: formatDate(sentence.expectedEndDate),
         totalLength: progress?.totalLength,
