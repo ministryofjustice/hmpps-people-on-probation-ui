@@ -505,6 +505,7 @@ describe('GET /licence/standard-conditions', () => {
 
     expect(response.status).toBe(200)
     expect(response.text).toContain('Your standard licence conditions are not available yet.')
+    expect(response.text).toContain('data-tracking-id="standard_conditions_unavailable_probation_officer_link"')
     expect(response.text).not.toContain('You need to:')
     expect(response.text).not.toContain('Last updated on')
     expect(peopleOnProbationService.getLicence).not.toHaveBeenCalled()
@@ -517,6 +518,7 @@ describe('GET /licence/standard-conditions', () => {
 
     expect(response.status).toBe(200)
     expect(response.text).toContain('Your standard licence conditions are not available yet.')
+    expect(response.text).toContain('data-tracking-id="standard_conditions_unavailable_probation_officer_link"')
   })
 
   it.each([
@@ -656,8 +658,29 @@ describe('GET /licence/specific-conditions', () => {
     const response = await renderPage()
 
     expect(response.text).toContain('You do not have any licence conditions specific to you.')
+    expect(response.text).not.toContain('not available yet')
     expect(cardTitles(response.text)).toEqual([])
   })
+
+  it.each([
+    ['an empty list', () => peopleOnProbationService.getLicences.mockResolvedValue([])],
+    ['a 404', () => peopleOnProbationService.getLicences.mockRejectedValue({ responseStatus: 404 })],
+  ])(
+    'says the conditions are not available, not that there are none, when the licences API returns %s',
+    async (_, mock) => {
+      mock()
+
+      const response = await renderPage()
+
+      expect(response.status).toBe(200)
+      expect(response.text).toContain('Your licence conditions specific to you are not available yet.')
+      expect(response.text).toContain('data-tracking-id="specific_conditions_unavailable_probation_officer_link"')
+      expect(response.text).not.toContain('You do not have any licence conditions specific to you.')
+      expect(response.text).not.toContain('Last updated on')
+      expect(cardTitles(response.text)).toEqual([])
+      expect(peopleOnProbationService.getLicence).not.toHaveBeenCalled()
+    },
+  )
 
   it('redirects community orders to the requirements page', async () => {
     peopleOnProbationService.getSentences.mockResolvedValue({

@@ -135,6 +135,9 @@ export default function licenceRoutes(services: Services): Router {
       }
 
       return res.render('pages/licence-specific-conditions', {
+        // False when CVL has no licence for the person yet (an empty list or 404), so we can't say
+        // whether they have conditions specific to them.
+        licenceAvailable: Boolean(licence),
         groups,
         // Only shown when the licence has bespoke conditions.
         hasBespokeConditions: Boolean(

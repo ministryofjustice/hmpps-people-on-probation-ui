@@ -24,7 +24,9 @@
   <p class="govuk-body">The numbers shown within each licence condition are the same as the condition numbers on your licence document.</p>
   <p class="govuk-body"><a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="specific_conditions_probation_officer_link">Your probation officer</a> can help you understand your licence conditions if you are not sure.</p>
 
-  {% if groups.length or hasBespokeConditions %}
+  {% if not licenceAvailable %}
+    <p class="govuk-body">Your licence conditions specific to you are not available yet. Ask <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="specific_conditions_unavailable_probation_officer_link">your probation officer</a> if you need to know what they are.</p>
+  {% elif groups.length or hasBespokeConditions %}
     <ul class="pop-condition-groups">
       {% for group in groups %}
         <li class="pop-condition-groups__card">
