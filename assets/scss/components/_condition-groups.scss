@@ -1,0 +1,24 @@
+// One card per group of licence conditions on the "Licence conditions specific to you" page: one
+// column on mobile; from tablet up, two columns filled top to bottom (down the first column, then the
+// second), as in the design. Cards are 20px apart.
+.pop-condition-groups {
+  margin: govuk-spacing(6) 0;
+  padding: 0;
+  list-style: none;
+
+  @include govuk-media-query($from: tablet) {
+    column-count: 2;
+    column-gap: govuk-spacing(4);
+  }
+
+  &__card {
+    // Keep each card whole within a column, rather than split across the two.
+    break-inside: avoid;
+    margin-bottom: govuk-spacing(4);
+
+    // .pop-card's height: 100% plus its padding would overflow; cards size to their content here.
+    .pop-card {
+      height: auto;
+    }
+  }
+}

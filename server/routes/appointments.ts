@@ -14,9 +14,13 @@ import {
   isMissedMandatoryAppointmentOrActivity,
   shouldIncludeMissedAppointmentInAlert,
   APPOINTMENTS_OVERVIEW_SIZE,
+  isLicenceSentence,
 } from '../utils/utils'
 import type { AppointmentResponse, PageMetadataResponse } from '../data/peopleOnProbationApiClient'
-import { TAG_CATEGORY_CODES, LICENCE_TAG_CATEGORY_CODES, OTHER_CHANNEL_CATEGORY_CODES } from '../utils/categoryCodes'
+import { TAG_CATEGORY_CODES, OTHER_CHANNEL_CATEGORY_CODES } from '../utils/categoryCodes'
+import findCurrentLicence from '../utils/currentLicence'
+import { toLicenceTags } from '../utils/licenceConditions'
+import logger from '../../logger'
 
 export type AppointmentsTab = 'upcoming' | 'past'
 
@@ -307,6 +311,18 @@ export function generateIcs(params: {
   return lines.join('\r\n')
 }
 
+// Whether the person's CVL licence has a tag condition, for the tag appointments guidance. If the
+// licence can't be loaded, the guidance is left out.
+async function hasLicenceTag(services: Services, crn: string, correlationId: string): Promise<boolean> {
+  try {
+    const licence = await findCurrentLicence(services, crn)
+    return toLicenceTags(licence?.conditions?.AP?.additional).length > 0
+  } catch (error) {
+    logger.warn({ correlationId, err: error }, 'Could not load the licence for the tag appointments guidance')
+    return false
+  }
+}
+
 export function toAppointmentCardView(appointment: AppointmentResponse): AppointmentCardView {
   const noLocation = appointment.unpaidWork ? false : hasNoLocation(appointment)
   const address = appointment.unpaidWork || noLocation ? [] : formatAddress(appointment.location)
@@ -394,9 +410,9 @@ export default function appointmentsRoutes(services: Services): Router {
         ...sentence.requirements.map(r => r.mainCategory?.code),
         ...sentence.licenceConditions.map(lc => lc.mainCategory?.code),
       ])
-      const hasTagAppointments = mainCategoryCodes.some(
-        code => TAG_CATEGORY_CODES.includes(code) || LICENCE_TAG_CATEGORY_CODES.includes(code),
-      )
+      const hasTagAppointments =
+        mainCategoryCodes.some(code => TAG_CATEGORY_CODES.includes(code)) ||
+        (isLicenceSentence(sentenceProgress.sentences[0]) && (await hasLicenceTag(services, crn, req.id)))
       const hasOtherChannelAppointments = mainCategoryCodes.some(code => OTHER_CHANNEL_CATEGORY_CODES.includes(code))
 
       const appointmentsToShow = activeTabAppointments.content

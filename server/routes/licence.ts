@@ -4,23 +4,27 @@ import type { Services } from '../services'
 import config from '../config'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
-import type { LicenceConditionResponse } from '../data/peopleOnProbationApiClient'
-import { calculateDateProgress, formatDate, formatLicenceSentenceType, isLicenceSentence } from '../utils/utils'
+import {
+  calculateDateProgress,
+  formatDate,
+  formatDateTimeWithDay,
+  formatLicenceSentenceType,
+  isLicenceSentence,
+  isLongerThanMonths,
+} from '../utils/utils'
 import { findDocumentIdByType } from '../utils/documentTypes'
 import { getSentenceTypeExplanationTemplate } from '../utils/sentenceCategories'
+import logger from '../../logger'
+import { toAppointmentCardView, type AppointmentCardView } from './appointments'
 import {
-  LICENCE_ALCOHOL_TAG_CATEGORY_CODE,
-  LICENCE_GPS_TAG_CATEGORY_CODE,
-  LICENCE_TRAIL_MONITORING_TAG_CATEGORY_CODE,
-} from '../utils/categoryCodes'
-
-// Electronic monitoring licence conditions, keyed by main category code, with the tag type as it
-// reads in "You need to wear [tagType] tag".
-const TAG_TYPES: Record<string, string> = {
-  [LICENCE_GPS_TAG_CATEGORY_CODE]: 'a GPS',
-  [LICENCE_TRAIL_MONITORING_TAG_CATEGORY_CODE]: 'a trail monitoring',
-  [LICENCE_ALCOHOL_TAG_CATEGORY_CODE]: 'an alcohol monitoring',
-}
+  BESPOKE_CONDITIONS_KEY,
+  TAG_CONDITION_GROUP_KEYS,
+  toBespokeConditionGroup,
+  toAdditionalConditionGroup,
+  toAdditionalConditionGroups,
+  toLicenceTags,
+} from '../utils/licenceConditions'
+import findCurrentLicence from '../utils/currentLicence'
 
 type LicenceTagView = {
   tagType: string
@@ -38,18 +42,12 @@ type LicenceSentenceView = {
   tags: LicenceTagView[]
 }
 
-const toLicenceTags = (licenceConditions: LicenceConditionResponse[] = []): LicenceTagView[] =>
-  licenceConditions.flatMap(condition => {
-    const tagType = TAG_TYPES[condition.mainCategory?.code ?? '']
-    return tagType ? [{ tagType, endDate: formatDate(condition.expectedEndDate) }] : []
-  })
-
 export default function licenceRoutes(services: Services): Router {
   const router = Router()
 
   router.use(requireAuthentication)
 
-  router.get('/', async (_req, res, next) => {
+  router.get('/', async (req, res, next) => {
     try {
       const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
@@ -73,7 +71,7 @@ export default function licenceRoutes(services: Services): Router {
         totalLength: progress?.totalLength,
         percentComplete: progress?.percentComplete,
         remainingDuration: progress?.remainingDuration,
-        tags: toLicenceTags(sentence.licenceConditions),
+        tags: await findLicenceTags(services, crn, req.id),
       }
 
       const licenceDocumentId = config.features.documents
@@ -86,5 +84,155 @@ export default function licenceRoutes(services: Services): Router {
     }
   })
 
+  router.get('/standard-conditions', async (req, res, next) => {
+    try {
+      const crn = getSessionCrn(res.locals.user)
+      if (!crn) return res.redirect('/autherror')
+
+      const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
+      const sentence = sentenceProgress.sentences[0]
+      if (!isLicenceSentence(sentence)) return res.redirect('/requirements')
+
+      const licence = await findCurrentLicence(services, crn)
+      return res.render('pages/licence-standard-conditions', {
+        // CVL's own wording, in CVL's order, so they match the person's licence document.
+        conditions: (licence?.conditions?.AP?.standard ?? []).map(({ text }) => text).filter(Boolean),
+        lastUpdatedAt: formatDateTimeWithDay(licence?.updatedDateTime ?? licence?.approvedDateTime),
+        // The firearms restriction applies to sentences longer than 3 months.
+        showFirearms: isLongerThanMonths(sentence.startDate, sentence.expectedEndDate, 3),
+      })
+    } catch (error) {
+      return next(error)
+    }
+  })
+
+  router.get('/specific-conditions', async (req, res, next) => {
+    try {
+      const crn = getSessionCrn(res.locals.user)
+      if (!crn) return res.redirect('/autherror')
+
+      const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
+      if (!isLicenceSentence(sentenceProgress.sentences[0])) return res.redirect('/requirements')
+
+      const licence = await findCurrentLicence(services, crn)
+      const { groups, unknownCodes, hasUnshownElectronicMonitoring } = toAdditionalConditionGroups(
+        licence?.conditions?.AP?.additional,
+      )
+      if (unknownCodes.length) {
+        logger.warn(
+          { correlationId: req.id, licenceId: licence?.id, unknownCodes },
+          'Additional licence conditions with no group, shown under their CVL category',
+        )
+      }
+      if (hasUnshownElectronicMonitoring) {
+        logger.warn(
+          { correlationId: req.id, licenceId: licence?.id },
+          'Electronic monitoring licence condition with no tag condition, so not shown',
+        )
+      }
+
+      return res.render('pages/licence-specific-conditions', {
+        groups,
+        // Only shown when the licence has bespoke conditions.
+        hasBespokeConditions: Boolean(
+          toBespokeConditionGroup(licence?.conditions?.AP?.additional, licence?.conditions?.AP?.bespoke),
+        ),
+        lastUpdatedAt: formatDateTimeWithDay(licence?.updatedDateTime ?? licence?.approvedDateTime),
+      })
+    } catch (error) {
+      return next(error)
+    }
+  })
+
+  router.get('/specific-conditions/:groupKey', async (req, res, next) => {
+    try {
+      const crn = getSessionCrn(res.locals.user)
+      if (!crn) return res.redirect('/autherror')
+
+      const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
+      if (!isLicenceSentence(sentenceProgress.sentences[0])) return res.redirect('/requirements')
+
+      const licence = await findCurrentLicence(services, crn)
+      const additional = licence?.conditions?.AP?.additional
+      const group =
+        req.params.groupKey === BESPOKE_CONDITIONS_KEY
+          ? toBespokeConditionGroup(additional, licence?.conditions?.AP?.bespoke)
+          : toAdditionalConditionGroup(additional, req.params.groupKey)
+      if (!group) return next()
+
+      const { groups } = toAdditionalConditionGroups(additional)
+      return res.render('pages/licence-condition-group', {
+        group,
+        nextDrugTest: group.key === 'take-drug-tests' ? await findNextDrugTest(services, crn, req.id) : undefined,
+        helpTemplate: licenceConditionHelpTemplate(group.key),
+        // The curfew help links to the person's tag conditions, when they have some.
+        tagGroupKey: TAG_CONDITION_GROUP_KEYS.find(key => groups.some(g => g.key === key)),
+      })
+    } catch (error) {
+      return next(error)
+    }
+  })
+
   return router
 }
+
+// The person's electronic monitoring tags from their CVL licence, for the licence page. If the licence
+// can't be loaded, the page is still shown, without them.
+const findLicenceTags = async (services: Services, crn: string, correlationId: string): Promise<LicenceTagView[]> => {
+  try {
+    const licence = await findCurrentLicence(services, crn)
+    return toLicenceTags(licence?.conditions?.AP?.additional).map(({ tagType, endDate }) => ({
+      tagType,
+      endDate: formatDate(endDate),
+    }))
+  } catch (error) {
+    logger.warn({ correlationId, err: error }, 'Could not load the licence for the electronic monitoring tags')
+    return []
+  }
+}
+
+// Drug Test Appointment (NS) in nDelius.
+const DRUG_TEST_APPOINTMENT_TYPE_CODE = 'DRGAPT'
+
+// The person's next drug test appointment, for the "Take drug tests" page. Upcoming appointments come
+// soonest first. If they can't be loaded, the page is still shown, without the card.
+const findNextDrugTest = async (
+  services: Services,
+  crn: string,
+  correlationId: string,
+): Promise<AppointmentCardView | undefined> => {
+  try {
+    const { content } = await services.peopleOnProbationService.getFutureAppointments(crn)
+    const drugTest = content.find(
+      appointment => appointment.typeCode?.toUpperCase() === DRUG_TEST_APPOINTMENT_TYPE_CODE,
+    )
+    return drugTest ? toAppointmentCardView(drugTest) : undefined
+  } catch (error) {
+    logger.warn({ correlationId, err: error }, 'Could not load upcoming appointments for the next drug test')
+    return undefined
+  }
+}
+
+// Help for a group's page, when it has some: the group key and its template in
+// views/partials/licence-condition-help/.
+const LICENCE_CONDITION_HELP: Record<string, string> = {
+  'follow-a-curfew': 'follow-a-curfew',
+  'areas-and-places-you-must-not-go-to': 'areas-and-places-you-must-not-go-to',
+  'areas-you-must-not-leave': 'areas-you-must-not-leave',
+  'take-drug-tests': 'take-drug-tests',
+  'things-you-are-not-allowed-to-do': 'things-you-are-not-allowed-to-do',
+  'things-you-must-tell-your-probation-officer-about': 'things-you-must-tell-your-probation-officer-about',
+  'things-you-are-not-allowed-to-use-have-or-own': 'things-you-are-not-allowed-to-use-have-or-own',
+  'people-you-must-not-contact-or-associate-with': 'people-you-must-not-contact-or-associate-with',
+  'area-you-must-live-in': 'area-you-must-live-in',
+  'money-and-assets-you-are-allowed-to-have': 'money-and-assets-you-are-allowed-to-have',
+  // Every tag page has the same help.
+  'wear-a-gps-tag': 'wear-a-tag',
+  'wear-a-curfew-or-rf-tag': 'wear-a-tag',
+  'wear-an-alcohol-tag': 'wear-a-tag',
+}
+
+const licenceConditionHelpTemplate = (groupKey: string): string | undefined =>
+  LICENCE_CONDITION_HELP[groupKey]
+    ? `partials/licence-condition-help/${LICENCE_CONDITION_HELP[groupKey]}.njk`
+    : undefined

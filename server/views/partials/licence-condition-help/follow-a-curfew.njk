@@ -1,0 +1,7 @@
+{# Links to the person's tag conditions only when they have some (tagGroupKey, set by the licence route). #}
+<p class="govuk-body">Your curfew is often checked with a tag. This means you will also have to follow {% if tagGroupKey %}<a class="govuk-link" href="/licence/specific-conditions/{{ tagGroupKey }}" data-tracking-id="licence_condition_help_curfew_tag_link">your licence conditions for wearing a tag</a>{% else %}your licence conditions for wearing a tag{% endif %}.</p>
+<p class="govuk-body">You need to ask for permission from <a class="govuk-link" href="/probation-officer" data-tracking-id="licence_condition_help_curfew_probation_officer_link">your probation officer</a> if you want to stay:</p>
+<ul class="govuk-list govuk-list--bullet">
+  <li>at a known temporary address</li>
+  <li>somewhere new</li>
+</ul>

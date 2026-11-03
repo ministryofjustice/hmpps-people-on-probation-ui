@@ -88,9 +88,12 @@ export interface OffenceResponse {
 }
 
 export interface SentenceResponse {
+  eventNumber?: number
   type?: string
   // nDelius disposal type code (e.g. '327'), used to explain the sentence type.
   typeCode?: string
+  // Prison book number (e.g. '76148A') for custodial sentences. Not the numeric bookingId on licences.
+  bookNumber?: string
   startDate?: string
   expectedEndDate?: string
   requirements: RequirementResponse[]
@@ -102,6 +105,76 @@ export interface SentenceResponse {
 
 export interface SentenceProgressResponse {
   sentences: SentenceResponse[]
+}
+
+// Licences come from Create and Vary a Licence (CVL). The API only returns ACTIVE licences.
+export interface LicenceSummaryResponse {
+  id: number
+  kind?: string
+  licenceType?: string
+  policyVersion?: string
+  version?: string
+  statusCode?: string
+  prisonNumber?: string
+  bookingId?: number
+  crn?: string
+  approvedDateTime?: string
+  createdDateTime?: string
+  updatedDateTime?: string
+  isInPssPeriod?: boolean
+  // From Prisoner Search; only present when the prisoner's current booking matches this licence.
+  sentenceStartDate?: string
+  sentenceExpiryDate?: string
+  licenceExpiryDate?: string
+}
+
+export interface StandardLicenceConditionResponse {
+  code?: string
+  text?: string
+}
+
+export interface AdditionalLicenceConditionResponse {
+  id?: number
+  category?: string
+  type?: string
+  code?: string
+  text?: string
+  restrictions: string[]
+  hasImageUpload?: boolean
+}
+
+export interface BespokeLicenceConditionResponse {
+  text?: string
+}
+
+export interface LicenceConditionSetResponse {
+  standard: StandardLicenceConditionResponse[]
+  additional: AdditionalLicenceConditionResponse[]
+  bespoke: BespokeLicenceConditionResponse[]
+}
+
+// AP = all-purpose licence conditions, PSS = post-sentence supervision conditions.
+export interface LicenceConditionsResponse {
+  AP?: LicenceConditionSetResponse
+  PSS?: LicenceConditionSetResponse
+}
+
+export interface LicenceResponse {
+  id: number
+  kind?: string
+  licenceType?: string
+  policyVersion?: string
+  version?: string
+  statusCode?: string
+  prisonNumber?: string
+  bookingId?: number
+  crn?: string
+  approvedDateTime?: string
+  createdDateTime?: string
+  updatedDateTime?: string
+  licenceStartDate?: string
+  isInPssPeriod?: boolean
+  conditions?: LicenceConditionsResponse
 }
 
 export interface PractitionerResponse {
@@ -275,6 +348,14 @@ export default class PeopleOnProbationApiClient extends RestClient {
 
   getSentences(crn: string) {
     return this.get<SentenceProgressResponse>({ path: `/v1/person/${crn}/sentences` }, asSystem())
+  }
+
+  getLicences(crn: string) {
+    return this.get<LicenceSummaryResponse[]>({ path: `/v1/person/${crn}/licences` }, asSystem())
+  }
+
+  getLicence(crn: string, licenceId: number) {
+    return this.get<LicenceResponse>({ path: `/v1/person/${crn}/licences/${licenceId}` }, asSystem())
   }
 
   getFutureAppointments(crn: string, page = 0, size = 50) {

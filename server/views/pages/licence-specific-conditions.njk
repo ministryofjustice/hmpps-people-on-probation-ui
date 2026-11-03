@@ -1,0 +1,48 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% set pageTitle = "Licence conditions specific to you – Check your probation account – GOV.UK" %}
+{% set currentPage = "licence" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Back", href: "/licence" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-xl">Licence conditions specific to you</h1>
+
+  {% if lastUpdatedAt %}
+    <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6">
+      <p class="govuk-body govuk-!-margin-bottom-0">Last updated on {{ lastUpdatedAt }}</p>
+    </div>
+  {% endif %}
+
+  <p class="govuk-body">These are conditions that you must follow that have been added specifically for you. These conditions can be added, removed or changed.</p>
+  <p class="govuk-body">They are aimed at helping you make positive changes or stopping you doing things that led you to prison.</p>
+  <p class="govuk-body">Read these and <a class="govuk-link govuk-link--no-visited-state" href="/licence/standard-conditions" data-tracking-id="specific_conditions_standard_conditions_link">standard licence conditions</a> carefully.</p>
+  <p class="govuk-body">The numbers shown within each licence condition are the same as the condition numbers on your licence document.</p>
+  <p class="govuk-body"><a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="specific_conditions_probation_officer_link">Your probation officer</a> can help you understand your licence conditions if you are not sure.</p>
+
+  {% if groups.length or hasBespokeConditions %}
+    <ul class="pop-condition-groups">
+      {% for group in groups %}
+        <li class="pop-condition-groups__card">
+          <a href="/licence/specific-conditions/{{ group.key }}" class="pop-card" data-tracking-id="licence_condition_group_{{ group.key }}">
+            <h2 class="govuk-heading-m pop-card__title govuk-!-margin-bottom-0">{{ group.title }}</h2>
+          </a>
+        </li>
+      {% endfor %}
+      {% if hasBespokeConditions %}
+        <li class="pop-condition-groups__card">
+          <a href="/licence/specific-conditions/bespoke-licence-conditions" class="pop-card" data-tracking-id="licence_condition_group_bespoke-licence-conditions">
+            <h2 class="govuk-heading-m pop-card__title govuk-!-margin-bottom-0">Bespoke licence conditions</h2>
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  {% else %}
+    <p class="govuk-body">You do not have any licence conditions specific to you.</p>
+  {% endif %}
+
+{% endblock %}

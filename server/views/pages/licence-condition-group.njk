@@ -1,0 +1,39 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "../macros/helpPanel.njk" import helpPanel %}
+
+{% set pageTitle = group.title + " – Check your probation account – GOV.UK" %}
+{% set currentPage = "licence" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Back", href: "/licence/specific-conditions" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <span class="govuk-caption-l">Your licence conditions</span>
+  <h1 class="govuk-heading-xl">{{ group.title }}</h1>
+
+  <h2 class="govuk-heading-l">Your licence conditions</h2>
+  {# Numbered as on the licence document, e.g. "7. (a)" - see toNumberedAdditionalConditions. Bespoke
+     conditions have a number only. #}
+  <ol class="govuk-list pop-condition-list">
+    {% for condition in group.conditions %}
+      <li class="pop-condition-list__item"><span class="pop-condition-list__number">{{ condition.number }}.</span><span>{% if condition.letter %}({{ condition.letter }}) {% endif %}{{ condition.text }}</span></li>
+    {% endfor %}
+  </ol>
+
+  {% if nextDrugTest %}
+    {% set appointment = nextDrugTest %}
+    {% set cardTitle = "Next drug test" %}
+    {% set locationLabel = "Address" %}
+    {% set showActions = true %}
+    {% include "../partials/appointment-card.njk" %}
+  {% endif %}
+
+  {% if helpTemplate %}
+    {% set helpHtml %}{% include helpTemplate %}{% endset %}
+    {{ helpPanel({ heading: "Help with this licence condition", html: helpHtml }) }}
+  {% endif %}
+
+{% endblock %}

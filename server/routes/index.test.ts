@@ -307,11 +307,12 @@ describe('GET /', () => {
       expect(response.text).not.toContain('You need to wear')
     })
 
-    it('labels the requirements tile and nav item "Your licence"', async () => {
+    it('labels the requirements tile "Your sentence and licence" and the nav item "Your licence"', async () => {
       const response = await renderHome({ requirements: [], licenceConditions: [licenceCondition] })
 
-      expect(response.text).toContain('See your sentence information and check your licence')
-      expect(response.text).toMatch(/href="\/licence"[^>]*>\s*Your licence/)
+      expect(response.text).toContain('Your sentence and licence</h2>')
+      expect(response.text).toContain('See your sentence information and check your licence conditions')
+      expect(response.text).toMatch(/govuk-service-navigation__link"[^>]*href="\/licence"[^>]*>\s*Your licence\s*</)
       expect(response.text).toContain('<a href="/licence" class="pop-card">')
       expect(response.text).not.toContain('href="/requirements"')
       expect(response.text).not.toContain('Order requirements')
@@ -340,6 +341,7 @@ describe('GET /', () => {
       expect(response.text).toContain('Order requirements')
       expect(response.text).toContain('See progress against your order requirements')
       expect(response.text).not.toContain('Your licence')
+      expect(response.text).not.toContain('Your sentence and licence')
       expect(response.text).not.toContain('Your progress')
       expect(response.text).not.toContain('You are on licence')
     })

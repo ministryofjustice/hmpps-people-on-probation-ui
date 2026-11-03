@@ -26,6 +26,14 @@ export default class PeopleOnProbationService {
     return this.peopleOnProbationApiClient.getSentences(crn)
   }
 
+  getLicences(crn: string) {
+    return this.peopleOnProbationApiClient.getLicences(crn)
+  }
+
+  getLicence(crn: string, licenceId: number) {
+    return this.peopleOnProbationApiClient.getLicence(crn, licenceId)
+  }
+
   getFutureAppointments(crn: string, page = 0, size = 50) {
     return this.peopleOnProbationApiClient.getFutureAppointments(crn, page, size)
   }

@@ -83,6 +83,12 @@ export const formatDateTimeWithDay = (datetimeStr?: string): string | undefined 
 
 export const parseLocalDate = (dateStr: string): Date => parse(dateStr, 'yyyy-MM-dd', new Date())
 
+// Whether a sentence runs for longer than `months`, from its start and end dates (yyyy-MM-dd).
+// False when either date is missing, as the length isn't known.
+export const isLongerThanMonths = (startDateStr: string | undefined, endDateStr: string | undefined, months: number) =>
+  Boolean(startDateStr && endDateStr) &&
+  isAfter(parseLocalDate(endDateStr), add(parseLocalDate(startDateStr), { months }))
+
 export const formatIntervalDuration = (start: Date, end: Date): string => {
   let { years = 0, months = 0, days = 0 } = intervalToDuration({ start: startOfDay(start), end: startOfDay(end) })
   if (days >= 30) {
@@ -205,11 +211,15 @@ export const formatLicenceSentenceType = (type?: string): string | undefined => 
 
 export type SentenceKind = 'LICENCE' | 'COMMUNITY_ORDER'
 
-// A sentence carries either licence conditions (licence) or requirements (community order),
-// never both. Returns undefined when neither is populated, so callers can fall back to the
-// existing requirements UI rather than guessing.
+// Decides the licence or community order journey (navigation, home page, /licence or /requirements):
+// - a prison book number means a custodial sentence, so the person is on licence, whether or not
+//   their licence conditions have been recorded yet
+// - otherwise licence conditions still mean licence, as a fallback for a missing book number
+// - otherwise requirements mean a community order
+// Returns undefined when none of these apply, so callers fall back to the requirements journey.
 export const getSentenceKind = (sentence?: SentenceResponse): SentenceKind | undefined => {
   if (!sentence) return undefined
+  if (sentence.bookNumber) return 'LICENCE'
   if (sentence.licenceConditions?.length) return 'LICENCE'
   if (sentence.requirements?.length) return 'COMMUNITY_ORDER'
   return undefined

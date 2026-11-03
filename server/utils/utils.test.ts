@@ -12,6 +12,7 @@ import {
   formatUnit,
   hasDateArrived,
   estimateEndDate,
+  isLongerThanMonths,
   formatAddress,
   formatMapUrl,
   formatPersonName,
@@ -407,7 +408,18 @@ describe('getSentenceKind', () => {
     expectedEndDate: '2027-09-29',
   }
 
-  it('returns LICENCE when licence conditions are populated and requirements are empty', () => {
+  it('returns LICENCE when there is a prison book number, even before licence conditions are recorded', () => {
+    const sentence: SentenceResponse = { bookNumber: '76148A', requirements: [], licenceConditions: [] }
+    expect(getSentenceKind(sentence)).toEqual('LICENCE')
+    expect(isLicenceSentence(sentence)).toBe(true)
+  })
+
+  it('returns LICENCE when there is a prison book number, even if requirements are populated', () => {
+    const sentence: SentenceResponse = { bookNumber: '76148A', requirements: [requirement], licenceConditions: [] }
+    expect(getSentenceKind(sentence)).toEqual('LICENCE')
+  })
+
+  it('falls back to LICENCE when licence conditions are populated but there is no book number', () => {
     const sentence: SentenceResponse = { requirements: [], licenceConditions: [licenceCondition] }
     expect(getSentenceKind(sentence)).toEqual('LICENCE')
     expect(isLicenceSentence(sentence)).toBe(true)
@@ -450,4 +462,19 @@ describe('formatLicenceSentenceType', () => {
     expect(formatLicenceSentenceType(undefined)).toBeUndefined()
     expect(formatLicenceSentenceType('')).toBeUndefined()
   })
+})
+
+describe('isLongerThanMonths', () => {
+  it.each([
+    ['2026-01-01', '2026-04-02', true],
+    ['2026-01-01', '2026-04-01', false],
+    ['2026-01-01', '2026-02-15', false],
+    [undefined, '2026-04-02', false],
+    ['2026-01-01', undefined, false],
+  ])(
+    '%s to %s is longer than 3 months: %s',
+    (start: string | undefined, end: string | undefined, expected: boolean) => {
+      expect(isLongerThanMonths(start, end, 3)).toBe(expected)
+    },
+  )
 })
