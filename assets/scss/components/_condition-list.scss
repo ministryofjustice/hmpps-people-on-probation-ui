@@ -10,9 +10,22 @@
 
   &__item {
     display: flex;
+    flex-wrap: wrap;
     margin-bottom: 0;
     padding: govuk-spacing(2) 0;
     border-bottom: 1px solid $govuk-border-colour;
+  }
+
+  // The condition text takes the rest of the row, so it never wraps below the number.
+  &__number + span {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  // A map uploaded for the condition, under its text, across the full width.
+  &__map {
+    flex-basis: 100%;
+    margin-top: govuk-spacing(4);
   }
 
   &__number {
@@ -21,4 +34,13 @@
     min-width: 24px;
     padding-right: govuk-spacing(1);
   }
+}
+
+// A map uploaded for a licence condition, e.g. an area you must not enter. Full width on mobile, as in
+// the design, and never wider than the image itself.
+.pop-condition-map {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: govuk-spacing(2);
 }

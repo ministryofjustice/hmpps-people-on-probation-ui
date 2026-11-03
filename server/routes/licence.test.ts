@@ -1,4 +1,5 @@
 import type { Express } from 'express'
+import { Readable } from 'stream'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import type { Services } from '../services'
@@ -12,6 +13,7 @@ let peopleOnProbationService: {
   getLicences: jest.Mock
   getLicence: jest.Mock
   getFutureAppointments: jest.Mock
+  getLicenceConditionImage: jest.Mock
 }
 
 const licenceCondition = { mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }
@@ -34,6 +36,7 @@ beforeEach(() => {
     getLicences: jest.fn(),
     getLicence: jest.fn(),
     getFutureAppointments: jest.fn(),
+    getLicenceConditionImage: jest.fn(),
   }
   app = appWithAllRoutes({
     services: { peopleOnProbationService } as unknown as Partial<Services>,
@@ -1034,6 +1037,104 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     })
   })
 
+  describe('maps', () => {
+    const EXCLUSION_ZONE = '0f9a20f4-35c7-4c77-8af8-f200f153fa11'
+    const mapLicence = (additional: { id: number; code: string; hasImageUpload?: boolean }[]): LicenceResponse => ({
+      id: 1440,
+      conditions: {
+        AP: {
+          standard: [],
+          additional: additional.map(condition => ({
+            ...condition,
+            category: 'Freedom of movement',
+            text: 'Not to enter the area as defined by the attached map.',
+            restrictions: [] as string[],
+          })),
+          bespoke: [],
+        },
+      },
+    })
+
+    it('shows the map for a condition with an uploaded image, through the image proxy', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        mapLicence([{ id: 204, code: EXCLUSION_ZONE, hasImageUpload: true }]),
+      )
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      expect(response.text).toContain('Map of the area you must not enter</h3>')
+      expect(response.text).toContain('src="/licence/conditions/1440/204/image"')
+      expect(response.text).toContain('alt="Map of the area you must not enter for licence condition 1. (a)"')
+    })
+
+    it('links to download the map', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        mapLicence([{ id: 204, code: EXCLUSION_ZONE, hasImageUpload: true }]),
+      )
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      expect(response.text).toContain(
+        '<a class="govuk-link" href="/licence/conditions/1440/204/image" download="map-licence-condition-1a.jpg" data-tracking-id="licence_condition_download_map">Download map<span class="govuk-visually-hidden"> for licence condition 1. (a)</span></a>',
+      )
+    })
+
+    it('shows each map directly under its own condition', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        mapLicence([
+          { id: 204, code: EXCLUSION_ZONE, hasImageUpload: true },
+          { id: 205, code: '42f71b40-84cd-446d-8647-f00bbb6c079c' },
+          { id: 229, code: EXCLUSION_ZONE, hasImageUpload: true },
+        ]),
+      )
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      const items = [...response.text.matchAll(/<li class="pop-condition-list__item">([\s\S]*?)<\/li>/g)].map(m => m[1])
+      expect(items).toHaveLength(3)
+      expect(items[0]).toContain('src="/licence/conditions/1440/204/image"')
+      expect(items[1]).not.toContain('Map of')
+      expect(items[2]).toContain('src="/licence/conditions/1440/229/image"')
+      expect(items[2]).toContain('for licence condition 1. (c)')
+    })
+
+    it('shows no map for conditions without an uploaded image', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(mapLicence([{ id: 204, code: EXCLUSION_ZONE }]))
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      expect(response.text).not.toContain('Map of')
+      expect(response.text).not.toContain('/image"')
+    })
+
+    it('shows the map on the areas you must not leave page, with its own heading', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        mapLicence([{ id: 211, code: '005d70e4-a247-4f82-b8b3-6d294a0f5051', hasImageUpload: true }]),
+      )
+
+      const response = await renderPage('areas-you-must-not-leave')
+
+      expect(response.text).toContain(
+        '<h3 class="govuk-heading-s govuk-!-margin-bottom-2">Map of the area you must not leave</h3>',
+      )
+      expect(response.text).toContain('src="/licence/conditions/1440/211/image"')
+      expect(response.text).toContain('alt="Map of the area you must not leave for licence condition 1. (a)"')
+      expect(response.text).toContain('Download map')
+    })
+
+    it('shows no map on other pages, even when a condition has an image', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        mapLicence([{ id: 203, code: '0a370862-5426-49c1-b6d4-3d074d78a81a', hasImageUpload: true }]),
+      )
+
+      const response = await renderPage('follow-a-curfew')
+
+      expect(response.status).toBe(200)
+      expect(response.text).not.toContain('Map of')
+      expect(response.text).not.toContain('/image"')
+    })
+  })
+
   it('has no page for the electronic monitoring condition on its own', async () => {
     peopleOnProbationService.getLicence.mockResolvedValue(
       licence([{ code: 'fd129172-bdd3-4d97-a4a0-efd7b47a49d4', category: 'Electronic monitoring' }]),
@@ -1145,5 +1246,75 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
 
     expect(response.status).toBe(302)
     expect(response.headers.location).toBe('/requirements')
+  })
+})
+
+describe('GET /licence/conditions/:licenceId/:conditionId/image', () => {
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46])
+
+  const getImage = async (path: string) =>
+    request(app)
+      .get(path)
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = []
+        res.on('data', (chunk: Buffer) => chunks.push(chunk))
+        res.on('end', () => callback(null, Buffer.concat(chunks)))
+      })
+
+  it('streams the image with safe headers', async () => {
+    peopleOnProbationService.getLicenceConditionImage.mockResolvedValue(Readable.from([jpeg]))
+
+    const response = await getImage('/licence/conditions/1440/204/image')
+
+    expect(response.status).toBe(200)
+    expect(response.headers['content-type']).toBe('image/jpeg')
+    expect(response.headers['cache-control']).toBe('no-store, private')
+    expect(response.headers['x-content-type-options']).toBe('nosniff')
+    expect(response.body).toEqual(jpeg)
+  })
+
+  it('uses the CRN from the session, not the URL', async () => {
+    peopleOnProbationService.getLicenceConditionImage.mockResolvedValue(Readable.from([jpeg]))
+
+    await getImage('/licence/conditions/1440/204/image?crn=Z999999')
+
+    expect(peopleOnProbationService.getLicenceConditionImage).toHaveBeenCalledWith('X123456', 1440, 204)
+  })
+
+  it.each([
+    '/licence/conditions/0/204/image',
+    '/licence/conditions/1440/-1/image',
+    '/licence/conditions/abc/204/image',
+  ])('returns not found for an invalid id (%s) without calling the API', async path => {
+    const response = await getImage(path)
+
+    expect(response.status).toBe(404)
+    expect(peopleOnProbationService.getLicenceConditionImage).not.toHaveBeenCalled()
+  })
+
+  it.each([404, 400])('returns not found when the API returns %s', async status => {
+    peopleOnProbationService.getLicenceConditionImage.mockRejectedValue({ responseStatus: status })
+
+    const response = await getImage('/licence/conditions/1440/204/image')
+
+    expect(response.status).toBe(404)
+  })
+
+  it('passes other API errors to the error handler', async () => {
+    peopleOnProbationService.getLicenceConditionImage.mockRejectedValue({ responseStatus: 500, message: 'boom' })
+
+    const response = await getImage('/licence/conditions/1440/204/image')
+
+    expect(response.status).toBe(500)
+  })
+
+  it('redirects an unauthenticated request to sign in, like the other licence routes', async () => {
+    const response = await request(app).get('/licence/conditions/1440/204/image')
+
+    expect(response.status).toBe(302)
+    expect(response.headers.location).toBe(`/?returnTo=${encodeURIComponent('/licence/conditions/1440/204/image')}`)
+    expect(peopleOnProbationService.getLicenceConditionImage).not.toHaveBeenCalled()
   })
 })

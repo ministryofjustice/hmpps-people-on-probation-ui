@@ -34,6 +34,10 @@ export default class PeopleOnProbationService {
     return this.peopleOnProbationApiClient.getLicence(crn, licenceId)
   }
 
+  getLicenceConditionImage(crn: string, licenceId: number, conditionId: number) {
+    return this.peopleOnProbationApiClient.getLicenceConditionImage(crn, licenceId, conditionId)
+  }
+
   getFutureAppointments(crn: string, page = 0, size = 50) {
     return this.peopleOnProbationApiClient.getFutureAppointments(crn, page, size)
   }

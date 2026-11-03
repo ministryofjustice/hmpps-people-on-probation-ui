@@ -19,7 +19,16 @@
      conditions have a number only. #}
   <ol class="govuk-list pop-condition-list">
     {% for condition in group.conditions %}
-      <li class="pop-condition-list__item"><span class="pop-condition-list__number">{{ condition.number }}.</span><span>{% if condition.letter %}({{ condition.letter }}) {% endif %}{{ condition.text }}</span></li>
+      <li class="pop-condition-list__item"><span class="pop-condition-list__number">{{ condition.number }}.</span><span>{% if condition.letter %}({{ condition.letter }}) {% endif %}{{ condition.text }}</span>
+        {%- if condition.mapUrl %}
+          {% set conditionLabel = condition.number + "." + (" (" + condition.letter + ")" if condition.letter else "") %}
+          {% set mapFilename = "map-licence-condition-" + condition.number + (condition.letter or "") + ".jpg" %}
+          <div class="pop-condition-list__map">
+            <h3 class="govuk-heading-s govuk-!-margin-bottom-2">{{ mapHeading }}</h3>
+            <img class="pop-condition-map" src="{{ condition.mapUrl }}" alt="{{ mapHeading }} for licence condition {{ conditionLabel }}">
+            <p class="govuk-body govuk-!-margin-bottom-0"><a class="govuk-link" href="{{ condition.mapUrl }}" download="{{ mapFilename }}" data-tracking-id="licence_condition_download_map">Download map<span class="govuk-visually-hidden"> for licence condition {{ conditionLabel }}</span></a></p>
+          </div>
+        {%- endif %}</li>
     {% endfor %}
   </ol>
 

@@ -1,4 +1,6 @@
+import type { Readable } from 'stream'
 import { Router } from 'express'
+import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 
 import type { Services } from '../services'
 import config from '../config'
@@ -23,6 +25,7 @@ import {
   toAdditionalConditionGroup,
   toAdditionalConditionGroups,
   toLicenceTags,
+  type AdditionalConditionGroupView,
 } from '../utils/licenceConditions'
 import findCurrentLicence from '../utils/currentLicence'
 
@@ -144,6 +147,42 @@ export default function licenceRoutes(services: Services): Router {
     }
   })
 
+  // A same-origin proxy for a licence condition's uploaded image (e.g. an exclusion zone map), so an
+  // <img> can show it without exposing API tokens. The CRN always comes from the session, never the URL.
+  router.get('/conditions/:licenceId/:conditionId/image', async (req, res, next) => {
+    const crn = getSessionCrn(res.locals.user)
+    if (!crn) return res.redirect('/autherror')
+
+    const { licenceId, conditionId } = req.params
+    if (!POSITIVE_INTEGER.test(licenceId) || !POSITIVE_INTEGER.test(conditionId)) return next()
+
+    let image: Readable
+    try {
+      image = await services.peopleOnProbationService.getLicenceConditionImage(
+        crn,
+        Number(licenceId),
+        Number(conditionId),
+      )
+    } catch (error) {
+      const status = (error as SanitisedError | undefined)?.responseStatus
+      if (status === 404 || status === 400) return next()
+      logger.error({ correlationId: req.id, licenceId, conditionId, status }, 'Could not load licence condition image')
+      return next(error)
+    }
+
+    res.set({
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'no-store, private',
+      'X-Content-Type-Options': 'nosniff',
+    })
+    image.on('error', error => {
+      logger.error({ correlationId: req.id, licenceId, conditionId }, 'Licence condition image stream failed')
+      if (res.headersSent) res.destroy(error)
+      else next(error)
+    })
+    return image.pipe(res)
+  })
+
   router.get('/specific-conditions/:groupKey', async (req, res, next) => {
     try {
       const crn = getSessionCrn(res.locals.user)
@@ -162,7 +201,8 @@ export default function licenceRoutes(services: Services): Router {
 
       const { groups } = toAdditionalConditionGroups(additional)
       return res.render('pages/licence-condition-group', {
-        group,
+        group: licence?.id ? withMaps(group, licence.id) : group,
+        mapHeading: MAP_HEADINGS[group.key],
         nextDrugTest: group.key === 'take-drug-tests' ? await findNextDrugTest(services, crn, req.id) : undefined,
         helpTemplate: licenceConditionHelpTemplate(group.key),
         // The curfew help links to the person's tag conditions, when they have some.
@@ -212,6 +252,28 @@ const findNextDrugTest = async (
     return undefined
   }
 }
+
+const POSITIVE_INTEGER = /^[1-9]\d*$/
+
+// Pages that show the maps uploaded for their conditions (hasImageUpload), with the heading shown above
+// each map. To show maps on another page, add its group key and heading here.
+const MAP_HEADINGS: Record<string, string> = {
+  'areas-and-places-you-must-not-go-to': 'Map of the area you must not enter',
+  'areas-you-must-not-leave': 'Map of the area you must not leave',
+}
+
+// Adds the image proxy URL to each condition with an uploaded map, so the map is shown under it.
+const withMaps = (group: AdditionalConditionGroupView, licenceId: number): AdditionalConditionGroupView =>
+  MAP_HEADINGS[group.key]
+    ? {
+        ...group,
+        conditions: group.conditions.map(condition =>
+          condition.hasImageUpload && condition.id
+            ? { ...condition, mapUrl: `/licence/conditions/${licenceId}/${condition.id}/image` }
+            : condition,
+        ),
+      }
+    : group
 
 // Help for a group's page, when it has some: the group key and its template in
 // views/partials/licence-condition-help/.

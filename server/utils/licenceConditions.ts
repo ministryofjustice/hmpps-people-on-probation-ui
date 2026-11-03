@@ -197,6 +197,11 @@ export type NumberedConditionView = {
   number: number
   letter?: string
   text?: string
+  // CVL's condition id, and whether it has an uploaded image (e.g. an exclusion zone map).
+  id?: number
+  hasImageUpload?: boolean
+  // Where to load the uploaded image from, on pages that show it.
+  mapUrl?: string
 }
 
 // Numbers the person's additional conditions as on their licence document, e.g. "7. (a)".
@@ -221,6 +226,8 @@ export const toNumberedAdditionalConditions = (
       number: numberByCategory.get(category),
       letter: String.fromCharCode(97 + letterIndex),
       text: condition.text,
+      id: condition.id,
+      hasImageUpload: condition.hasImageUpload,
     }
   })
 }

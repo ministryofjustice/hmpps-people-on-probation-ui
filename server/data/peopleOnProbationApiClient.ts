@@ -1,3 +1,4 @@
+import type { Readable } from 'stream'
 import { RestClient, asSystem } from '@ministryofjustice/hmpps-rest-client'
 import type { AuthenticationClient } from '@ministryofjustice/hmpps-auth-clients'
 import logger from '../../logger'
@@ -356,6 +357,17 @@ export default class PeopleOnProbationApiClient extends RestClient {
 
   getLicence(crn: string, licenceId: number) {
     return this.get<LicenceResponse>({ path: `/v1/person/${crn}/licences/${licenceId}` }, asSystem())
+  }
+
+  // The image uploaded for an additional condition with hasImageUpload, e.g. an exclusion zone map, as
+  // raw JPEG bytes. Uses stream() rather than the JSON get(): it resolves to a Readable the route can
+  // pipe straight to the browser, and rejects with the API's status (e.g. 404) on errors. Note the
+  // underlying client still reads the whole response (around 700KB) before handing the stream back.
+  getLicenceConditionImage(crn: string, licenceId: number, conditionId: number): Promise<Readable> {
+    return this.stream(
+      { path: `/v1/person/${crn}/licences/${licenceId}/conditions/${conditionId}/image-upload` },
+      asSystem(),
+    )
   }
 
   getFutureAppointments(crn: string, page = 0, size = 50) {
