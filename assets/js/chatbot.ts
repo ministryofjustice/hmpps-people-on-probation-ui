@@ -10,6 +10,20 @@ import '@justiceaiunit/chatbot-widget/style.css'
 // switch to a server-templated value.
 const CHATBOT_PRIVACY_URL = 'https://probationchatbot-prod.apps.live.cloud-platform.service.justice.gov.uk/privacy'
 
+// Voice messages are a per-environment opt-in (FEATURE_CHATBOT_VOICE plus the
+// speech key). The server tells this page whether they are on through data
+// attributes on the root, so the bundle ships unchanged across environments.
+function voiceOptions() {
+  const root = document.getElementById('chatbot-root')
+  if (root?.dataset.voiceEnabled !== 'true') return undefined
+  const maxRecordingSeconds = Number(root.dataset.voiceMaxSeconds)
+  return {
+    transcribeUrl: '/api/chatbot/voice/transcribe',
+    speakUrl: '/api/chatbot/voice/speak',
+    ...(Number.isFinite(maxRecordingSeconds) && maxRecordingSeconds > 0 ? { maxRecordingSeconds } : {}),
+  }
+}
+
 // This bundle only loads on the dedicated /chat page (see pages/chat.njk),
 // which already renders the real GOV.UK header + service nav. So the widget
 // hides its own header (hideHeader) and fills the content area beneath it —
@@ -20,6 +34,7 @@ init({
   domain: 'pop',
   inline: true,
   hideHeader: true,
+  voice: voiceOptions(),
   config: {
     assistantName: 'Fred',
     // Fallback greeting; the server templates a per-user "Hi, <first name>"
