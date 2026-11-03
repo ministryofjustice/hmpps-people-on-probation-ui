@@ -1,8 +1,8 @@
-import type { Readable } from 'stream'
 import { Router } from 'express'
 import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 
 import type { Services } from '../services'
+import type { LicenceConditionImage } from '../data/peopleOnProbationApiClient'
 import config from '../config'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
@@ -159,7 +159,7 @@ export default function licenceRoutes(services: Services): Router {
     const { licenceId, conditionId } = req.params
     if (!POSITIVE_INTEGER.test(licenceId) || !POSITIVE_INTEGER.test(conditionId)) return next()
 
-    let image: Readable
+    let image: LicenceConditionImage
     try {
       image = await services.peopleOnProbationService.getLicenceConditionImage(
         crn,
@@ -173,17 +173,23 @@ export default function licenceRoutes(services: Services): Router {
       return next(error)
     }
 
+    // The API sets the type from the bytes; only pass on image types a browser can show safely.
+    const contentType = image.contentType.split(';')[0].trim().toLowerCase()
+    if (!IMAGE_CONTENT_TYPES.includes(contentType)) {
+      logger.error(
+        { correlationId: req.id, licenceId, conditionId, contentType },
+        'Licence condition image has an unexpected content type',
+      )
+      return next(Object.assign(new Error('Unexpected licence condition image content type'), { status: 502 }))
+    }
+
     res.set({
-      'Content-Type': 'image/jpeg',
+      'Content-Type': contentType,
+      'Content-Length': String(image.body.length),
       'Cache-Control': 'no-store, private',
       'X-Content-Type-Options': 'nosniff',
     })
-    image.on('error', error => {
-      logger.error({ correlationId: req.id, licenceId, conditionId }, 'Licence condition image stream failed')
-      if (res.headersSent) res.destroy(error)
-      else next(error)
-    })
-    return image.pipe(res)
+    return res.send(image.body)
   })
 
   router.get('/specific-conditions/:groupKey', async (req, res, next) => {
@@ -257,6 +263,8 @@ const findNextDrugTest = async (
 }
 
 const POSITIVE_INTEGER = /^[1-9]\d*$/
+
+const IMAGE_CONTENT_TYPES = ['image/png', 'image/jpeg', 'image/gif']
 
 // Pages that show the maps uploaded for their conditions (hasImageUpload), with the heading shown above
 // each map. To show maps on another page, add its group key and heading here.

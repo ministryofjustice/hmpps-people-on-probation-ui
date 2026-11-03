@@ -49,17 +49,16 @@ describe('PeopleOnProbationApiClient licences', () => {
     expect(fakeApi.isDone()).toBe(true)
   })
 
-  it('streams a licence condition image with the system token', async () => {
-    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46])
+  it('gets a licence condition image with the system token, with its content type', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00])
     fakeApi
       .get('/v1/person/Y057365/licences/1440/conditions/204/image-upload')
-      .reply(200, jpeg, { 'Content-Type': 'image/jpeg' })
+      .reply(200, png, { 'Content-Type': 'image/png' })
 
-    const image = await client.getLicenceConditionImage('Y057365', 1440, 204)
-    const chunks: Buffer[] = []
-    for await (const chunk of image) chunks.push(Buffer.from(chunk))
-
-    expect(Buffer.concat(chunks)).toEqual(jpeg)
+    await expect(client.getLicenceConditionImage('Y057365', 1440, 204)).resolves.toEqual({
+      body: png,
+      contentType: 'image/png',
+    })
     expect(fakeApi.isDone()).toBe(true)
   })
 

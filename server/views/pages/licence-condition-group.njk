@@ -22,7 +22,8 @@
       <li class="pop-condition-list__item"><span class="pop-condition-list__number">{{ condition.number }}.</span><span>{% if condition.letter %}({{ condition.letter }}) {% endif %}{{ condition.text }}</span>
         {%- if condition.mapUrl %}
           {% set conditionLabel = condition.number + "." + (" (" + condition.letter + ")" if condition.letter else "") %}
-          {% set mapFilename = "map-licence-condition-" + condition.number + (condition.letter or "") + ".jpg" %}
+          {# No extension: the browser adds one from the served content type. #}
+          {% set mapFilename = "map-licence-condition-" + condition.number + (condition.letter or "") %}
           <div class="pop-condition-list__map">
             <h3 class="govuk-heading-s govuk-!-margin-bottom-2">{{ mapHeading }}</h3>
             <img class="pop-condition-map" src="{{ condition.mapUrl }}" alt="{{ mapHeading }} for licence condition {{ conditionLabel }}">

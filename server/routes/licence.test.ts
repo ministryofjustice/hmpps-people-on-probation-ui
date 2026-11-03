@@ -1,5 +1,4 @@
 import type { Express } from 'express'
-import { Readable } from 'stream'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import type { Services } from '../services'
@@ -1098,7 +1097,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       const response = await renderPage('areas-and-places-you-must-not-go-to')
 
       expect(response.text).toContain(
-        '<a class="govuk-link" href="/licence/conditions/1440/204/image" download="map-licence-condition-1a.jpg" data-tracking-id="licence_condition_download_map">Download map<span class="govuk-visually-hidden"> for licence condition 1. (a)</span></a>',
+        '<a class="govuk-link" href="/licence/conditions/1440/204/image" download="map-licence-condition-1a" data-tracking-id="licence_condition_download_map">Download map<span class="govuk-visually-hidden"> for licence condition 1. (a)</span></a>',
       )
     })
 
@@ -1273,6 +1272,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
 })
 
 describe('GET /licence/conditions/:licenceId/:conditionId/image', () => {
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00])
   const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46])
 
   const getImage = async (path: string) =>
@@ -1286,20 +1286,44 @@ describe('GET /licence/conditions/:licenceId/:conditionId/image', () => {
         res.on('end', () => callback(null, Buffer.concat(chunks)))
       })
 
-  it('streams the image with safe headers', async () => {
-    peopleOnProbationService.getLicenceConditionImage.mockResolvedValue(Readable.from([jpeg]))
+  it('serves the image with its content type and safe headers', async () => {
+    peopleOnProbationService.getLicenceConditionImage.mockResolvedValue({ body: png, contentType: 'image/png' })
+
+    const response = await getImage('/licence/conditions/1440/204/image')
+
+    expect(response.status).toBe(200)
+    expect(response.headers['content-type']).toBe('image/png')
+    expect(response.headers['content-length']).toBe(String(png.length))
+    expect(response.headers['cache-control']).toBe('no-store, private')
+    expect(response.headers['x-content-type-options']).toBe('nosniff')
+    expect(response.headers['content-disposition']).toBeUndefined()
+    expect(response.body).toEqual(png)
+  })
+
+  it('serves a JPEG as image/jpeg', async () => {
+    peopleOnProbationService.getLicenceConditionImage.mockResolvedValue({ body: jpeg, contentType: 'image/jpeg' })
 
     const response = await getImage('/licence/conditions/1440/204/image')
 
     expect(response.status).toBe(200)
     expect(response.headers['content-type']).toBe('image/jpeg')
-    expect(response.headers['cache-control']).toBe('no-store, private')
-    expect(response.headers['x-content-type-options']).toBe('nosniff')
     expect(response.body).toEqual(jpeg)
   })
 
+  it.each(['text/html', 'image/svg+xml', 'application/octet-stream'])(
+    'rejects an unexpected content type (%s)',
+    async contentType => {
+      peopleOnProbationService.getLicenceConditionImage.mockResolvedValue({ body: png, contentType })
+
+      const response = await getImage('/licence/conditions/1440/204/image')
+
+      expect(response.status).toBe(502)
+      expect(response.body).not.toEqual(png)
+    },
+  )
+
   it('uses the CRN from the session, not the URL', async () => {
-    peopleOnProbationService.getLicenceConditionImage.mockResolvedValue(Readable.from([jpeg]))
+    peopleOnProbationService.getLicenceConditionImage.mockResolvedValue({ body: jpeg, contentType: 'image/jpeg' })
 
     await getImage('/licence/conditions/1440/204/image?crn=Z999999')
 
