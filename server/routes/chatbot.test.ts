@@ -221,6 +221,25 @@ describe('POST /api/chatbot/chat', () => {
     expect(body.user_context.metadata.crn).toBe('X123456')
   })
 
+  it('forwards the message language to the embed API as a query parameter, dropping anything odd', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-3"}\n\n']),
+    } as unknown as Response)
+    const app = buildApp()
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'Helo', language: 'cy' }).expect(200)
+    expect(fetchSpy.mock.calls[0][0]).toBe('https://upstream.test/chat?lang=cy')
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(body.language).toBeUndefined()
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi', language: 'cy-GB&x=1' }).expect(200)
+    expect(fetchSpy.mock.calls[1][0]).toBe('https://upstream.test/chat')
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+    expect(fetchSpy.mock.calls[2][0]).toBe('https://upstream.test/chat')
+  })
+
   it('sanitizes goals and appointments to the fields actually shown on screen', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
