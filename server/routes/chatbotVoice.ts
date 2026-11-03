@@ -81,6 +81,17 @@ export function identifiedLanguage(payload: TranscriptionPayload): SpeechLanguag
   return spokenMs.cy > spokenMs.en ? 'cy' : 'en'
 }
 
+// Cancel the upstream call if the browser goes away mid-request. The signal
+// is the RESPONSE closing before it finished: the request's own 'close' event
+// also fires once its body has been fully read, which for a raw audio upload
+// parsed inside this router happens right before the handler runs and would
+// cancel every transcription.
+function abortWhenClientLeaves(res: Response, controller: AbortController): void {
+  res.on('close', () => {
+    if (!res.writableFinished) controller.abort()
+  })
+}
+
 function retryLater(res: Response, retryAfterSeconds: number): void {
   res.setHeader('Retry-After', String(retryAfterSeconds))
   res.status(429).json({ error: 'Too many requests' })
@@ -150,7 +161,7 @@ export default function chatbotVoiceRoutes(): Router {
 
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TTS_UPSTREAM_TIMEOUT_MS)
-    req.on('close', () => controller.abort())
+    abortWhenClientLeaves(res, controller)
 
     try {
       const upstream = await fetch(speechUrls(speechRegion).tts, {
@@ -238,7 +249,7 @@ export default function chatbotVoiceRoutes(): Router {
 
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), STT_UPSTREAM_TIMEOUT_MS)
-      req.on('close', () => controller.abort())
+      abortWhenClientLeaves(res, controller)
 
       try {
         const upstream = await fetch(speechUrls(speechRegion).stt, {

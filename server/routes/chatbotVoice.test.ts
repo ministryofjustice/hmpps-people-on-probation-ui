@@ -294,6 +294,35 @@ describe('chatbot voice routes', () => {
       expect(Buffer.from(await audio.arrayBuffer()).toString()).toBe('fake-opus-bytes')
     })
 
+    it('does not cancel the upstream call just because the upload body has been read', async () => {
+      // Regression: the request's 'close' event fires once a body is consumed,
+      // which for the raw audio route is right before the handler. Listening
+      // to it aborted every real transcription with a 504.
+      jest.spyOn(global, 'fetch').mockImplementation(
+        (_url, init) =>
+          new Promise<Response>((resolve, reject) => {
+            init?.signal?.addEventListener('abort', () =>
+              reject(Object.assign(new Error('aborted'), { name: 'AbortError' })),
+            )
+            setTimeout(
+              () =>
+                resolve({
+                  ok: true,
+                  status: 200,
+                  json: async () => ({ durationMilliseconds: 900, combinedPhrases: [{ text: 'hello' }] }),
+                } as unknown as Response),
+              60,
+            )
+          }),
+      )
+      const res = await request(buildApp())
+        .post('/api/chatbot/voice/transcribe')
+        .set('Content-Type', 'audio/webm')
+        .send(Buffer.from('opus'))
+        .expect(200)
+      expect(res.body).toMatchObject({ text: 'hello', language: 'en' })
+    })
+
     it('reports Welsh when most of the recording was identified as cy-GB', async () => {
       jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: true,
