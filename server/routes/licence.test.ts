@@ -510,6 +510,23 @@ describe('GET /licence/standard-conditions', () => {
     expect(peopleOnProbationService.getLicence).not.toHaveBeenCalled()
   })
 
+  it('treats a 404 for the licence itself as no licence yet, e.g. when it stops being active', async () => {
+    peopleOnProbationService.getLicence.mockRejectedValue({ responseStatus: 404 })
+
+    const response = await renderPage()
+
+    expect(response.status).toBe(200)
+    expect(response.text).toContain('Your standard licence conditions are not available yet.')
+  })
+
+  it('shows the error page for other errors loading the licence', async () => {
+    peopleOnProbationService.getLicence.mockRejectedValue({ responseStatus: 500 })
+
+    const response = await renderPage()
+
+    expect(response.status).toBe(500)
+  })
+
   it('treats a 404 from the licences API as no licence yet', async () => {
     peopleOnProbationService.getLicences.mockRejectedValue({ responseStatus: 404 })
 
@@ -680,6 +697,15 @@ describe('GET /licence/specific-conditions', () => {
       expect(peopleOnProbationService.getLicence).not.toHaveBeenCalled()
     },
   )
+
+  it('says the conditions are not available when the licence itself returns 404', async () => {
+    peopleOnProbationService.getLicence.mockRejectedValue({ responseStatus: 404 })
+
+    const response = await renderPage()
+
+    expect(response.status).toBe(200)
+    expect(response.text).toContain('Your licence conditions specific to you are not available yet.')
+  })
 
   it('redirects community orders to the requirements page', async () => {
     peopleOnProbationService.getSentences.mockResolvedValue({
@@ -1245,6 +1271,12 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       expect(response.text).toContain('(a) Provide a sample')
       expect(response.text).not.toContain('Next drug test')
     })
+  })
+
+  it('returns not found, not an error, when the licence itself returns 404', async () => {
+    peopleOnProbationService.getLicence.mockRejectedValue({ responseStatus: 404 })
+
+    expect((await renderPage('follow-a-curfew')).status).toBe(404)
   })
 
   it('returns not found for a group the person has no conditions in', async () => {

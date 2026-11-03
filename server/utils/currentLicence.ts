@@ -5,7 +5,8 @@ import type { LicenceResponse, LicenceSummaryResponse } from '../data/peopleOnPr
 const isNotFound = (error: unknown) => (error as SanitisedError | undefined)?.responseStatus === 404
 
 // The person's current licence from CVL. The API only returns active licences; if there's more than one,
-// the most recently updated is used. Undefined when they don't have one yet.
+// the most recently updated is used. Undefined when they don't have one yet, including when the licence
+// stops being active between the two calls (the API then returns 404 for it).
 export default async function findCurrentLicence(
   services: Services,
   crn: string,
@@ -21,5 +22,11 @@ export default async function findCurrentLicence(
   const [latest] = [...(summaries ?? [])].sort((a, b) =>
     (b.updatedDateTime ?? b.approvedDateTime ?? '').localeCompare(a.updatedDateTime ?? a.approvedDateTime ?? ''),
   )
-  return latest ? peopleOnProbationService.getLicence(crn, latest.id) : undefined
+  if (!latest) return undefined
+  try {
+    return await peopleOnProbationService.getLicence(crn, latest.id)
+  } catch (error) {
+    if (isNotFound(error)) return undefined
+    throw error
+  }
 }

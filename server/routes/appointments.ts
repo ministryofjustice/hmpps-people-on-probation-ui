@@ -14,7 +14,6 @@ import {
   isMissedMandatoryAppointmentOrActivity,
   shouldIncludeMissedAppointmentInAlert,
   APPOINTMENTS_OVERVIEW_SIZE,
-  isLicenceSentence,
 } from '../utils/utils'
 import type { AppointmentResponse, PageMetadataResponse } from '../data/peopleOnProbationApiClient'
 import { TAG_CATEGORY_CODES, OTHER_CHANNEL_CATEGORY_CODES } from '../utils/categoryCodes'
@@ -391,15 +390,22 @@ export default function appointmentsRoutes(services: Services): Router {
       const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
       const apiPage = page - 1
 
-      const [activeTabAppointments, pastAppointmentsForAlert, futureAppointmentsForLastUpdated, sentenceProgress] =
-        await Promise.all([
-          tab === 'past'
-            ? services.peopleOnProbationService.getPastAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE)
-            : services.peopleOnProbationService.getFutureAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE),
-          services.peopleOnProbationService.getPastAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
-          services.peopleOnProbationService.getFutureAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
-          services.peopleOnProbationService.getSentences(crn),
-        ])
+      const [
+        activeTabAppointments,
+        pastAppointmentsForAlert,
+        futureAppointmentsForLastUpdated,
+        sentenceProgress,
+        licenceHasTag,
+      ] = await Promise.all([
+        tab === 'past'
+          ? services.peopleOnProbationService.getPastAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE)
+          : services.peopleOnProbationService.getFutureAppointments(crn, apiPage, APPOINTMENTS_PAGE_SIZE),
+        services.peopleOnProbationService.getPastAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
+        services.peopleOnProbationService.getFutureAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
+        services.peopleOnProbationService.getSentences(crn),
+        // Only people on licence (the sentence kind cached in the session) have a CVL licence to check.
+        res.locals.isLicence ? hasLicenceTag(services, crn, req.id) : false,
+      ])
 
       const totalPages = activeTabAppointments.page?.totalPages
       if (totalPages && page > totalPages) {
@@ -410,9 +416,7 @@ export default function appointmentsRoutes(services: Services): Router {
         ...sentence.requirements.map(r => r.mainCategory?.code),
         ...sentence.licenceConditions.map(lc => lc.mainCategory?.code),
       ])
-      const hasTagAppointments =
-        mainCategoryCodes.some(code => TAG_CATEGORY_CODES.includes(code)) ||
-        (isLicenceSentence(sentenceProgress.sentences[0]) && (await hasLicenceTag(services, crn, req.id)))
+      const hasTagAppointments = mainCategoryCodes.some(code => TAG_CATEGORY_CODES.includes(code)) || licenceHasTag
       const hasOtherChannelAppointments = mainCategoryCodes.some(code => OTHER_CHANNEL_CATEGORY_CODES.includes(code))
 
       const appointmentsToShow = activeTabAppointments.content

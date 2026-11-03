@@ -66,6 +66,12 @@ export default function licenceRoutes(services: Services): Router {
           ? calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
           : undefined
 
+      // The licence (for the tag rows) and the licence document don't depend on each other.
+      const [tags, licenceDocumentId] = await Promise.all([
+        findLicenceTags(services, crn, req.id),
+        config.features.documents ? findDocumentIdByType(services, crn, 'LICENCE_CONDITION') : undefined,
+      ])
+
       const licenceSentence: LicenceSentenceView = {
         type: formatLicenceSentenceType(sentence.type),
         typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode, 'licence'),
@@ -74,12 +80,8 @@ export default function licenceRoutes(services: Services): Router {
         totalLength: progress?.totalLength,
         percentComplete: progress?.percentComplete,
         remainingDuration: progress?.remainingDuration,
-        tags: await findLicenceTags(services, crn, req.id),
+        tags,
       }
-
-      const licenceDocumentId = config.features.documents
-        ? await findDocumentIdByType(services, crn, 'LICENCE_CONDITION')
-        : undefined
 
       return res.render('pages/licence', { licenceSentence, licenceDocumentId })
     } catch (error) {
