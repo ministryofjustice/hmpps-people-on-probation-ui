@@ -317,7 +317,10 @@ The "Progress and achievements" page (`/progress`) totals unpaid work hours and 
 | `/goals` | Goals in the sentence plan (current, future and achieved tabs) |
 | `/requirements` | Order requirements and charge details |
 | `/requirements/:slug` | A single requirement's progress and details (see [Requirement progress](#requirement-progress)) |
-| `/licence` | Licence sentence, progress and licence conditions, for people on licence (when `FEATURE_LICENCE` is on) |
+| `/licence` | Your sentence and licence: sentence details, progress and licence conditions, for people on licence (when `FEATURE_LICENCE` is on) |
+| `/licence/standard-conditions` | Standard licence conditions from the person's CVL licence, in CVL's wording and order |
+| `/licence/specific-conditions` | The groups the person's additional licence conditions fall into (by CVL code, in the order CVL returns them), plus bespoke conditions if they have any |
+| `/licence/specific-conditions/<group>` | One group's additional licence conditions, numbered as on the licence document (e.g. "7. (a)"): the number is the CVL category's place in the response, the letter the condition's place within its category |
 | `/probation-officer` | Probation officer name, and the office's phone number, address and a link to more details |
 | `/probation-agreement` | Probation agreement |
 | `/feedback` | Give feedback about probation accounts |

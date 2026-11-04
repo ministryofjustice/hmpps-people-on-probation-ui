@@ -1,0 +1,50 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% set pageTitle = "Standard licence conditions – Check your probation account – GOV.UK" %}
+{% set currentPage = "licence" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Back", href: "/licence" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <h1 class="govuk-heading-xl">Standard licence conditions</h1>
+
+  {% if lastUpdatedAt %}
+    <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6">
+      <p class="govuk-body govuk-!-margin-bottom-0">Last updated on {{ lastUpdatedAt }}</p>
+    </div>
+  {% endif %}
+
+  <p class="govuk-body">These are conditions that everyone on licence must follow. These conditions will only change if national policy changes.</p>
+  <p class="govuk-body">Read these and <a class="govuk-link govuk-link--no-visited-state" href="/licence/specific-conditions" data-tracking-id="standard_conditions_specific_conditions_link">any licence conditions that are specific to you</a> carefully.</p>
+  <p class="govuk-body"><a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="standard_conditions_probation_officer_link">Your probation officer</a> can help you understand your licence conditions if you are not sure.</p>
+
+  {% if conditions.length %}
+    <h2 class="govuk-heading-l">You need to:</h2>
+    <ol class="govuk-list pop-condition-list">
+      {% for condition in conditions %}
+        <li class="pop-condition-list__item"><span class="pop-condition-list__number">{{ loop.index }}.</span><span>{{ condition }}</span></li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="govuk-body">Your standard licence conditions are not available yet. Ask <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="standard_conditions_unavailable_probation_officer_link">your probation officer</a> if you need to know what they are.</p>
+  {% endif %}
+
+  {# Only for sentences known to be longer than 3 months (showFirearms, set by the licence route). #}
+  {% if showFirearms %}
+    <h2 class="govuk-heading-l govuk-!-margin-top-8">Using firearms and ammunition</h2>
+    <p class="govuk-body">If you have a sentence that is longer than 3 months, you cannot use, own or have access to firearms or ammunition for a specified period of time.</p>
+    <p class="govuk-body">This can include firearms, air weapons and some antique weapons.</p>
+    <p class="govuk-body">This will also mean you cannot take part in activities such as shooting sports or use some airsoft guns.</p>
+    <p class="govuk-body">You should check with <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="standard_conditions_firearms_probation_officer_link">your probation officer</a> if you:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>are not sure about an activity you want to take part in</li>
+      <li>want to apply to the Crown court to get these restrictions lifted early</li>
+    </ul>
+    <p class="govuk-body">If you have or use restricted firearms or ammunition, you could go back to prison, have to pay a fee, or both.</p>
+  {% endif %}
+
+{% endblock %}

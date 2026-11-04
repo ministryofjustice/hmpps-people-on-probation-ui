@@ -305,6 +305,8 @@ describe('GET /appointments', () => {
     getFutureAppointments: jest.Mock
     getPastAppointments: jest.Mock
     getSentences: jest.Mock
+    getLicences: jest.Mock
+    getLicence: jest.Mock
   }
 
   beforeEach(() => {
@@ -315,6 +317,8 @@ describe('GET /appointments', () => {
       getFutureAppointments: jest.fn().mockResolvedValue({ content: [] }),
       getPastAppointments: jest.fn().mockResolvedValue({ content: [] }),
       getSentences: jest.fn().mockResolvedValue({ sentences: [] }),
+      getLicences: jest.fn().mockResolvedValue([]),
+      getLicence: jest.fn(),
     }
 
     app = appWithAllRoutes({
@@ -890,12 +894,17 @@ describe('GET /appointments', () => {
   })
 
   it.each([
-    ['EM01', 'GPS tag'],
-    ['LC104', 'trail monitoring tag'],
-    ['NLC13', 'alcohol monitoring tag'],
-  ])('shows the tag appointments guidance for licence condition code %s (%s)', async code => {
+    ['524f2fd6-ad53-47dd-8edc-2161d3dd2ed4', 'GPS tag'],
+    ['86e6f2a9-bb60-40f8-9ac4-310ebc72ac2f', 'curfew or RF tag'],
+    ['d36a3b77-30ba-40ce-8953-83e761d3b487', 'alcohol tag'],
+  ])('shows the tag appointments guidance for CVL licence condition %s (%s)', async code => {
     peopleOnProbationService.getSentences.mockResolvedValue({
-      sentences: [{ requirements: [], licenceConditions: [{ mainCategory: { code } }] }],
+      sentences: [{ requirements: [], licenceConditions: [{ mainCategory: { code: 'NLC8' } }] }],
+    })
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7 }])
+    peopleOnProbationService.getLicence.mockResolvedValue({
+      id: 7,
+      conditions: { AP: { standard: [], additional: [{ code, restrictions: [] }], bespoke: [] } },
     })
 
     const response = await request(app)
@@ -905,6 +914,46 @@ describe('GET /appointments', () => {
 
     expect(response.text).toContain('Tag appointments are sent by the electronic monitoring service')
     expect(response.text).toContain('Why this might happen')
+  })
+
+  it('no longer uses the nDelius licence tag codes for the tag appointments guidance', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [{ requirements: [], licenceConditions: [{ mainCategory: { code: 'EM01' } }] }],
+    })
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Tag appointments are sent by the electronic monitoring service')
+  })
+
+  it('leaves out the tag guidance when the licence cannot be loaded', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [{ requirements: [], licenceConditions: [{ mainCategory: { code: 'NLC8' } }] }],
+    })
+    peopleOnProbationService.getLicences.mockRejectedValue(new Error('API down'))
+
+    const response = await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Tag appointments are sent by the electronic monitoring service')
+  })
+
+  it('does not look up the licence for a community order', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [{ requirements: [{ mainCategory: { code: 'W' } }], licenceConditions: [] }],
+    })
+
+    await request(app)
+      .get('/appointments')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(peopleOnProbationService.getLicences).not.toHaveBeenCalled()
   })
 
   it('shows the plain inset text with no reveal when only unpaid work main categories are present', async () => {

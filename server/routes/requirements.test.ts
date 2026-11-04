@@ -1978,3 +1978,45 @@ describe('progress rules', () => {
     expect(res.text).toMatch(/>Time required<\/dt>\s*<dd class="pop-summary-card__value">60 days/)
   })
 })
+
+describe('licence or community order journey', () => {
+  it('redirects a custodial sentence with a book number to /licence, even before licence conditions are recorded', async () => {
+    config.features.licence = true
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Adult Custody (not PSS)',
+          typeCode: '327',
+          bookNumber: '76148A',
+          requirements: [],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    const res = await request(app)
+      .get('/requirements')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+
+    expect(res.status).toBe(302)
+    expect(res.headers.location).toBe('/licence')
+  })
+
+  it('keeps a community order without a book number on /requirements', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        {
+          type: 'ORA Community Order',
+          typeCode: '329',
+          requirements: [{ mainCategory: { code: 'W', description: 'Unpaid Work' } }],
+          licenceConditions: [],
+        },
+      ],
+    })
+
+    await request(app)
+      .get('/requirements')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+  })
+})
