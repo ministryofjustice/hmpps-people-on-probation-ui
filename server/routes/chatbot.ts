@@ -261,6 +261,22 @@ async function buildUserContext(services: Services, user: { userId: string }, cr
  *                            back as SSE. user_context is always built
  *                            server-side from the authenticated session.
  */
+// The widget may say which language a message is in (for example the
+// language a voice message was spoken in). The embed API takes that as a
+// `lang` query parameter and rejects codes it does not support; anything
+// that is not a plain two-letter code is dropped here rather than forwarded.
+const LANGUAGE_CODE_RE = /^[a-z]{2}$/
+export function withLanguage(apiUrl: string, language: unknown): string {
+  if (typeof language !== 'string' || !LANGUAGE_CODE_RE.test(language)) return apiUrl
+  try {
+    const url = new URL(apiUrl)
+    url.searchParams.set('lang', language)
+    return url.toString()
+  } catch {
+    return apiUrl
+  }
+}
+
 export default function chatbotRoutes(services: Services): Router {
   const router = Router()
 
@@ -294,7 +310,7 @@ export default function chatbotRoutes(services: Services): Router {
     // from the request body. session_token is echoed straight through
     // from the widget; the backend uses it to prove the caller owns the
     // conversation on any follow-up (same-conversation) request.
-    const { message, conversation_id: conversationId, session_token: sessionToken } = req.body ?? {}
+    const { message, conversation_id: conversationId, session_token: sessionToken, language } = req.body ?? {}
     let userContext: UserContext | undefined
     if (crn) {
       try {
@@ -352,7 +368,7 @@ export default function chatbotRoutes(services: Services): Router {
     }
 
     try {
-      const upstream = await fetch(apiUrl, {
+      const upstream = await fetch(withLanguage(apiUrl, language), {
         method: 'POST',
         headers: upstreamHeaders,
         body: JSON.stringify(upstreamBody),
