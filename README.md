@@ -223,6 +223,72 @@ Access is controlled by one of two gates, both applied in `server/routes/admin.t
 
 If you hit HMPPS Auth's own "Access denied" page mid-flow despite following the above, check `docker logs hmpps-auth` for the actual cause rather than assuming your credentials are wrong — the generic page is shown for several unrelated failure types (see the redirect-URI warning in step 2).
 
+## Analytics device details
+
+Every `page_viewed` analytics event records the person's device in `properties`. This shows what devices people use and how old they are. The values are worked out in the browser by `assets/js/lib/analytics/deviceInfo.ts`:
+
+- Chrome, Edge and Samsung Internet give the real OS version and device model through Client Hints (`navigator.userAgentData.getHighEntropyValues`).
+- Other browsers fall back to the user-agent string.
+
+```json
+{
+  "os": { "name": "Android", "version": "14" },
+  "browser": { "name": "Chrome", "version": "130" },
+  "deviceModel": "Pixel 7a",
+  "screenWidth": 412, "screenHeight": 915, "pixelRatio": 2.63,
+  "viewportWidth": 412, "viewportHeight": 780,
+  "connectionType": "4g", "saveData": false
+}
+```
+
+When a value isn't known, it's left out of the event rather than sent as `null`. `deviceType` is a separate top-level field on every event.
+
+### What is recorded for each device
+
+| Scenario | `deviceType` | `os` | `browser` | `deviceModel` |
+|---|---|---|---|---|
+| iPhone, Safari, iOS 18 or earlier | `mobile` | `iOS` with version | `Safari` with version | `iPhone` |
+| iPhone, Safari 26 or later | `mobile` | `iOS`, no version | `Safari` with version | `iPhone` |
+| iPhone, Chrome or Firefox | `mobile` | `iOS` with version from the user-agent (see note below) | `Chrome` / `Firefox` with version | `iPhone` |
+| iPad, default desktop mode (sends a Mac user-agent) | `tablet` | `iPadOS`, no version | `Safari` with version | `iPad` |
+| iPad with an iPad user-agent, iPadOS 18 or earlier | `tablet` | `iPadOS` with version | `Safari` with version | `iPad` |
+| iPad with an iPad user-agent, Safari 26 or later | `tablet` | `iPadOS`, no version | `Safari` with version | `iPad` |
+| Android phone, Chrome, Edge or Samsung Internet | `mobile` | `Android` with real version | browser with version | real model, e.g. `Pixel 7a` |
+| Android phone, Chrome, when Client Hints fail | `mobile` | `Android`, no version | `Chrome` with version | none |
+| Android, browser with a full user-agent (e.g. older Samsung Internet) | `mobile` | `Android` with version | browser with version | model from the user-agent, e.g. `SM-A146B` |
+| Android phone, Firefox | `mobile` | `Android` with version | `Firefox` with version | none |
+| Android tablet, Chrome | `tablet` | `Android` with real version | `Chrome` with version | real model, e.g. `SM-X710` |
+| Windows, Chrome or Edge | `desktop` | `Windows`, version `10` or `11` | browser with version | none |
+| Windows, Firefox | `desktop` | `Windows`, no version | `Firefox` with version | none |
+| Mac, Chrome or Edge | `desktop` | `macOS` with real version | browser with version | none |
+| Mac, Safari or Firefox | `desktop` | `macOS`, no version | browser with version | none |
+| Chromebook | `desktop` | `ChromeOS` with the build's major number (no version if Client Hints fail) | `Chrome` with version | none |
+| Linux | `desktop` | `Linux`, no version | browser with version | none |
+| No user-agent | `unknown` | left out | left out | left out |
+
+All versions are major versions only, for example `17` rather than `17.4`.
+
+Every scenario also records:
+
+- `screenWidth`, `screenHeight` and `pixelRatio`.
+- `viewportWidth` and `viewportHeight`.
+- `referrerPath`, but only when the person came from another page of this service.
+- `connectionType` and `saveData`, but only in Chrome, Edge, Samsung Internet and Opera. They're never recorded on Safari or Firefox, so no iPhone or iPad records them.
+
+### Why some values are missing
+
+- **No OS version:** browsers freeze the OS version in the user-agent, and we leave it out rather than record a wrong value. The frozen values are:
+  - macOS is always 10_15_7;
+  - Windows 11 says NT 10.0;
+  - reduced Chrome on Android says "Android 10; K";
+  - Safari 26 and later says iOS 18_6.
+
+  For Safari 26 and later, use `browser.version` instead: Safari's version follows the iOS version.
+- **iPhone and iPad models:** Apple doesn't expose the exact model to websites, so only the family is recorded (`iPhone` or `iPad`).
+- **Chrome and Firefox on iOS:** these don't send the `Version/` token that tells a frozen 18_6 apart from a real iOS 18.6. If they send the frozen token on iOS 26, they record version `18`.
+- **iPads in desktop mode** are told apart from Macs by their touch screen (`navigator.maxTouchPoints > 1`).
+- **Events sent by the server** (sign-in, registration, `session_started`) record `deviceType: "unknown"` and no device details.
+
 ## Documents
 
 `/documents` lets a citizen view documents uploaded for their CRN (currently just a court order); `/admin/documents/upload` (behind the same admin gate as [Admin preview](#admin-preview-preview-as-user)) lets an admin search a CRN, pick a PDF, preview it locally with PDF.js, and confirm the upload. Both are gated behind `FEATURE_DOCUMENTS` (`false` unless set), independently of `FEATURE_ADMIN_PREVIEW` — either can be live without the other.
