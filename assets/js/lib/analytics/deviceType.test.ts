@@ -54,6 +54,14 @@ describe('detectDeviceType', () => {
     expect(detectDeviceType(MAC_DESKTOP_UA)).toBe('desktop')
   })
 
+  it('classifies a Mac user agent with a touch screen as a tablet (iPadOS desktop mode)', () => {
+    expect(detectDeviceType(MAC_DESKTOP_UA, 5)).toBe('tablet')
+  })
+
+  it('still classifies a Mac user agent with no touch points as desktop', () => {
+    expect(detectDeviceType(MAC_DESKTOP_UA, 0)).toBe('desktop')
+  })
+
   it('is case-insensitive', () => {
     expect(detectDeviceType(IPHONE_UA.toUpperCase())).toBe('mobile')
   })
