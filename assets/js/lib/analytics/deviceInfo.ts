@@ -69,10 +69,27 @@ function windowsVersion(platformVersion: string): string | undefined {
   return undefined
 }
 
+// Client Hints names for Chromebooks, mapped to the name osFromUserAgent
+// uses, so the same device is reported the same way whichever source we read.
+const CLIENT_HINTS_PLATFORM_NAMES: Readonly<Record<string, string>> = {
+  'Chrome OS': 'ChromeOS',
+  'Chromium OS': 'ChromeOS',
+}
+
 function osFromClientHints(hints: ClientHints | undefined): NameAndVersion | undefined {
   if (!hints?.platform || !hints.platformVersion) return undefined
   if (hints.platform === 'Windows') return { name: 'Windows', version: windowsVersion(hints.platformVersion) }
-  return { name: hints.platform, version: majorVersion(hints.platformVersion) }
+  const name = CLIENT_HINTS_PLATFORM_NAMES[hints.platform] ?? hints.platform
+  return { name, version: majorVersion(hints.platformVersion) }
+}
+
+/**
+ * Safari 26+ always says iOS 18_6. A real iOS 18.6 device sends the same
+ * token, but with Version/18.6, so it's only frozen next to Version/26 or later.
+ */
+function isFrozenSafariIosVersion(ua: string): boolean {
+  if (!/OS 18_6 like/.test(ua)) return false
+  return Number(/Version\/(\d+)/.exec(ua)?.[1]) >= 26
 }
 
 /**
@@ -82,7 +99,7 @@ function osFromClientHints(hints: ClientHints | undefined): NameAndVersion | und
  * version is only returned where the user-agent still carries a real one.
  */
 function osFromUserAgent(ua: string, maxTouchPoints: number): NameAndVersion | undefined {
-  const iosVersion = /OS (\d+)_/.exec(ua)?.[1]
+  const iosVersion = isFrozenSafariIosVersion(ua) ? undefined : /OS (\d+)_/.exec(ua)?.[1]
   if (/iPhone|iPod/.test(ua)) return { name: 'iOS', version: iosVersion }
   if (/iPad/.test(ua)) return { name: 'iPadOS', version: iosVersion }
   if (isIpadInDesktopMode(ua, maxTouchPoints)) return { name: 'iPadOS' }

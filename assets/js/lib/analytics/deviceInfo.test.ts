@@ -4,6 +4,13 @@ const IPHONE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
 const IPAD_UA =
   'Mozilla/5.0 (iPad; CPU OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1'
+// Safari 26+ freezes the OS token at 18_6; Version/ still carries the real release.
+const IPHONE_SAFARI_26_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
+const IPAD_SAFARI_26_UA =
+  'Mozilla/5.0 (iPad; CPU OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
+const IPHONE_IOS_18_6_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1'
 const MAC_SAFARI_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15'
 const ANDROID_CHROME_REDUCED_UA =
@@ -50,6 +57,21 @@ describe('buildDeviceInfo', () => {
       os: { name: 'iPadOS', version: '16' },
       deviceModel: 'iPad',
     })
+  })
+
+  it.each([
+    ['iPhone', IPHONE_SAFARI_26_UA, 'iOS'],
+    ['iPad', IPAD_SAFARI_26_UA, 'iPadOS'],
+  ])('omits the frozen 18_6 OS version from Safari 26+ on an %s', (deviceModel, userAgent, os) => {
+    expect(buildDeviceInfo(env({ userAgent }))).toMatchObject({
+      os: { name: os, version: undefined },
+      browser: { name: 'Safari', version: '26' },
+      deviceModel,
+    })
+  })
+
+  it('keeps the version for a real iOS 18.6 device, which sends a matching Version/18.6', () => {
+    expect(buildDeviceInfo(env({ userAgent: IPHONE_IOS_18_6_UA })).os).toEqual({ name: 'iOS', version: '18' })
   })
 
   it('reads a Mac user agent with a touch screen as an iPad, without the frozen Mac version', () => {
@@ -134,6 +156,17 @@ describe('buildDeviceInfo', () => {
   it('reads a Chromebook as ChromeOS', () => {
     expect(buildDeviceInfo(env({ userAgent: CHROMEBOOK_UA })).os).toEqual({ name: 'ChromeOS' })
   })
+
+  it.each(['Chrome OS', 'Chromium OS'])(
+    'reports the Client Hints platform %s with the same ChromeOS name as the user-agent fallback',
+    platform => {
+      const info = buildDeviceInfo(
+        env({ userAgent: CHROMEBOOK_UA, clientHints: { platform, platformVersion: '16093.68.0', model: '' } }),
+      )
+
+      expect(info.os).toEqual({ name: 'ChromeOS', version: '16093' })
+    },
+  )
 
   it('passes through the Chromium-only network signals', () => {
     expect(buildDeviceInfo(env({ connectionType: '3g', saveData: true }))).toMatchObject({
