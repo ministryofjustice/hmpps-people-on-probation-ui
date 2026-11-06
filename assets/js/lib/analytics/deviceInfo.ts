@@ -41,9 +41,11 @@ export type DeviceInfo = {
   saveData?: boolean
 }
 
-// Order matters: Edge, Samsung Internet and Opera all also contain
-// "Chrome/", and Chrome on Android contains "Version/" in WebViews.
+// Order matters: Android WebView (in-app browsers, marked "; wv)"), Edge,
+// Samsung Internet and Opera all also contain "Chrome/", and WebView also
+// contains "Version/".
 const BROWSERS: ReadonlyArray<[string, RegExp]> = [
+  ['Android WebView', /; wv\).*Chrome\/(\d+)/],
   ['Edge', /Edg(?:e|A|iOS)?\/(\d+)/],
   ['Samsung Internet', /SamsungBrowser\/(\d+)/],
   ['Opera', /(?:OPR|OPiOS)\/(\d+)/],
@@ -116,6 +118,10 @@ function osFromUserAgent(ua: string, maxTouchPoints: number): NameAndVersion | u
   return undefined
 }
 
+// Tokens in the model's place that aren't a model: reduced Chrome's "K", and
+// Firefox's "Mobile" or "Tablet".
+const NOT_ANDROID_MODELS: ReadonlySet<string> = new Set(['K', 'Mobile', 'Tablet'])
+
 /**
  * Apple doesn't expose the exact model to the web, so iOS devices only get
  * their family. Android model comes from Client Hints, or from the
@@ -127,8 +133,9 @@ function detectDeviceModel(ua: string, maxTouchPoints: number, hints: ClientHint
   if (appleFamily) return appleFamily
   if (isIpadInDesktopMode(ua, maxTouchPoints)) return 'iPad'
 
-  const androidModel = /Android [\d.]+; ([^;)]+)\)/.exec(ua)?.[1]?.replace(/ Build\/.*$/, '')
-  return androidModel && androidModel !== 'K' ? androidModel : undefined
+  // The model is followed by ")" or, in Android WebView, "; wv)".
+  const androidModel = /Android [\d.]+; ([^;)]+)[;)]/.exec(ua)?.[1]?.replace(/ Build\/.*$/, '')
+  return androidModel && !NOT_ANDROID_MODELS.has(androidModel) ? androidModel : undefined
 }
 
 function detectBrowser(ua: string): NameAndVersion | undefined {

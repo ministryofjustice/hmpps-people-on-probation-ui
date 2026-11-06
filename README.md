@@ -256,6 +256,7 @@ When a value isn't known, it's left out of the event rather than sent as `null`.
 | Android phone, Chrome, Edge or Samsung Internet | `mobile` | `Android` with real version | browser with version | real model, e.g. `Pixel 7a` |
 | Android phone, Chrome, when Client Hints fail | `mobile` | `Android`, no version | `Chrome` with version | none |
 | Android, browser with a full user-agent (e.g. older Samsung Internet) | `mobile` | `Android` with version | browser with version | model from the user-agent, e.g. `SM-A146B` |
+| Android, in-app browser (Android WebView, e.g. a link opened from an email or messaging app) | `mobile` | `Android` with version | `Android WebView` with Chrome version | model from the user-agent, e.g. `SM-G960F` |
 | Android phone, Firefox | `mobile` | `Android` with version | `Firefox` with version | none |
 | Android tablet, Chrome | `tablet` | `Android` with real version | `Chrome` with version | real model, e.g. `SM-X710` |
 | Windows, Chrome or Edge | `desktop` | `Windows`, version `10` or `11` | browser with version | none |

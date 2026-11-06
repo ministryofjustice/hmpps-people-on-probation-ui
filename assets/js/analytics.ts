@@ -81,10 +81,14 @@ try {
   // "on route/page change" for a traditional multi-page app. Sent once,
   // best-effort (see client.ts) — no queue, so there's nothing here that
   // can be sent twice. It waits only for the Client Hints lookup, which
-  // resolves almost immediately, so the device details can ride along.
+  // resolves almost immediately, so the device details can ride along. The
+  // context and time are taken before the wait so occurredAt is the moment
+  // the page was viewed and always comes before that view's page_exited.
   const sendPageViewed = () => {
+    const viewedAt = new Date()
+    const context = { ...eventContext(), now: () => viewedAt }
     collectDeviceInfo()
-      .then(deviceInfo => client.send(createEvent(eventContext(), 'page_viewed', deviceInfo)))
+      .then(deviceInfo => client.send(createEvent(context, 'page_viewed', deviceInfo)))
       .catch(() => {
         // Analytics must never break the page it's running on.
       })

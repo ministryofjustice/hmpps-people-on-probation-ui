@@ -17,7 +17,10 @@ const ANDROID_CHROME_REDUCED_UA =
   'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36'
 const ANDROID_SAMSUNG_UA =
   'Mozilla/5.0 (Linux; Android 13; SM-A146B Build/TP1A.220624.014) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/25.0 Chrome/121.0.0.0 Mobile Safari/537.36'
+const ANDROID_WEBVIEW_UA =
+  'Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.102 Mobile Safari/537.36'
 const ANDROID_FIREFOX_UA = 'Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0'
+const ANDROID_FIREFOX_TABLET_UA = 'Mozilla/5.0 (Android 14; Tablet; rv:131.0) Gecko/131.0 Firefox/131.0'
 const WINDOWS_EDGE_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0'
 const CHROMEBOOK_UA =
@@ -122,6 +125,14 @@ describe('buildDeviceInfo', () => {
     })
   })
 
+  it('reads an Android WebView (in-app browser) user agent, taking the model where "; wv)" follows it', () => {
+    expect(buildDeviceInfo(env({ userAgent: ANDROID_WEBVIEW_UA }))).toMatchObject({
+      os: { name: 'Android', version: '9' },
+      browser: { name: 'Android WebView', version: '130' },
+      deviceModel: 'SM-G960F',
+    })
+  })
+
   it('reads Firefox on Android, which never includes a model', () => {
     const info = buildDeviceInfo(env({ userAgent: ANDROID_FIREFOX_UA }))
 
@@ -130,6 +141,10 @@ describe('buildDeviceInfo', () => {
       browser: { name: 'Firefox', version: '131' },
     })
     expect(info.deviceModel).toBeUndefined()
+  })
+
+  it('does not record Firefox on an Android tablet as having a "Tablet" model', () => {
+    expect(buildDeviceInfo(env({ userAgent: ANDROID_FIREFOX_TABLET_UA })).deviceModel).toBeUndefined()
   })
 
   it.each([
