@@ -21,6 +21,10 @@ const ANDROID_WEBVIEW_UA =
   'Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.6723.102 Mobile Safari/537.36'
 const ANDROID_FIREFOX_UA = 'Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0'
 const ANDROID_FIREFOX_TABLET_UA = 'Mozilla/5.0 (Android 14; Tablet; rv:131.0) Gecko/131.0 Firefox/131.0'
+const ANDROID_LOCALE_FIRST_UA =
+  'Mozilla/5.0 (Linux; U; Android 4.4.2; en-us; GT-I9505 Build/KOT49H) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30'
+const HUAWEI_BROWSER_UA =
+  'Mozilla/5.0 (Linux; Android 10; HarmonyOS; ELS-NX9; HMSCore 6.13.0.302) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.196 HuaweiBrowser/14.0.5.302 Mobile Safari/537.36'
 const WINDOWS_EDGE_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0'
 const CHROMEBOOK_UA =
@@ -145,6 +149,20 @@ describe('buildDeviceInfo', () => {
 
   it('does not record Firefox on an Android tablet as having a "Tablet" model', () => {
     expect(buildDeviceInfo(env({ userAgent: ANDROID_FIREFOX_TABLET_UA })).deviceModel).toBeUndefined()
+  })
+
+  it('does not record the locale as the model for an older Android browser that puts it first', () => {
+    const info = buildDeviceInfo(env({ userAgent: ANDROID_LOCALE_FIRST_UA }))
+
+    expect(info.os).toEqual({ name: 'Android', version: '4' })
+    expect(info.deviceModel).toBeUndefined()
+  })
+
+  it('does not record "HarmonyOS" as the model for Huawei\'s browser', () => {
+    const info = buildDeviceInfo(env({ userAgent: HUAWEI_BROWSER_UA }))
+
+    expect(info.os).toEqual({ name: 'Android', version: '10' })
+    expect(info.deviceModel).toBeUndefined()
   })
 
   it.each([
