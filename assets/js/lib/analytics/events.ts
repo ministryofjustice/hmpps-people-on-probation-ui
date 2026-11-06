@@ -32,6 +32,8 @@ export type CreateEventContext = {
   generateId: () => string
   now: () => Date
   userAgent: string | undefined | null
+  // Needed alongside the user agent to spot iPads, which send a Mac one.
+  maxTouchPoints?: number
   pagePath: string
   application: string
   // Used only to derive referrerPath on page_viewed events (see
@@ -81,7 +83,7 @@ export function createEvent(
     eventName,
     occurredAt: context.now().toISOString(),
     application: context.application,
-    deviceType: detectDeviceType(context.userAgent),
+    deviceType: detectDeviceType(context.userAgent, context.maxTouchPoints),
     pagePath: context.pagePath,
     properties: mergedProperties,
   }
