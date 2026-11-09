@@ -16,6 +16,7 @@ import setUpWebSession from './middleware/setUpWebSession'
 
 import routes from './routes'
 import analyticsRoutes from './routes/analytics'
+import researchRoutes from './routes/research'
 import type { Services } from './services'
 
 export default function createApp(services: Services): express.Application {
@@ -70,6 +71,8 @@ export default function createApp(services: Services): express.Application {
     res.status(500)
     res.render('pages/sign-in-error')
   })
+
+  app.use('/research', researchRoutes())
 
   app.use((_req, _res, next) => next(createError(404, 'Not found')))
   app.use(errorHandler(process.env.NODE_ENV === 'production'))

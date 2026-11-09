@@ -1,0 +1,30 @@
+// Contents list for the multi-page research guides, styled like GOV.UK guide
+// pages: plain links, each with an em-dash before it, and the current page as
+// plain text.
+.pop-guide-contents {
+  margin-bottom: govuk-spacing(6);
+}
+
+.pop-guide-contents__title {
+  @include govuk-font($size: 19);
+  margin: 0 0 govuk-spacing(2);
+}
+
+.pop-guide-contents__list {
+  @include govuk-font($size: 19);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pop-guide-contents__item {
+  position: relative;
+  margin-bottom: govuk-spacing(1);
+  padding-left: govuk-spacing(5);
+
+  &::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+  }
+}
