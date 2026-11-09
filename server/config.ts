@@ -204,6 +204,9 @@ const config = {
     // built, so until an environment sets FEATURE_LICENCE=true, anyone whose sentence has licence
     // conditions is sent to the "You cannot use this service" page instead of their account.
     licence: get('FEATURE_LICENCE', 'false') === 'true',
+    // Master switch for the public /research/* participant guidance pages. Off by default:
+    // the pages still hold placeholder content ([what], booking link, privacy notice link).
+    researchGuidance: get('FEATURE_RESEARCH_GUIDANCE', 'false') === 'true',
   },
 }
 

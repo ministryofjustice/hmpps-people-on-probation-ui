@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser'
 import { NotFound } from 'http-errors'
 import { randomUUID } from 'crypto'
 import routes from '../index'
+import researchRoutes from '../research'
 import nunjucksSetup from '../../utils/nunjucksSetup'
 import errorHandler from '../../errorHandler'
 import type { Services } from '../../services'
@@ -50,6 +51,7 @@ function appSetup(services: Services, production: boolean): Express {
     res.status(500)
     res.render('pages/sign-in-error')
   })
+  app.use('/research', researchRoutes())
 
   app.use((req, res, next) => next(new NotFound()))
   app.use(errorHandler(production))

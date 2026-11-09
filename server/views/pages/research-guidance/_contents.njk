@@ -1,0 +1,15 @@
+{# Contents list in the style of GOV.UK guide pages: plain links with an em-dash before each, and the current page as text. #}
+<nav class="pop-guide-contents" aria-label="Pages in this guide">
+  <h2 class="pop-guide-contents__title">Contents</h2>
+  <ol class="pop-guide-contents__list">
+    {% for item in contents %}
+      <li class="pop-guide-contents__item">
+        {% if item.current %}
+          <span aria-current="page">{{ item.text }}</span>
+        {% else %}
+          <a class="govuk-link" href="{{ item.href }}">{{ item.text }}</a>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</nav>

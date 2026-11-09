@@ -1,0 +1,31 @@
+{#
+  Shared layout for the research guides. Each page extends this and fills
+  guideContent; the router passes guideTitle, sectionTitle, contents,
+  previous and next (see server/routes/research.ts).
+#}
+{% extends "../../partials/layout.njk" %}
+{% from "govuk/components/pagination/macro.njk" import govukPagination %}
+
+{% set pageTitle = sectionTitle + " – " + guideTitle + " – Check your probation account – GOV.UK" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      <h1 class="govuk-heading-l">{{ guideTitle }}</h1>
+
+      {% include "./_contents.njk" %}
+
+      <h2 class="govuk-heading-m">{{ sectionTitle }}</h2>
+
+      {% block guideContent %}{% endblock %}
+
+      {{ govukPagination({
+        previous: previous,
+        next: next,
+        classes: "govuk-!-margin-top-8"
+      }) }}
+
+    </div>
+  </div>
+{% endblock %}
