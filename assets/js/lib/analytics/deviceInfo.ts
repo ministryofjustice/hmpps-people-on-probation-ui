@@ -86,22 +86,27 @@ function osFromClientHints(hints: ClientHints | undefined): NameAndVersion | und
 }
 
 /**
- * Safari 26+ always says iOS 18_6. A real iOS 18.6 device sends the same
- * token, but with Version/18.6, so it's only frozen next to Version/26 or later.
+ * Safari 26+ freezes the OS token at an iOS 18 value: 18_6 at first, 18_7
+ * from later iOS 26 updates. On iPhone and iPad, Safari is part of the OS
+ * and numbered with it (Safari 26 ships with iOS 26), so its Version/ gives
+ * the real iOS version. A real iOS 18 device always sends Version/18, so any
+ * iOS 18 token next to Version/26 or later is frozen, whichever 18_x it is.
  */
-function isFrozenSafariIosVersion(ua: string): boolean {
-  if (!/OS 18_6 like/.test(ua)) return false
-  return Number(/Version\/(\d+)/.exec(ua)?.[1]) >= 26
+function iosVersionFromUserAgent(ua: string): string | undefined {
+  const osVersion = /OS (\d+)_/.exec(ua)?.[1]
+  const safariVersion = /Version\/(\d+)/.exec(ua)?.[1]
+  return osVersion === '18' && Number(safariVersion) >= 26 ? safariVersion : osVersion
 }
 
 /**
  * Falls back to the user-agent string. Browsers freeze the OS version they
- * put there — macOS is always 10_15_7, Windows 11 says NT 10.0, Chrome on
- * Android always says "Android 10; K" and Safari 26+ says iOS 18_6 — so a
- * version is only returned where the user-agent still carries a real one.
+ * put there — macOS is always 10_15_7, Windows 11 says NT 10.0 and Chrome on
+ * Android always says "Android 10; K" — so a version is only returned where
+ * the user-agent still carries a real one, or, for Safari on iOS, where
+ * Safari's own version stands in for it.
  */
 function osFromUserAgent(ua: string, maxTouchPoints: number): NameAndVersion | undefined {
-  const iosVersion = isFrozenSafariIosVersion(ua) ? undefined : /OS (\d+)_/.exec(ua)?.[1]
+  const iosVersion = iosVersionFromUserAgent(ua)
   if (/iPhone|iPod/.test(ua)) return { name: 'iOS', version: iosVersion }
   if (/iPad/.test(ua)) return { name: 'iPadOS', version: iosVersion }
   if (isIpadInDesktopMode(ua, maxTouchPoints)) return { name: 'iPadOS' }

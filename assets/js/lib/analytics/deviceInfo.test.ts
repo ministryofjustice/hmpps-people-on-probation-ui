@@ -4,13 +4,25 @@ const IPHONE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
 const IPAD_UA =
   'Mozilla/5.0 (iPad; CPU OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1'
-// Safari 26+ freezes the OS token at 18_6; Version/ still carries the real release.
+// Safari 26+ freezes the OS token at an iOS 18 value (18_6, then 18_7 from
+// later iOS 26 updates); Version/ still carries the real release.
 const IPHONE_SAFARI_26_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
 const IPAD_SAFARI_26_UA =
   'Mozilla/5.0 (iPad; CPU OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1'
+const IPHONE_SAFARI_26_2_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.2 Mobile/15E148 Safari/604.1'
+const IPHONE_SAFARI_27_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1'
+const IPAD_SAFARI_27_UA =
+  'Mozilla/5.0 (iPad; CPU OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1'
 const IPHONE_IOS_18_6_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1'
+const IPHONE_IOS_18_7_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7 Mobile/15E148 Safari/604.1'
+// Third-party iOS browsers send their own user agent, with the real OS version.
+const IPHONE_CHROME_IOS_27_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 27_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/142.0.7444.77 Mobile/15E148 Safari/604.1'
 const MAC_SAFARI_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15'
 const ANDROID_CHROME_REDUCED_UA =
@@ -67,18 +79,35 @@ describe('buildDeviceInfo', () => {
   })
 
   it.each([
-    ['iPhone', IPHONE_SAFARI_26_UA, 'iOS'],
-    ['iPad', IPAD_SAFARI_26_UA, 'iPadOS'],
-  ])('omits the frozen 18_6 OS version from Safari 26+ on an %s', (deviceModel, userAgent, os) => {
-    expect(buildDeviceInfo(env({ userAgent }))).toMatchObject({
-      os: { name: os, version: undefined },
-      browser: { name: 'Safari', version: '26' },
-      deviceModel,
-    })
+    ['18_6', 'Safari 26.0', 'iPhone', IPHONE_SAFARI_26_UA, 'iOS', '26'],
+    ['18_6', 'Safari 26.0', 'iPad', IPAD_SAFARI_26_UA, 'iPadOS', '26'],
+    ['18_7', 'Safari 26.2', 'iPhone', IPHONE_SAFARI_26_2_UA, 'iOS', '26'],
+    ['18_7', 'Safari 27.0', 'iPhone', IPHONE_SAFARI_27_UA, 'iOS', '27'],
+    ['18_7', 'Safari 27.0', 'iPad', IPAD_SAFARI_27_UA, 'iPadOS', '27'],
+  ])(
+    "takes the real OS version from Safari's version, not the frozen %s, for %s on an %s",
+    (_frozenToken, _safari, deviceModel, userAgent, os, safariVersion) => {
+      expect(buildDeviceInfo(env({ userAgent }))).toMatchObject({
+        os: { name: os, version: safariVersion },
+        browser: { name: 'Safari', version: safariVersion },
+        deviceModel,
+      })
+    },
+  )
+
+  it.each([
+    ['18.6', IPHONE_IOS_18_6_UA],
+    ['18.7', IPHONE_IOS_18_7_UA],
+  ])('keeps the version for a real iOS %s device, which sends a matching Safari Version/18', (_, userAgent) => {
+    expect(buildDeviceInfo(env({ userAgent })).os).toEqual({ name: 'iOS', version: '18' })
   })
 
-  it('keeps the version for a real iOS 18.6 device, which sends a matching Version/18.6', () => {
-    expect(buildDeviceInfo(env({ userAgent: IPHONE_IOS_18_6_UA })).os).toEqual({ name: 'iOS', version: '18' })
+  it('keeps the real iOS version that a third-party browser such as Chrome sends', () => {
+    expect(buildDeviceInfo(env({ userAgent: IPHONE_CHROME_IOS_27_UA }))).toMatchObject({
+      os: { name: 'iOS', version: '27' },
+      browser: { name: 'Chrome', version: '142' },
+      deviceModel: 'iPhone',
+    })
   })
 
   it('reads a Mac user agent with a touch screen as an iPad, without the frozen Mac version', () => {

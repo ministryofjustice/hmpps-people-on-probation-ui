@@ -248,11 +248,11 @@ When a value isn't known, it's left out of the event rather than sent as `null`.
 | Scenario | `deviceType` | `os` | `browser` | `deviceModel` |
 |---|---|---|---|---|
 | iPhone, Safari, iOS 18 or earlier | `mobile` | `iOS` with version | `Safari` with version | `iPhone` |
-| iPhone, Safari 26 or later | `mobile` | `iOS`, no version | `Safari` with version | `iPhone` |
-| iPhone, Chrome or Firefox | `mobile` | `iOS` with version from the user-agent (see note below) | `Chrome` / `Firefox` with version | `iPhone` |
+| iPhone, Safari 26 or later | `mobile` | `iOS` with version, taken from Safari's version | `Safari` with version | `iPhone` |
+| iPhone, Chrome, Firefox or Edge | `mobile` | `iOS` with real version | `Chrome` / `Firefox` / `Edge` with version | `iPhone` |
 | iPad, default desktop mode (sends a Mac user-agent) | `tablet` | `iPadOS`, no version | `Safari` with version | `iPad` |
 | iPad with an iPad user-agent, iPadOS 18 or earlier | `tablet` | `iPadOS` with version | `Safari` with version | `iPad` |
-| iPad with an iPad user-agent, Safari 26 or later | `tablet` | `iPadOS`, no version | `Safari` with version | `iPad` |
+| iPad with an iPad user-agent, Safari 26 or later | `tablet` | `iPadOS` with version, taken from Safari's version | `Safari` with version | `iPad` |
 | Android phone, Chrome, Edge or Samsung Internet | `mobile` | `Android` with real version | browser with version | real model, e.g. `Pixel 7a` |
 | Android phone, Chrome, when Client Hints fail | `mobile` | `Android`, no version | `Chrome` with version | none |
 | Android, browser with a full user-agent (e.g. older Samsung Internet) | `mobile` | `Android` with version | browser with version | model from the user-agent, e.g. `SM-A146B` |
@@ -281,12 +281,12 @@ Every scenario also records:
 - **No OS version:** browsers freeze the OS version in the user-agent, and we leave it out rather than record a wrong value. The frozen values are:
   - macOS is always 10_15_7;
   - Windows 11 says NT 10.0;
-  - reduced Chrome on Android says "Android 10; K";
-  - Safari 26 and later says iOS 18_6.
-
-  For Safari 26 and later, use `browser.version` instead: Safari's version follows the iOS version.
+  - reduced Chrome on Android says "Android 10; K".
+- **Safari 26 and later on iPhone and iPad** also freezes the OS version, at iOS 18. It sent 18_6 at first and 18_7 from later iOS 26 updates. We don't leave this one out. On iPhone and iPad, Safari is part of the OS and numbered with it (Safari 26 ships with iOS 26), so the OS version is taken from Safari's `Version/`:
+  - any iOS 18 value next to Safari 26 or later is treated as frozen, so a future change to the frozen value is handled too;
+  - a real iOS 18 device always sends Safari `Version/18`, so it keeps 18.
 - **iPhone and iPad models:** Apple doesn't expose the exact model to websites, so only the family is recorded (`iPhone` or `iPad`).
-- **Chrome and Firefox on iOS:** these don't send the `Version/` token that tells a frozen 18_6 apart from a real iOS 18.6. If they send the frozen token on iOS 26, they record version `18`.
+- **Chrome, Firefox and Edge on iOS** aren't frozen. They send their own user-agent with the real iOS version, e.g. `OS 27_1`.
 - **iPads in desktop mode** are told apart from Macs by their touch screen (`navigator.maxTouchPoints > 1`).
 - **Events sent by the server** (sign-in, registration, `session_started`) record `deviceType: "unknown"` and no device details.
 
