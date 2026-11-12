@@ -211,10 +211,10 @@ const config = {
 }
 
 // Single source of truth for whether the chatbot is live: the master flag AND
-// the backend being configured (URL + key). The routes serving /chat + /home,
-// the `/` → /chat redirect, and the service-nav Chat item all use this, so they
-// can never disagree — e.g. flag on but creds unset in preprod/local, which
-// would otherwise redirect to a /chat with no Chat nav item and a dead backend.
+// the backend being configured (URL + key). The route serving /chat and the
+// service-nav Chat item both use this, so they can never disagree — e.g. flag
+// on but creds unset in preprod/local, which would otherwise show a Chat nav
+// item leading to a /chat with a dead backend.
 export const chatbotEnabled = Boolean(config.features.chatbot && config.popChatbot.apiUrl && config.popChatbot.apiKey)
 
 export default config

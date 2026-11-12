@@ -1,6 +1,6 @@
 // Clears the persisted chat conversation when the user signs out — on EVERY
 // signed-in page, not just /chat. The conversation lives in sessionStorage, so
-// if a user signs out from /home, /appointments or the timeout dialog without
+// if a user signs out from the homepage, /appointments or the timeout dialog without
 // this, the next person to sign in in the same browser tab (e.g. a shared
 // device) would have the previous user's probation chat restored.
 //
