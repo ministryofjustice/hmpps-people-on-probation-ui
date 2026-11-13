@@ -375,9 +375,9 @@ The "Progress and achievements" page (`/progress`) totals unpaid work hours and 
 
 | Path | Description |
 |---|---|
-| `/` | Home — next appointment, missed appointment, and order progress summary. Redirects to `/chat` when the chatbot is live |
-| `/home` | Home, when the chatbot is live (otherwise `/` is home) |
-| `/chat` | Full-screen chatbot, when the chatbot is live |
+| `/` | Home — next appointment, missed appointment, and order progress summary. Always the landing page for signed-in users |
+| `/home` | Redirects to `/`. Kept so links saved while this was home still work |
+| `/chat` | Full-screen chatbot, when the chatbot is live. Reached from the Chat item in the service navigation |
 | `/welcome` | "Welcome to your online probation account", shown after sign-in on a first visit or after 30 days away |
 | `/appointments` | Appointments and activities (upcoming and past tabs) |
 | `/progress` | Progress and achievements — attended appointments, unpaid work hours, achieved goals and RAR days |
