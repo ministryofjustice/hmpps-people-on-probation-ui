@@ -5,11 +5,12 @@
 {% set currentPage = "licence" %}
 
 {% block breadcrumb %}
-  {{ govukBackLink({ text: "Back", href: "/licence" }) }}
+  {{ govukBackLink({ text: "Back", href: "/your-probation/licence" if withOrders else "/your-probation" }) }}
 {% endblock %}
 
 {% block content %}
 
+  {% if withOrders %}<span class="govuk-caption-l">Your sentence and licence</span>{% endif %}
   <h1 class="govuk-heading-xl">Standard licence conditions</h1>
 
   {% if lastUpdatedAt %}
@@ -19,7 +20,7 @@
   {% endif %}
 
   <p class="govuk-body">These are conditions that everyone on licence must follow. These conditions will only change if national policy changes.</p>
-  <p class="govuk-body">Read these and <a class="govuk-link govuk-link--no-visited-state" href="/licence/specific-conditions" data-tracking-id="standard_conditions_specific_conditions_link">any licence conditions that are specific to you</a> carefully.</p>
+  <p class="govuk-body">Read these and <a class="govuk-link govuk-link--no-visited-state" href="/your-probation/specific-conditions" data-tracking-id="standard_conditions_specific_conditions_link">any licence conditions that are specific to you</a> carefully.</p>
   <p class="govuk-body"><a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="standard_conditions_probation_officer_link">Your probation officer</a> can help you understand your licence conditions if you are not sure.</p>
 
   {% if conditions.length %}

@@ -5,11 +5,12 @@
 {% set currentPage = "licence" %}
 
 {% block breadcrumb %}
-  {{ govukBackLink({ text: "Back", href: "/licence" }) }}
+  {{ govukBackLink({ text: "Back", href: "/your-probation/licence" if withOrders else "/your-probation" }) }}
 {% endblock %}
 
 {% block content %}
 
+  {% if withOrders %}<span class="govuk-caption-l">Your sentence and licence</span>{% endif %}
   <h1 class="govuk-heading-xl">Licence conditions specific to you</h1>
 
   {% if lastUpdatedAt %}
@@ -20,7 +21,7 @@
 
   <p class="govuk-body">These are conditions that you must follow that have been added specifically for you. These conditions can be added, removed or changed.</p>
   <p class="govuk-body">They are aimed at helping you make positive changes or stopping you doing things that led you to prison.</p>
-  <p class="govuk-body">Read these and <a class="govuk-link govuk-link--no-visited-state" href="/licence/standard-conditions" data-tracking-id="specific_conditions_standard_conditions_link">standard licence conditions</a> carefully.</p>
+  <p class="govuk-body">Read these and <a class="govuk-link govuk-link--no-visited-state" href="/your-probation/standard-conditions" data-tracking-id="specific_conditions_standard_conditions_link">standard licence conditions</a> carefully.</p>
   <p class="govuk-body">The numbers shown within each licence condition are the same as the condition numbers on your licence document.</p>
   <p class="govuk-body"><a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="specific_conditions_probation_officer_link">Your probation officer</a> can help you understand your licence conditions if you are not sure.</p>
 
@@ -30,14 +31,14 @@
     <ul class="pop-condition-groups">
       {% for group in groups %}
         <li class="pop-condition-groups__card">
-          <a href="/licence/specific-conditions/{{ group.key }}" class="pop-card" data-tracking-id="licence_condition_group_{{ group.key }}">
+          <a href="/your-probation/specific-conditions/{{ group.key }}" class="pop-card" data-tracking-id="licence_condition_group_{{ group.key }}">
             <h2 class="govuk-heading-m pop-card__title govuk-!-margin-bottom-0">{{ group.title }}</h2>
           </a>
         </li>
       {% endfor %}
       {% if hasBespokeConditions %}
         <li class="pop-condition-groups__card">
-          <a href="/licence/specific-conditions/bespoke-licence-conditions" class="pop-card" data-tracking-id="licence_condition_group_bespoke-licence-conditions">
+          <a href="/your-probation/specific-conditions/bespoke-licence-conditions" class="pop-card" data-tracking-id="licence_condition_group_bespoke-licence-conditions">
             <h2 class="govuk-heading-m pop-card__title govuk-!-margin-bottom-0">Bespoke licence conditions</h2>
           </a>
         </li>

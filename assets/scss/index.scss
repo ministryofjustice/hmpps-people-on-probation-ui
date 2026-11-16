@@ -24,5 +24,7 @@ $govuk-page-width: $moj-page-width;
 @import './components/welcome';
 @import './components/admin-preview-banner';
 @import './components/research-guidance';
+@import './components/inset-panel';
+@import './components/order-summary';
 @import './overrides/header';
 @import './overrides/local';

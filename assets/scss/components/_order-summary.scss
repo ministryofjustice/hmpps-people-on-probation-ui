@@ -1,0 +1,38 @@
+// The numbered list of orders on the "Your probation" page, for someone on orders that don't match. Each
+// order has a blue numbered circle, its type as a link and its end date.
+.pop-order-summary {
+  margin-top: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pop-order-summary;
+
+  &__item {
+    position: relative;
+    padding: govuk-spacing(2) 0 govuk-spacing(2) 65px;
+    counter-increment: pop-order-summary;
+
+    &::before {
+      content: counter(pop-order-summary);
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 33px;
+      height: 33px;
+      transform: translateY(-50%);
+      border-radius: 50%;
+      background-color: $govuk-brand-colour;
+      color: govuk-colour('white');
+      @include govuk-font($size: 24, $weight: bold, $line-height: 33px);
+      text-align: center;
+    }
+  }
+
+  &__link {
+    @include govuk-font($size: 24, $weight: bold);
+  }
+
+  &__date {
+    margin: govuk-spacing(1) 0 0;
+    color: $govuk-secondary-text-colour;
+  }
+}

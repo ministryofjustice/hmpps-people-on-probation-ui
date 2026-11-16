@@ -4,6 +4,8 @@ import config from '../config'
 import logger from '../../logger'
 import type { Services } from '../services'
 import { getSessionCrn } from '../auth/sessionStore'
+import { combineSentences, findLicence, groupOrders } from '../utils/concurrentOrders'
+import { hasIndeterminateSentence } from '../utils/currentLicence'
 import { toAppointmentCardView } from './appointments'
 import type { AppointmentCardView } from './appointments'
 import { toRequirementViews } from './requirements'
@@ -163,11 +165,44 @@ function sanitizeSentence(sentence: SentenceResponse): Record<string, unknown> {
   }
 }
 
-function sanitizeSentenceProgress(sentenceProgress: SentenceProgressResponse): Record<string, unknown> {
-  // Only sentences[0] is ever shown (see requirements.ts) — later sentences
-  // in the array are invisible to the user, so they're dropped here too.
-  const sentence = sentenceProgress.sentences?.[0]
-  return { sentences: sentence ? [sanitizeSentence(sentence)] : [] }
+function sanitizeSentenceProgress(
+  sentenceProgress: SentenceProgressResponse,
+  indeterminate = false,
+): Record<string, unknown> {
+  // The same view as the "Your probation" page: the licence first, if there is one, then each order
+  // (matching orders as one, see groupOrders), with every requirement listed once. The requirements go
+  // on the first order, as the page lists them together rather than by order. A licence for an
+  // indeterminate sentence (such as life) has no end date, as on the licence page.
+  const { licence } = findLicence(sentenceProgress.sentences)
+  const orders = groupOrders(sentenceProgress.sentences?.filter(sentence => sentence !== licence))
+  const requirements = combineSentences(orders)?.requirements ?? []
+  return {
+    sentences: [
+      ...(licence
+        ? [
+            sanitizeSentence({
+              ...licence,
+              requirements: [],
+              ...(indeterminate && { expectedEndDate: undefined }),
+            }),
+          ]
+        : []),
+      ...orders.map((order, index) => sanitizeSentence({ ...order, requirements: index === 0 ? requirements : [] })),
+    ],
+  }
+}
+
+// Whether the licence is indeterminate, for someone on licence, as the licence page works it out. If the
+// licence can't be loaded, the sentence's end date is used, as on the page.
+const loadSentenceProgress = async (services: Services, crn: string) => {
+  const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
+  const indeterminate =
+    Boolean(findLicence(sentenceProgress.sentences).licence) &&
+    (await hasIndeterminateSentence(services, crn).catch(err => {
+      logger.warn({ err, crn }, 'Could not load the licence for the chatbot; using the sentence end date')
+      return false
+    }))
+  return sanitizeSentenceProgress(sentenceProgress, indeterminate)
 }
 
 type SanitizedAppointment = Omit<
@@ -227,7 +262,7 @@ async function buildUserContext(services: Services, user: { userId: string }, cr
   // saw that even though they were signed in.
   const sources = {
     personalDetails: () => service.getPersonalDetails(crn).then(sanitizePersonalDetails),
-    sentenceProgress: () => service.getSentences(crn).then(sanitizeSentenceProgress),
+    sentenceProgress: () => loadSentenceProgress(services, crn),
     futureAppointments: () => service.getFutureAppointments(crn, 0, 10).then(r => sanitizeAppointments(r.content)),
     pastAppointments: () => service.getPastAppointments(crn, 0, 10).then(r => sanitizeAppointments(r.content)),
     sentencePlan: () => service.getSentencePlan(crn).then(sanitizeSentencePlan),

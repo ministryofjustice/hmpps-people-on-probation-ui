@@ -1,22 +1,36 @@
 {% extends "../partials/layout.njk" %}
 {% from "../macros/whatDoesThisMean.njk" import whatDoesThisMean %}
 {% from "partials/licence-status.njk" import licenceStatus %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 
-{% set pageTitle = "Your sentence and licence – Check your probation account – GOV.UK" %}
+{# Someone also on an order reaches this page from the "Your probation" summary (withOrders). #}
+{% set pageHeading = "Your sentence and licence" if withOrders else "Your probation" %}
+{% set pageTitle = pageHeading + " – Check your probation account – GOV.UK" %}
 {% set currentPage = "licence" %}
+
+{% block breadcrumb %}
+  {% if withOrders %}
+    {{ govukBackLink({ text: "Back", href: "/your-probation" }) }}
+  {% endif %}
+{% endblock %}
 
 {% block content %}
 
-  <h1 class="govuk-heading-xl">Your sentence and licence</h1>
+  {% if withOrders %}
+    <span class="govuk-caption-l">Your probation</span>
+    <h1 class="govuk-heading-xl">{{ pageHeading }}</h1>
+  {% else %}
+    <h1 class="govuk-heading-xl">{{ pageHeading }}</h1>
 
-  <p class="govuk-body">
-    Make sure you follow the licence conditions. If you do not, conditions could be added or made stricter. In some cases, you could go back to prison.
-  </p>
-  <p class="govuk-body">
-    See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/probation-agreement">probation agreement</a>.
-  </p>
+    <p class="govuk-body">
+      Make sure you follow the licence conditions. If you do not, conditions could be added or made stricter. In some cases, you could go back to prison.
+    </p>
+    <p class="govuk-body">
+      See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/probation-agreement">probation agreement</a>.
+    </p>
+  {% endif %}
 
-  <h2 class="govuk-heading-l pop-requirements__section-heading">Your sentence</h2>
+  <h2 class="govuk-heading-l pop-requirements__section-heading">Progress and details</h2>
 
   <div class="govuk-!-margin-bottom-6">
     {{ licenceStatus({
@@ -91,13 +105,13 @@
 
   <div class="govuk-grid-row pop-card-row govuk-!-margin-bottom-6">
     <div class="govuk-grid-column-one-half">
-      <a href="/licence/specific-conditions" class="pop-card" data-tracking-id="licence_specific_conditions_card">
+      <a href="/your-probation/specific-conditions" class="pop-card" data-tracking-id="licence_specific_conditions_card">
         <h3 class="govuk-heading-m pop-card__title">Additional and bespoke licence conditions</h3>
         <p class="govuk-body pop-card__body">These licence conditions are specific to you and can change</p>
       </a>
     </div>
     <div class="govuk-grid-column-one-half">
-      <a href="/licence/standard-conditions" class="pop-card" data-tracking-id="licence_standard_conditions_card">
+      <a href="/your-probation/standard-conditions" class="pop-card" data-tracking-id="licence_standard_conditions_card">
         <h3 class="govuk-heading-m pop-card__title">Standard licence conditions</h3>
         <p class="govuk-body pop-card__body">Everyone on licence must follow these conditions</p>
       </a>

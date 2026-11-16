@@ -1,0 +1,90 @@
+{#
+  The "Progress and details" of an order: progress bar, order type, dates and the court order row.
+  Used on the "Your probation" page for one order and on each order's own page.
+  Expects: overallOrder, showCourtOrderSignpost, courtOrderDocumentId (see requirements.ts).
+#}
+{% from "../macros/showDetails.njk" import showDetails %}
+{% from "../macros/whatDoesThisMean.njk" import whatDoesThisMean %}
+{% from "partials/progress-bar.njk" import progressBar %}
+
+{# Only when there is a court order document to link to. Without one, the row has nothing for the
+   person to act on, and each requirement's own page still says where to find its details. #}
+{% set showCourtOrderRow = showCourtOrderSignpost and courtOrderDocumentId %}
+{% if showCourtOrderRow %}
+  {% set courtOrderRow %}
+    <div class="pop-summary-card__row">
+      <dt class="pop-summary-card__key">Court order</dt>
+      <dd class="pop-summary-card__value">
+        <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
+      </dd>
+    </div>
+  {% endset %}
+{% endif %}
+
+{% if overallOrder %}
+  <h2 class="govuk-heading-l pop-requirements__section-heading">Progress and details</h2>
+
+  <div class="pop-progress__row govuk-!-margin-bottom-4">
+    {{ progressBar({
+      percentComplete: overallOrder.percentComplete,
+      completedDuration: overallOrder.completedDuration,
+      remainingDuration: overallOrder.remainingDuration
+    }) }}
+  </div>
+
+  <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
+    <dl class="pop-summary-card__details">
+      {% if features.offenceDetails and overallOrder.charge %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Offence</dt>
+          <dd class="pop-summary-card__value">
+            {{ showDetails({ id: "charge-detail", text: overallOrder.charge }) }}
+          </dd>
+        </div>
+      {% endif %}
+      {% if overallOrder.type %}
+        {% if overallOrder.typeExplanationTemplate %}
+          {% set orderTypeExplanationHtml %}{% include overallOrder.typeExplanationTemplate %}{% endset %}
+        {% endif %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Order type</dt>
+          <dd class="pop-summary-card__value">
+            {{ overallOrder.type }}
+            {% if orderTypeExplanationHtml %}
+              {{ whatDoesThisMean({
+                html: orderTypeExplanationHtml,
+                trackingId: "requirements_order_type_what_does_this_mean",
+                classes: "pop-order-type-details"
+              }) }}
+            {% endif %}
+          </dd>
+        </div>
+      {% endif %}
+      {% if overallOrder.startDate %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Start date</dt>
+          <dd class="pop-summary-card__value">{{ overallOrder.startDate }}</dd>
+        </div>
+      {% endif %}
+      {% if overallOrder.endDate %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">End date</dt>
+          <dd class="pop-summary-card__value">{{ overallOrder.endDate }}</dd>
+        </div>
+      {% endif %}
+      {% if overallOrder.totalLength %}
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Total order length</dt>
+          <dd class="pop-summary-card__value">{{ overallOrder.totalLength }}</dd>
+        </div>
+      {% endif %}
+      {{ courtOrderRow | safe }}
+    </dl>
+  </div>
+{% elif showCourtOrderRow %}
+  <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
+    <dl class="pop-summary-card__details">
+      {{ courtOrderRow | safe }}
+    </dl>
+  </div>
+{% endif %}

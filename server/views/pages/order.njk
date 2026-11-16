@@ -1,0 +1,30 @@
+{% extends "../partials/layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% set pageTitle = orderType + " – Check your probation account – GOV.UK" %}
+{% set currentPage = "requirements" %}
+
+{% block breadcrumb %}
+  {{ govukBackLink({ text: "Back", href: "/your-probation" }) }}
+{% endblock %}
+
+{% block content %}
+
+  <span class="govuk-caption-l">Your probation</span>
+  <h1 class="govuk-heading-xl">{{ orderType }}</h1>
+
+  {% include "partials/order-progress-and-details.njk" %}
+
+  {% if requirements.length %}
+    <h2 class="govuk-heading-l pop-requirements__section-heading">Requirements in your order</h2>
+
+    <div class="pop-requirement-cards govuk-!-margin-bottom-9">
+      {% for requirement in requirements %}
+        <a class="pop-requirement-card" href="/your-probation/{{ requirement.slug }}" data-tracking-id="order_requirement_view_{{ requirement.slug }}">
+          <span class="pop-requirement-card__title">{{ requirement.label }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+{% endblock %}

@@ -1,6 +1,7 @@
 import type { DocumentType } from '../data/peopleOnProbationApiClient'
 import type { Services } from '../services'
 import logger from '../../logger'
+import { formatDate } from './utils'
 
 // Citizen-facing label for each document type - centralised here rather than trusting the
 // admin-entered `name` field, so the wording citizens see is consistent regardless of what an
@@ -16,6 +17,14 @@ const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
 // an "undefined – ..." page title.
 export function formatDocumentTypeLabel(documentType: DocumentType): string {
   return DOCUMENT_TYPE_LABELS[documentType] ?? 'Document'
+}
+
+// A document's title, with the date it was added so people can tell versions apart, following the NHS
+// app's naming for uploaded documents, e.g. "Your court order added on 15 January 2026".
+export function formatDocumentTitle(documentType: DocumentType, uploadedAt?: string): string {
+  const label = formatDocumentTypeLabel(documentType)
+  const addedOn = formatDate(uploadedAt)
+  return addedOn ? `${label} added on ${addedOn}` : label
 }
 
 // Options for the admin upload form's document type dropdown.

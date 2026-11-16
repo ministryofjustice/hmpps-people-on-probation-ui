@@ -3,8 +3,7 @@ import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 import type { Services } from '../services'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
-import { formatDateWithDay } from '../utils/utils'
-import { formatDocumentTypeLabel } from '../utils/documentTypes'
+import { formatDocumentTitle } from '../utils/documentTypes'
 import logger from '../../logger'
 
 export default function documentsRoutes(services: Services): Router {
@@ -24,8 +23,7 @@ export default function documentsRoutes(services: Services): Router {
       return res.render('pages/documents', {
         documents: documents.map(document => ({
           id: document.id,
-          name: formatDocumentTypeLabel(document.documentType),
-          uploadedAt: formatDateWithDay(document.uploadedAt),
+          name: formatDocumentTitle(document.documentType, document.uploadedAt),
         })),
       })
     } catch (error) {
@@ -65,7 +63,7 @@ export default function documentsRoutes(services: Services): Router {
       return res.render('pages/document-view', {
         document: {
           id: document.id,
-          name: formatDocumentTypeLabel(document.documentType),
+          name: formatDocumentTitle(document.documentType, document.uploadedAt),
           viewUrl: document.viewUrl,
         },
       })

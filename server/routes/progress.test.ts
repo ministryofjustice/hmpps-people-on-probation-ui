@@ -2,6 +2,7 @@ import type { Express } from 'express'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import type { Services } from '../services'
+import config from '../config'
 import type { AppointmentResponse, RequirementResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import { countAttendedAppointments, requirementProgress } from './progress'
 
@@ -10,6 +11,7 @@ let peopleOnProbationService: {
   getAllPastAppointments: jest.Mock
   getSentences: jest.Mock
   getSentencePlan: jest.Mock
+  getLicences: jest.Mock
 }
 
 const unpaidWork = (overrides: Partial<RequirementResponse> = {}): RequirementResponse => ({
@@ -58,6 +60,7 @@ beforeEach(() => {
     getAllPastAppointments: jest.fn(),
     getSentences: jest.fn(),
     getSentencePlan: jest.fn(),
+    getLicences: jest.fn().mockResolvedValue([]),
   }
   app = appWithAllRoutes({ services: { peopleOnProbationService } as unknown as Partial<Services> })
 })
@@ -78,9 +81,9 @@ describe('GET /progress', () => {
 
     const rows = [
       'You have attended 2 <a class="govuk-link govuk-link--no-visited-state" href="/appointments?tab=past" data-tracking-id="progress_appointments_link">probation appointments</a>',
-      'You have completed 35 hours of <a class="govuk-link govuk-link--no-visited-state" href="/requirements/community-payback-unpaid-work" data-tracking-id="progress_unpaid_work_link">community payback (unpaid work)</a>',
+      'You have completed 35 hours of <a class="govuk-link govuk-link--no-visited-state" href="/your-probation/community-payback-unpaid-work" data-tracking-id="progress_unpaid_work_link">community payback (unpaid work)</a>',
       'You have achieved 1 <a class="govuk-link govuk-link--no-visited-state" href="/goals?tab=achieved" data-tracking-id="progress_goals_link">goal</a>',
-      'You have completed 9 <a class="govuk-link govuk-link--no-visited-state" href="/requirements/rehabilitation-activity-requirement-rar" data-tracking-id="progress_rar_link">RAR days</a>',
+      'You have completed 9 <a class="govuk-link govuk-link--no-visited-state" href="/your-probation/rehabilitation-activity-requirement-rar" data-tracking-id="progress_rar_link">RAR days</a>',
     ]
     const positions = rows.map(row => response.text.indexOf(row))
     positions.forEach(position => expect(position).toBeGreaterThan(-1))
@@ -212,6 +215,22 @@ describe('GET /progress', () => {
     expect(response.status).toBe(500)
   })
 
+  it('includes requirements from every concurrent order', async () => {
+    peopleOnProbationService.getAllPastAppointments.mockResolvedValue([])
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [
+        { requirements: [unpaidWork()], licenceConditions: [] },
+        { requirements: [rar()], licenceConditions: [] },
+      ],
+    })
+    peopleOnProbationService.getSentencePlan.mockResolvedValue({ goals: [] })
+
+    const response = await renderProgress()
+
+    expect(response.text).toContain('You have completed 35 hours of')
+    expect(response.text).toContain('You have completed 9 <a')
+  })
+
   it('redirects users without a person reference to auth error', async () => {
     const response = await request(app)
       .get('/progress')
@@ -219,6 +238,189 @@ describe('GET /progress', () => {
 
     expect(response.status).toBe(302)
     expect(response.headers.location).toBe('/autherror')
+  })
+})
+
+describe('GET /progress overall progress and ending early', () => {
+  const originalLicenceFlag = config.features.licence
+
+  beforeEach(() => {
+    config.features.licence = true
+  })
+
+  afterEach(() => {
+    config.features.licence = originalLicenceFlag
+  })
+
+  const mockSentences = (sentences: SentenceResponse[]) => {
+    peopleOnProbationService.getAllPastAppointments.mockResolvedValue([])
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences })
+    peopleOnProbationService.getSentencePlan.mockResolvedValue({ goals: [] })
+  }
+
+  const communityOrder = (overrides: Partial<SentenceResponse> = {}): SentenceResponse => ({
+    typeCode: '340',
+    startDate: '2026-01-01',
+    expectedEndDate: '2027-07-15',
+    requirements: [unpaidWork()],
+    licenceConditions: [],
+    ...overrides,
+  })
+
+  const licence = (overrides: Partial<SentenceResponse> = {}): SentenceResponse => ({
+    startDate: '2026-01-01',
+    expectedEndDate: '2027-07-15',
+    requirements: [],
+    licenceConditions: [{ mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }],
+    ...overrides,
+  })
+
+  it('shows the progress in the overall order, above the achievements', async () => {
+    mockSentences([communityOrder()])
+
+    const response = await renderProgress()
+
+    const progress = response.text.indexOf('<h2 class="govuk-heading-s">Progress in overall order</h2>')
+    const achievements = response.text.indexOf('<h2 class="govuk-heading-s">Your achievements</h2>')
+    expect(progress).toBeGreaterThan(-1)
+    expect(achievements).toBeGreaterThan(progress)
+    expect(response.text).toContain('role="progressbar"')
+    expect(response.text).toContain('Completed: ')
+    expect(response.text).toContain('Remaining: ')
+    expect(response.text).not.toContain('You are on licence')
+  })
+
+  it('shows one progress bar for matching concurrent orders', async () => {
+    mockSentences([communityOrder(), communityOrder({ requirements: [rar()] })])
+
+    const response = await renderProgress()
+
+    expect(response.text.match(/role="progressbar"/g)).toHaveLength(1)
+  })
+
+  it('shows a progress bar for each order that does not match, headed by its type, in API order', async () => {
+    mockSentences([
+      communityOrder({ type: 'SA2020 Community Order' }),
+      communityOrder({
+        type: 'SA2020 Suspended Sentence Order',
+        typeCode: '341',
+        startDate: '2025-09-01',
+        requirements: [rar()],
+      }),
+    ])
+
+    const response = await renderProgress()
+
+    const communityOrderHeading = response.text.indexOf('>Community Order</h2>')
+    const suspendedHeading = response.text.indexOf('>Suspended Sentence Order</h2>')
+    const achievements = response.text.indexOf('<h2 class="govuk-heading-s">Your achievements</h2>')
+    expect(communityOrderHeading).toBeGreaterThan(-1)
+    expect(suspendedHeading).toBeGreaterThan(communityOrderHeading)
+    expect(achievements).toBeGreaterThan(suspendedHeading)
+    expect(response.text.match(/<h3 class="govuk-heading-s">Progress in overall order<\/h3>/g)).toHaveLength(2)
+    expect(response.text.match(/role="progressbar"/g)).toHaveLength(2)
+  })
+
+  it('shows matching orders as one bar among orders that do not match', async () => {
+    mockSentences([communityOrder(), communityOrder({ typeCode: '341' }), communityOrder()])
+
+    const response = await renderProgress()
+
+    expect(response.text.match(/role="progressbar"/g)).toHaveLength(2)
+  })
+
+  it('hides the order progress when the order has no start or expected end date', async () => {
+    mockSentences([communityOrder({ startDate: undefined })])
+
+    const response = await renderProgress()
+
+    expect(response.text).not.toContain('Progress in overall order')
+    expect(response.text).not.toContain('role="progressbar"')
+  })
+
+  it('shows only the time until the licence ends for someone on licence', async () => {
+    mockSentences([licence()])
+
+    const response = await renderProgress()
+
+    const progress = response.text.indexOf('<h2 class="govuk-heading-s">Time until your licence ends</h2>')
+    expect(progress).toBeGreaterThan(-1)
+    expect(response.text.indexOf('Your achievements')).toBeGreaterThan(progress)
+    expect(response.text).toContain('role="progressbar"')
+    expect(response.text).toContain('Remaining: ')
+    expect(response.text).not.toContain('Your progress')
+    expect(response.text).not.toContain('You are on licence')
+    expect(response.text).not.toContain('Until 15 July 2027')
+    expect(response.text).not.toContain('Progress in overall order')
+  })
+
+  it('shows the time until the licence ends, then the order progress, for someone on licence and an order', async () => {
+    // The order first, as in the API's data: the licence is still shown first.
+    mockSentences([communityOrder(), licence()])
+
+    const response = await renderProgress()
+
+    const licenceHeading = response.text.indexOf('<h2 class="govuk-heading-s">Time until your licence ends</h2>')
+    const orderHeading = response.text.indexOf('<h2 class="govuk-heading-s">Progress in overall order</h2>')
+    expect(licenceHeading).toBeGreaterThan(-1)
+    expect(orderHeading).toBeGreaterThan(licenceHeading)
+    expect(response.text.match(/role="progressbar"/g)).toHaveLength(2)
+    expect(response.text).not.toContain('Community Order</h2>')
+  })
+
+  it('hides the time until the licence ends for an indeterminate sentence', async () => {
+    mockSentences([licence()])
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, indeterminateSentence: true }])
+
+    const response = await renderProgress()
+
+    expect(response.text).not.toContain('Time until your licence ends')
+    expect(response.text).not.toContain('role="progressbar"')
+    expect(response.text).toContain('Your achievements')
+    expect(response.text).toContain('Ending your probation early')
+  })
+
+  it('still shows the time until the licence ends when the licence cannot be loaded', async () => {
+    mockSentences([licence()])
+    peopleOnProbationService.getLicences.mockRejectedValue(new Error('CVL down'))
+
+    const response = await renderProgress()
+
+    expect(response.text).toContain('Time until your licence ends')
+  })
+
+  it('hides the licence progress when the licence has no start date', async () => {
+    mockSentences([licence({ startDate: undefined })])
+
+    const response = await renderProgress()
+
+    expect(response.text).not.toContain('Time until your licence ends')
+    expect(response.text).not.toContain('role="progressbar"')
+  })
+
+  it.each([
+    ['an order', () => [communityOrder()]],
+    ['a licence', () => [licence()]],
+  ])('shows the ending your probation early guidance for %s', async (_, sentences) => {
+    mockSentences(sentences())
+
+    const response = await renderProgress()
+
+    expect(response.text).toContain('<h2 class="govuk-heading-s">Ending your probation early</h2>')
+    expect(response.text).toContain('the panel will make the final decision')
+  })
+
+  it('still shows the achievements and guidance, without any progress, when sentences cannot be loaded', async () => {
+    mockData()
+    peopleOnProbationService.getAllPastAppointments.mockResolvedValue([attended()])
+    peopleOnProbationService.getSentences.mockRejectedValue(new Error('timeout'))
+
+    const response = await renderProgress()
+
+    expect(response.status).toBe(200)
+    expect(response.text).not.toContain('role="progressbar"')
+    expect(response.text).toContain('Your achievements')
+    expect(response.text).toContain('Ending your probation early')
   })
 })
 
@@ -249,7 +451,7 @@ describe('requirementProgress', () => {
     expect(requirementProgress(sentence, 'unpaid-work')).toEqual({
       completed: 15,
       unit: 'HOURS',
-      href: '/requirements',
+      href: '/your-probation',
     })
   })
 
@@ -274,7 +476,7 @@ describe('requirementProgress', () => {
     expect(requirementProgress(sentence, 'rar')).toEqual({
       completed: 0,
       unit: undefined,
-      href: '/requirements/rehabilitation-activity-requirement-rar',
+      href: '/your-probation/rehabilitation-activity-requirement-rar',
     })
   })
 
@@ -287,7 +489,7 @@ describe('requirementProgress', () => {
     expect(requirementProgress(sentence, 'rar')).toEqual({
       completed: 9,
       unit: 'DAYS',
-      href: '/requirements/rehabilitation-activity-requirement-rar',
+      href: '/your-probation/rehabilitation-activity-requirement-rar',
     })
   })
 

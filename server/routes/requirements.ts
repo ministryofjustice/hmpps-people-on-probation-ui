@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Response } from 'express'
 
 import type { Services } from '../services'
 import config from '../config'
@@ -14,9 +14,10 @@ import {
   estimateEndDate,
   isLicenceSentence,
 } from '../utils/utils'
-import type { RequirementResponse } from '../data/peopleOnProbationApiClient'
+import type { RequirementResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import { findDocumentIdByType } from '../utils/documentTypes'
 import { getSentenceTypeExplanationTemplate } from '../utils/sentenceCategories'
+import { combineSentences, findLicence, groupOrders } from '../utils/concurrentOrders'
 import { ADMINISTRATIVE_RAR_CATEGORY_CODE, TAG_CATEGORY_CODES } from '../utils/categoryCodes'
 import {
   explanationTemplate,
@@ -218,60 +219,118 @@ export function toRequirementViews(allRequirements: RequirementResponse[] = []):
   })
 }
 
+// The "Progress and details" of an order: its type, dates and progress. Null without both dates.
+const toOverallOrderView = (sentence?: SentenceResponse): OverallOrderView | null => {
+  if (!sentence?.startDate || !sentence?.expectedEndDate) return null
+  const { percentComplete, completedDuration, totalLength, remainingDuration, startDate, endDate } =
+    calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
+  return {
+    charge: sentence.mainOffence?.description,
+    type: formatSentenceType(sentence.type),
+    typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode, 'order'),
+    startDate,
+    endDate,
+    totalLength,
+    completedDuration,
+    remainingDuration,
+    percentComplete,
+  }
+}
+
+// The court order row is shown when a requirement points to the court order and there's a document to
+// link to.
+const courtOrderSignpost = async (services: Services, crn: string, requirements: RequirementView[]) => {
+  const showCourtOrderSignpost = requirements.some(r => r.showCourtOrderSignpost)
+  const courtOrderDocumentId =
+    config.features.documents && showCourtOrderSignpost
+      ? await findDocumentIdByType(services, crn, 'COURT_ORDER')
+      : undefined
+  return { showCourtOrderSignpost, courtOrderDocumentId }
+}
+
+const mostRecentUpdate = (sentence?: SentenceResponse): string | undefined =>
+  formatDateTimeWithDay(
+    shownRequirements(sentence?.requirements)
+      .map(r => r.lastUpdatedAt)
+      .filter(Boolean)
+      .sort()
+      .reverse()[0],
+  )
+
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+
+// The "Your probation" page for someone on one order, or on matching orders shown as one (see
+// groupOrders). /your-probation decides which page to show (see yourProbation.ts).
+export async function renderOrderOverview(
+  services: Services,
+  res: Response,
+  crn: string,
+  sentence: SentenceResponse | undefined,
+) {
+  const requirements = toRequirementViews(sentence?.requirements)
+  return res.render('pages/requirements', {
+    overallOrder: toOverallOrderView(sentence),
+    requirements,
+    ...(await courtOrderSignpost(services, crn, requirements)),
+    lastUpdatedAt: mostRecentUpdate(sentence),
+  })
+}
+
+// The "Your probation" page for someone on orders that don't match, or on licence and an order: a
+// numbered summary linking to each one's own page. Orders that don't match have their requirements
+// listed here too, each shown once; someone on licence sees an order's requirements on its own page.
+export function renderOrdersSummary(
+  res: Response,
+  orders: SentenceResponse[],
+  sentence: SentenceResponse,
+  licence?: SentenceResponse,
+) {
+  return res.render('pages/requirements', {
+    orders: [
+      ...(licence
+        ? [
+            {
+              href: '/your-probation/licence',
+              type: 'Your sentence and licence',
+              endDate: formatDate(licence.expectedEndDate),
+            },
+          ]
+        : []),
+      ...orders.map(order => ({
+        href: `/your-probation/orders/${order.eventNumber}`,
+        type: formatSentenceType(order.type),
+        endDate: formatDate(order.expectedEndDate),
+      })),
+    ],
+    orderCount: NUMBER_WORDS[orders.length] ?? orders.length,
+    withLicence: Boolean(licence),
+    requirements: licence ? [] : toRequirementViews(sentence.requirements),
+    lastUpdatedAt: mostRecentUpdate(sentence),
+  })
+}
+
 export default function requirementsRoutes(services: Services): Router {
   const router = Router()
 
   router.use(requireAuthentication)
 
-  router.get('/', async (_req, res, next) => {
+  // An order's own page, linked from the summary when someone has orders that don't match.
+  router.get('/orders/:eventNumber', async (req, res, next) => {
     try {
       const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
-      const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
-      const sentence = sentenceProgress.sentences[0]
+      const { sentences } = await services.peopleOnProbationService.getSentences(crn)
+      const order = groupOrders(sentences).find(o => String(o.eventNumber) === req.params.eventNumber)
+      if (!order || isLicenceSentence(order)) return next()
 
-      // Licence sentences have no requirements - their equivalent page is /licence.
-      if (isLicenceSentence(sentence)) return res.redirect('/licence')
-
-      let overallOrder: OverallOrderView | null = null
-      if (sentence?.startDate && sentence?.expectedEndDate) {
-        const { percentComplete, completedDuration, totalLength, remainingDuration, startDate, endDate } =
-          calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
-        overallOrder = {
-          charge: sentence.mainOffence?.description,
-          type: formatSentenceType(sentence?.type),
-          typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode, 'order'),
-          startDate,
-          endDate,
-          totalLength,
-          completedDuration,
-          remainingDuration,
-          percentComplete,
-        }
-      }
-
-      const requirements = toRequirementViews(sentence?.requirements)
-
-      const mostRecentUpdate = shownRequirements(sentence?.requirements)
-        .map(r => r.lastUpdatedAt)
-        .filter(Boolean)
-        .sort()
-        .reverse()[0]
-
-      const showCourtOrderSignpost = requirements.some(r => r.showCourtOrderSignpost)
-
-      let courtOrderDocumentId: string | undefined
-      if (config.features.documents && showCourtOrderSignpost) {
-        courtOrderDocumentId = await findDocumentIdByType(services, crn, 'COURT_ORDER')
-      }
-
-      return res.render('pages/requirements', {
-        overallOrder,
-        requirements,
-        showCourtOrderSignpost,
-        courtOrderDocumentId,
-        lastUpdatedAt: formatDateTimeWithDay(mostRecentUpdate),
+      const requirements = toRequirementViews(order.requirements)
+      return res.render('pages/order', {
+        orderType: formatSentenceType(order.type),
+        overallOrder: toOverallOrderView(order),
+        // Someone on licence and an order sees the order's requirements here, not on the summary.
+        requirements: findLicence(sentences).licence ? requirements : [],
+        ...(await courtOrderSignpost(services, crn, requirements)),
       })
     } catch (error) {
       return next(error)
@@ -284,7 +343,7 @@ export default function requirementsRoutes(services: Services): Router {
       if (!crn) return res.redirect('/autherror')
 
       const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
-      const sentence = sentenceProgress.sentences[0]
+      const sentence = combineSentences(sentenceProgress.sentences)
 
       const requirements = toRequirementViews(sentence?.requirements)
       const requirement = requirements.find(r => r.slug === req.params.slug)
@@ -300,7 +359,20 @@ export default function requirementsRoutes(services: Services): Router {
         courtOrderDocumentId = await findDocumentIdByType(services, crn, 'COURT_ORDER')
       }
 
-      return res.render('pages/requirement-detail', { requirement, courtOrderDocumentId, tagSlug })
+      // Someone on licence and an order reaches a requirement from the order's own page.
+      const [order] = findLicence(sentenceProgress.sentences).withOrders
+        ? groupOrders(sentenceProgress.sentences.filter(s => !isLicenceSentence(s)))
+        : []
+
+      return res.render('pages/requirement-detail', {
+        requirement,
+        courtOrderDocumentId,
+        tagSlug,
+        ...(order && {
+          caption: formatSentenceType(order.type),
+          backHref: `/your-probation/orders/${order.eventNumber}`,
+        }),
+      })
     } catch (error) {
       return next(error)
     }

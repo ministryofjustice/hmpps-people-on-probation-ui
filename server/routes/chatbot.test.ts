@@ -296,9 +296,9 @@ describe('POST /api/chatbot/chat', () => {
                     lastUpdatedAt: '2026-01-01T00:00:00Z',
                   },
                 ],
-                licenceConditions: [{ mainCategory: { code: 'L1', description: 'Should never appear' } }],
+                licenceConditions: [],
               },
-              { type: 'Second sentence — should never appear', requirements: [], licenceConditions: [] },
+              { type: 'Suspended Sentence Order', requirements: [], licenceConditions: [] },
             ],
           }),
           getPastAppointments: jest.fn().mockResolvedValue({
@@ -340,7 +340,9 @@ describe('POST /api/chatbot/chat', () => {
     expect(ctx.personalDetails.mainAddress.lastUpdatedAt).toBeUndefined()
     expect(ctx.personalDetails.practitioner.team.officeAddresses).toEqual([{ street: 'Office One' }])
 
-    expect(ctx.sentenceProgress.sentences).toHaveLength(1)
+    // A second, different order is shown on the "Your probation" page, so the chatbot gets its details too.
+    expect(ctx.sentenceProgress.sentences).toHaveLength(2)
+    expect(ctx.sentenceProgress.sentences[1]).toEqual({ type: 'Suspended Sentence Order', requirements: [] })
     expect(ctx.sentenceProgress.sentences[0].mainOffence).toEqual({ description: 'Theft' })
     expect(ctx.sentenceProgress.sentences[0].additionalOffences).toBeUndefined()
     expect(ctx.sentenceProgress.sentences[0].lastUpdatedAt).toBeUndefined()
@@ -440,6 +442,119 @@ describe('POST /api/chatbot/chat', () => {
     expect(ctx.sentencePlan.goals).toHaveLength(1)
     expect(ctx.sentencePlan.goals[0].title).toBe('Find stable housing')
     expect(ctx.sentencePlan.goals[0].achievedDate).toBe(formatDate('2026-01-10'))
+  })
+
+  it('sends concurrent orders as one order with the requirements from every order', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-orders"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getSentences: jest.fn().mockResolvedValue({
+            sentences: [
+              {
+                type: 'Community Order',
+                requirements: [{ mainCategory: { code: 'W', description: 'Unpaid Work' } }],
+                licenceConditions: [],
+              },
+              {
+                type: 'Community Order',
+                requirements: [{ mainCategory: { code: 'RM49', description: 'Curfew' } }],
+                licenceConditions: [],
+              },
+            ],
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(ctx.sentenceProgress.sentences).toHaveLength(1)
+    expect(ctx.sentenceProgress.sentences[0].requirements.map((r: { label: string }) => r.label)).toEqual([
+      'Community payback (unpaid work)',
+      'Follow a curfew',
+    ])
+  })
+
+  it('sends the licence first, then the order with its requirements, as the page shows them', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-licence"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getSentences: jest.fn().mockResolvedValue({
+            sentences: [
+              {
+                type: 'SA2020 Suspended Sentence Order',
+                typeCode: '341',
+                requirements: [{ mainCategory: { code: 'RM49', description: 'Curfew' } }],
+                licenceConditions: [],
+              },
+              {
+                type: 'ORA Adult Custody (not PSS)',
+                typeCode: '327',
+                requirements: [],
+                licenceConditions: [{ mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }],
+              },
+            ],
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(ctx.sentenceProgress.sentences.map((s: { type: string }) => s.type)).toEqual([
+      'ORA Adult Custody (not PSS)',
+      'SA2020 Suspended Sentence Order',
+    ])
+    expect(ctx.sentenceProgress.sentences[0].requirements).toEqual([])
+    expect(ctx.sentenceProgress.sentences[1].requirements.map((r: { label: string }) => r.label)).toEqual([
+      'Follow a curfew',
+    ])
+  })
+
+  it('leaves out the end date of a licence for an indeterminate sentence, as the licence page does', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-life"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getSentences: jest.fn().mockResolvedValue({
+            sentences: [
+              {
+                type: 'Life imprisonment (Adult)',
+                typeCode: '308',
+                startDate: '2026-01-15',
+                expectedEndDate: '2099-01-01',
+                requirements: [],
+                licenceConditions: [{ mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }],
+              },
+            ],
+          }),
+          getLicences: jest.fn().mockResolvedValue([{ id: 7, indeterminateSentence: true }]),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(ctx.sentenceProgress.sentences).toHaveLength(1)
+    expect(ctx.sentenceProgress.sentences[0].startDate).toBe('2026-01-15')
+    expect(ctx.sentenceProgress.sentences[0].expectedEndDate).toBeUndefined()
   })
 
   it('still builds user_context from the working endpoints when one upstream call rejects', async () => {

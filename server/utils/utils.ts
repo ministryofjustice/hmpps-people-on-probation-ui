@@ -211,7 +211,7 @@ export const formatLicenceSentenceType = (type?: string): string | undefined => 
 
 export type SentenceKind = 'LICENCE' | 'COMMUNITY_ORDER'
 
-// Decides the licence or community order journey (navigation, home page, /licence or /requirements):
+// Decides the licence or community order journey (navigation, home page, which page /your-probation shows):
 // - a prison book number means a custodial sentence, so the person is on licence, whether or not
 //   their licence conditions have been recorded yet
 // - otherwise licence conditions still mean licence, as a fallback for a missing book number

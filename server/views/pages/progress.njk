@@ -1,4 +1,5 @@
 {% extends "../partials/layout.njk" %}
+{% from "partials/progress-bar.njk" import progressBar %}
 
 {% set pageTitle = "Progress and achievements – Check your probation account – GOV.UK" %}
 {% set currentPage = "progress" %}
@@ -7,19 +8,74 @@
 
   <h1 class="govuk-heading-xl">Progress and achievements</h1>
 
-  {% if rows.length %}
-    <ul class="pop-progress-summary">
-      {% for row in rows %}
-        <li class="pop-progress-summary__row">
-          <span class="pop-progress-summary__icon">
-            <img src="{{ row.icon.src }}" alt="" width="{{ row.icon.width }}" height="{{ row.icon.height }}">
-          </span>
-          <p class="govuk-body-s pop-progress-summary__text">
-            {{ row.text }} <a class="govuk-link govuk-link--no-visited-state" href="{{ row.href }}" data-tracking-id="{{ row.trackingId }}">{{ row.linkText }}</a>
-          </p>
-        </li>
-      {% endfor %}
-    </ul>
+  {% if licenceProgress %}
+    <div class="govuk-!-margin-bottom-6">
+      <h2 class="govuk-heading-s">Time until your licence ends</h2>
+      <div class="pop-progress__row">
+        {{ progressBar({ percentComplete: licenceProgress.percentComplete }) }}
+      </div>
+      <p class="govuk-body-s govuk-!-margin-top-2">Remaining: {{ licenceProgress.remainingDuration }}</p>
+    </div>
   {% endif %}
+
+  {% if orderProgress.length > 1 %}
+    {# Orders that don't match each have their own bar, headed by the order type. #}
+    {% for order in orderProgress %}
+      <div class="govuk-!-margin-bottom-6">
+        <h2 class="govuk-heading-m govuk-!-margin-bottom-3">{{ order.type }}</h2>
+        <h3 class="govuk-heading-s">Progress in overall order</h3>
+        <div class="pop-progress__row">
+          {{ progressBar({
+            percentComplete: order.percentComplete,
+            completedDuration: order.completedDuration,
+            remainingDuration: order.remainingDuration
+          }) }}
+        </div>
+      </div>
+    {% endfor %}
+  {% elif orderProgress.length %}
+    {% set order = orderProgress[0] %}
+    <div class="govuk-!-margin-bottom-6">
+      <h2 class="govuk-heading-s">Progress in overall order</h2>
+      <div class="pop-progress__row">
+        {{ progressBar({
+          percentComplete: order.percentComplete,
+          completedDuration: order.completedDuration,
+          remainingDuration: order.remainingDuration
+        }) }}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if rows.length %}
+    <div class="govuk-!-margin-bottom-6">
+      <h2 class="govuk-heading-s">Your achievements</h2>
+      <ul class="pop-progress-summary">
+        {% for row in rows %}
+          <li class="pop-progress-summary__row">
+            <span class="pop-progress-summary__icon">
+              <img src="{{ row.icon.src }}" alt="" width="{{ row.icon.width }}" height="{{ row.icon.height }}">
+            </span>
+            <p class="govuk-body-s pop-progress-summary__text">
+              {{ row.text }} <a class="govuk-link govuk-link--no-visited-state" href="{{ row.href }}" data-tracking-id="{{ row.trackingId }}">{{ row.linkText }}</a>
+            </p>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="pop-inset-panel govuk-!-margin-bottom-6">
+    <h2 class="govuk-heading-s">Ending your probation early</h2>
+    <p class="govuk-body">Your probation officer may consider if your probation could end early. They recommend it if you:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>are making positive progress on probation</li>
+      <li>are engaging with probation</li>
+      <li>complete your requirements</li>
+      <li>achieve your sentence goals</li>
+    </ul>
+    <p class="govuk-body">Ending your probation early is not automatic. Your probation officer will consider your specific situation, but the panel will make the final decision.</p>
+    <p class="govuk-body">Your probation officer can help you understand how you are doing and if you could be considered for ending your probation early.</p>
+  </div>
 
 {% endblock %}
