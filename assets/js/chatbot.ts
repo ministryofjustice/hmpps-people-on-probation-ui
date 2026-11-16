@@ -21,15 +21,15 @@ init({
   inline: true,
   hideHeader: true,
   config: {
-    assistantName: 'Fred',
+    // Used mid-sentence by the widget's feedback survey ("…feedback about the AI assistant?").
+    assistantName: 'the AI assistant',
     // Fallback greeting; the server templates a per-user "Hi, <first name>"
     // via data-display-title on #chatbot-root.
     displayTitle: 'Hi there',
     placeholder: 'Ask a question...',
     // One-liner shown under the greeting on the home screen. The markdown link
     // drops the user straight to the account homepage.
-    welcomeMessage:
-      "I'm Fred, your AI Assistant. Ask me questions about your probation or [use the website instead](/home).",
+    welcomeMessage: "I'm your AI assistant. Ask me questions about your probation or [use the website instead](/).",
     // Keep the conversation across navigation so returning to /chat from an
     // account page doesn't lose it.
     persistSession: true,

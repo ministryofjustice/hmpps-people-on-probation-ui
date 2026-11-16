@@ -9,11 +9,10 @@
    should. Off /admin pages (adminUser unset) any citizen session counts, as
    before. #}
 {% if user and (not adminUser or user.previewedByAdmin) %}
-  {# When the chatbot is enabled, chat is the landing page: Home moves to /home
-     and a "Chat" item is added below it. With the flag off the nav is unchanged
-     (Home points at /, no Chat item). #}
+  {# Home is always the dashboard at /. When the chatbot is enabled a "Chat" item
+     is added below it — the only way into the chat page. #}
   {% set citizenNav = [
-    { href: "/home" if chatbotEnabled else "/", text: "Home", active: currentPage === "home" }
+    { href: "/", text: "Home", active: currentPage === "home" }
   ] %}
   {% if chatbotEnabled %}
     {% set citizenNav = citizenNav.concat([

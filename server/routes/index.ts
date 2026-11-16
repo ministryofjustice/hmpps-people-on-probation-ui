@@ -166,8 +166,7 @@ export default function routes(services: Services): Router {
     }
   }
 
-  // The signed-in account dashboard. Shared by /home and by / (when the chatbot
-  // is switched off), so the two entry points can never drift apart.
+  // The signed-in account dashboard, served at /.
   const renderAccountHome = async (res: Response, next: NextFunction) => {
     try {
       const crn = getSessionCrn(res.locals.user)
@@ -207,10 +206,10 @@ export default function routes(services: Services): Router {
     }
   }
 
-  // Full-screen chat page and chat-first landing, gated behind `chatbotEnabled`
-  // (the flag AND the backend creds — the same check the nav uses, so routes and
-  // nav can't disagree). With it off, /chat and /home don't exist and / falls
-  // through to the normal account dashboard below — the site behaves as before.
+  // Full-screen chat page, reached only via the "Chat" item in the service nav
+  // (the dashboard at / is always the landing page). Gated behind
+  // `chatbotEnabled` (the flag AND the backend creds — the same check the nav
+  // uses, so routes and nav can't disagree). With it off, /chat doesn't exist.
   if (chatbotEnabled) {
     router.get('/chat', requireAuthentication, async (req, res) => {
       // Match the dashboard and every other account page: a signed-in user with
@@ -226,10 +225,9 @@ export default function routes(services: Services): Router {
       // does NOT change anything sent to the chatbot.
       let greetingName = (res.locals.user.displayName || '').trim().split(' ')[0]
       if (!greetingName) {
-        // This lookup is purely cosmetic and sits on the landing path (/ redirects
-        // here), so bound it hard: no retries and a short timeout. If the POP API
-        // is slow or down, don't stall the page — just render the widget's default
-        // greeting (what it would have shown anyway).
+        // This lookup is purely cosmetic, so bound it hard: no retries and a short
+        // timeout. If the POP API is slow or down, don't stall the page — just
+        // render the widget's default greeting (what it would have shown anyway).
         try {
           const name = await Promise.race([
             services.peopleOnProbationService.getName(crn, { retries: 0 }),
@@ -244,19 +242,17 @@ export default function routes(services: Services): Router {
       }
       return res.render('pages/chat', { greetingName })
     })
-    router.get('/home', requireAuthentication, (req, res, next) => renderAccountHome(res, next))
   }
+
+  // /home was the dashboard's address while chat was the landing page. Keep it
+  // resolving so saved links and the old "use the website instead" link don't 404.
+  router.get('/home', (req, res) => res.redirect('/'))
 
   router.get('/', async (req, res, next) => {
     try {
       if (res.locals.user) {
         if (isBlockedLicenceUser(res)) {
           return res.redirect('/autherror')
-        }
-        // Chat-first landing: signed-in users go straight to the chat when the
-        // chatbot is enabled; otherwise they see the account dashboard.
-        if (chatbotEnabled) {
-          return res.redirect('/chat')
         }
         return renderAccountHome(res, next)
       }
