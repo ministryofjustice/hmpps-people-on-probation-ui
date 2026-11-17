@@ -104,9 +104,14 @@
   },
   "overrides": {
     "@aws-sdk/xml-builder": {
-      "fast-xml-parser": "^5.5.1"
+      "fast-xml-parser": "^5.12.0"
     },
     "@opentelemetry/core": "2.12.0",
-    "moment": "^2.31.0"
+    "moment": "^2.31.0",
+    "@ministryofjustice/hmpps-azure-telemetry": {
+      "@opentelemetry/instrumentation-http": "0.222.0"
+    },
+    "glob@>=9.0.0 <14.0.2": "^14.0.6",
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.9"
   }
 }
