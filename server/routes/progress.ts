@@ -5,9 +5,11 @@ import type { Services } from '../services'
 import logger from '../../logger'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
-import { formatUnit } from '../utils/utils'
+import { calculateDateProgress, formatSentenceType, formatUnit, isLicenceSentence } from '../utils/utils'
+import { combineSentences, findLicence, groupOrders } from '../utils/concurrentOrders'
 import type { AppointmentResponse, SentencePlanResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import { type RequirementKind, toRequirementViews } from './requirements'
+import { hasIndeterminateSentence } from '../utils/currentLicence'
 
 type ProgressIcon = { src: string; width: number; height: number }
 
@@ -18,6 +20,44 @@ export type ProgressRow = {
   href: string
   trackingId: string
 }
+
+type LicenceProgressView = {
+  percentComplete: number
+  remainingDuration: string
+}
+
+type OrderProgressView = {
+  type?: string
+  percentComplete: number
+  completedDuration: string
+  remainingDuration: string
+}
+
+// Someone on licence sees the time until their licence ends; without both dates there's nothing to show.
+export const toLicenceProgressView = (sentence?: SentenceResponse): LicenceProgressView | undefined => {
+  if (!isLicenceSentence(sentence) || !sentence.startDate || !sentence.expectedEndDate) return undefined
+
+  const { percentComplete, remainingDuration } = calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
+  return { percentComplete, remainingDuration }
+}
+
+// Someone on an order sees how far through it they are; without both dates there's nothing to show.
+export const toOrderProgressView = (sentence?: SentenceResponse): OrderProgressView | undefined => {
+  if (isLicenceSentence(sentence) || !sentence?.startDate || !sentence?.expectedEndDate) return undefined
+
+  const { percentComplete, completedDuration, remainingDuration } = calculateDateProgress(
+    sentence.startDate,
+    sentence.expectedEndDate,
+  )
+  return { type: formatSentenceType(sentence.type), percentComplete, completedDuration, remainingDuration }
+}
+
+// One progress bar per order to show: matching orders share one (see groupOrders). Orders without
+// both dates have no bar.
+export const toOrderProgressViews = (sentences: SentenceResponse[] = []): OrderProgressView[] =>
+  groupOrders(sentences)
+    .map(order => toOrderProgressView(order))
+    .filter((view): view is OrderProgressView => view !== undefined)
 
 const ICONS = {
   appointments: { src: '/assets/images/progress-calendar.svg', width: 34, height: 33 },
@@ -47,7 +87,7 @@ export const requirementProgress = (
     completed: matching.reduce((sum, view) => sum + (view.completed ?? 0), 0),
     // Requirements of the same kind share a unit (hours for unpaid work, days for RAR).
     unit: matching.find(view => view.unit)?.unit,
-    href: matching.length === 1 ? `/requirements/${matching[0].slug}` : '/requirements',
+    href: matching.length === 1 ? `/your-probation/${matching[0].slug}` : '/your-probation',
   }
 }
 
@@ -97,7 +137,9 @@ export default function progressRoutes(services: Services): Router {
         })
       }
 
-      const sentence = sentences.status === 'fulfilled' ? sentences.value.sentences[0] : undefined
+      const allSentences = sentences.status === 'fulfilled' ? sentences.value.sentences : []
+      const sentence = combineSentences(allSentences)
+      const { licence } = findLicence(allSentences)
 
       const unpaidWork = requirementProgress(sentence, 'unpaid-work')
       if (unpaidWork) {
@@ -132,7 +174,21 @@ export default function progressRoutes(services: Services): Router {
         })
       }
 
-      return res.render('pages/progress', { rows })
+      // An indeterminate sentence (such as life) has no end date, so there's no time until the licence
+      // ends to show. If the licence can't be loaded, the bar is shown from the sentence's dates.
+      const indeterminate =
+        licence &&
+        (await hasIndeterminateSentence(services, crn).catch(error => {
+          logger.warn({ correlationId: req.id, err: error }, 'Could not load the licence for the progress page')
+          return false
+        }))
+
+      return res.render('pages/progress', {
+        rows,
+        // Someone on licence and an order sees both: the licence first, then the order.
+        licenceProgress: indeterminate ? undefined : toLicenceProgressView(licence),
+        orderProgress: toOrderProgressViews(allSentences.filter(s => s !== licence)),
+      })
     } catch (error) {
       return next(error)
     }

@@ -23,12 +23,12 @@
 {% set currentPage = "requirements" %}
 
 {% block breadcrumb %}
-  {{ govukBackLink({ text: "Back", href: "/requirements" }) }}
+  {{ govukBackLink({ text: "Back", href: backHref or "/your-probation" }) }}
 {% endblock %}
 
 {% block content %}
 
-  <span class="govuk-caption-l">Order requirements</span>
+  <span class="govuk-caption-l">{{ caption or "Your probation" }}</span>
   <h1 class="govuk-heading-xl govuk-!-margin-bottom-2">{{ requirement.label }}</h1>
 
   {% if requirement.explanationTemplate %}

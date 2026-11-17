@@ -3,6 +3,7 @@ import {
   isValidDocumentName,
   isValidDocumentType,
   formatDocumentTypeLabel,
+  formatDocumentTitle,
   isS3KeyForCrn,
   DOCUMENT_NAME_MAX_LENGTH,
 } from './documentTypes'
@@ -34,6 +35,19 @@ describe('isValidDocumentName', () => {
 
   it('rejects characters outside the standard punctuation allowlist, such as angle brackets', () => {
     expect(isValidDocumentName('<not allowed>')).toBe(false)
+  })
+})
+
+describe('formatDocumentTitle', () => {
+  it('adds the upload date to the document type label', () => {
+    expect(formatDocumentTitle('COURT_ORDER', '2026-01-15T10:30:00Z')).toBe('Your court order added on 15 January 2026')
+    expect(formatDocumentTitle('LICENCE_CONDITION', '2026-03-02T09:00:00Z')).toBe(
+      'Your licence document added on 2 March 2026',
+    )
+  })
+
+  it('uses the label alone when there is no upload date', () => {
+    expect(formatDocumentTitle('COURT_ORDER', undefined)).toBe('Your court order')
   })
 })
 

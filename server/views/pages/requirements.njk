@@ -1,110 +1,51 @@
 {% extends "../partials/layout.njk" %}
-{% from "../macros/showDetails.njk" import showDetails %}
-{% from "../macros/whatDoesThisMean.njk" import whatDoesThisMean %}
-{% from "partials/progress-bar.njk" import progressBar %}
 
-{% set pageTitle = "Order requirements – Check your probation account – GOV.UK" %}
+{% set pageTitle = "Your probation – Check your probation account – GOV.UK" %}
 {% set currentPage = "requirements" %}
 
 {% block content %}
 
-  <h1 class="govuk-heading-xl">Order requirements</h1>
+  <h1 class="govuk-heading-xl">Your probation</h1>
 
   <p class="govuk-body">
     Make sure you follow the requirements included in your order. If you don’t, you could breach your probation, and go back to court.
   </p>
+  {% if withLicence %}
+    <p class="govuk-body">
+      You also need to follow the licence conditions. If you do not, conditions could be added or made stricter. In some cases, you could go back to prison.
+    </p>
+  {% endif %}
   <p class="govuk-body">
     See also a summary of your <a class="govuk-link govuk-link--no-visited-state" href="/probation-agreement">probation agreement</a>.
   </p>
 
-  {# Only when there is a court order document to link to. Without one, the row has nothing for the
-     person to act on, and each requirement's own page still says where to find its details. #}
-  {% set showCourtOrderRow = showCourtOrderSignpost and courtOrderDocumentId %}
-  {% if showCourtOrderRow %}
-    {% set courtOrderRow %}
-      <div class="pop-summary-card__row">
-        <dt class="pop-summary-card__key">Court order</dt>
-        <dd class="pop-summary-card__value">
-          <a class="govuk-link" href="/documents/{{ courtOrderDocumentId }}">View your court order</a>
-        </dd>
-      </div>
-    {% endset %}
-  {% endif %}
-
-  {% if overallOrder %}
-    <h2 class="govuk-heading-l pop-requirements__section-heading">Overall order</h2>
-
-    <div class="pop-progress__row govuk-!-margin-bottom-4">
-      {{ progressBar({
-        percentComplete: overallOrder.percentComplete,
-        completedDuration: overallOrder.completedDuration,
-        remainingDuration: overallOrder.remainingDuration
-      }) }}
-    </div>
-
-    <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
-      <dl class="pop-summary-card__details">
-        {% if features.offenceDetails and overallOrder.charge %}
-          <div class="pop-summary-card__row">
-            <dt class="pop-summary-card__key">Offence</dt>
-            <dd class="pop-summary-card__value">
-              {{ showDetails({ id: "charge-detail", text: overallOrder.charge }) }}
-            </dd>
-          </div>
-        {% endif %}
-        {% if overallOrder.type %}
-          {% if overallOrder.typeExplanationTemplate %}
-            {% set orderTypeExplanationHtml %}{% include overallOrder.typeExplanationTemplate %}{% endset %}
+  {% if orders %}
+    <h2 class="govuk-heading-l pop-requirements__section-heading">Summary</h2>
+    {% if withLicence %}
+      <p class="govuk-body">Your probation includes licence conditions and order requirements.</p>
+    {% else %}
+      <p class="govuk-body">You have {{ orderCount }} court orders.</p>
+    {% endif %}
+    <ol class="pop-order-summary govuk-!-margin-bottom-9">
+      {% for order in orders %}
+        <li class="pop-order-summary__item">
+          <a class="govuk-link govuk-link--no-visited-state pop-order-summary__link" href="{{ order.href }}" data-tracking-id="requirements_order_{{ loop.index }}">{{ order.type }}</a>
+          {% if order.endDate %}
+            <p class="govuk-body pop-order-summary__date">End date: {{ order.endDate }}</p>
           {% endif %}
-          <div class="pop-summary-card__row">
-            <dt class="pop-summary-card__key">Order type</dt>
-            <dd class="pop-summary-card__value">
-              {{ overallOrder.type }}
-              {% if orderTypeExplanationHtml %}
-                {{ whatDoesThisMean({
-                  html: orderTypeExplanationHtml,
-                  trackingId: "requirements_order_type_what_does_this_mean",
-                  classes: "pop-order-type-details"
-                }) }}
-              {% endif %}
-            </dd>
-          </div>
-        {% endif %}
-        {% if overallOrder.startDate %}
-          <div class="pop-summary-card__row">
-            <dt class="pop-summary-card__key">Start date</dt>
-            <dd class="pop-summary-card__value">{{ overallOrder.startDate }}</dd>
-          </div>
-        {% endif %}
-        {% if overallOrder.endDate %}
-          <div class="pop-summary-card__row">
-            <dt class="pop-summary-card__key">End date</dt>
-            <dd class="pop-summary-card__value">{{ overallOrder.endDate }}</dd>
-          </div>
-        {% endif %}
-        {% if overallOrder.totalLength %}
-          <div class="pop-summary-card__row">
-            <dt class="pop-summary-card__key">Total order length</dt>
-            <dd class="pop-summary-card__value">{{ overallOrder.totalLength }}</dd>
-          </div>
-        {% endif %}
-        {{ courtOrderRow | safe }}
-      </dl>
-    </div>
-  {% elif showCourtOrderRow %}
-    <div class="pop-summary-card pop-summary-card--flat govuk-!-margin-bottom-9">
-      <dl class="pop-summary-card__details">
-        {{ courtOrderRow | safe }}
-      </dl>
-    </div>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    {% include "partials/order-progress-and-details.njk" %}
   {% endif %}
 
   {% if requirements.length %}
-    <h2 class="govuk-heading-l pop-requirements__section-heading">Requirements in your order</h2>
+    <h2 class="govuk-heading-l pop-requirements__section-heading">Requirements in your {{ "orders" if orders else "order" }}</h2>
 
     <div class="pop-requirement-cards govuk-!-margin-bottom-9">
       {% for requirement in requirements %}
-        <a class="pop-requirement-card" href="/requirements/{{ requirement.slug }}" data-tracking-id="requirements_view_{{ requirement.slug }}">
+        <a class="pop-requirement-card" href="/your-probation/{{ requirement.slug }}" data-tracking-id="requirements_view_{{ requirement.slug }}">
           <span class="pop-requirement-card__title">{{ requirement.label }}</span>
         </a>
       {% endfor %}

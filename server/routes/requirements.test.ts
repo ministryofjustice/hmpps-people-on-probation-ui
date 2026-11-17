@@ -2,12 +2,16 @@ import type { Express } from 'express'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import type { Services } from '../services'
-import type { RequirementResponse, SentenceProgressResponse } from '../data/peopleOnProbationApiClient'
+import type {
+  RequirementResponse,
+  SentenceProgressResponse,
+  SentenceResponse,
+} from '../data/peopleOnProbationApiClient'
 import config from '../config'
 import { toRequirementView, toRequirementViews } from './requirements'
 
 let app: Express
-let peopleOnProbationService: { getSentences: jest.Mock; getDocuments: jest.Mock }
+let peopleOnProbationService: { getSentences: jest.Mock; getDocuments: jest.Mock; getLicences: jest.Mock }
 
 // Fake only the Date clock; leave async timer primitives real so supertest works
 const fakeDate = (dateStr: string) => {
@@ -31,7 +35,11 @@ const originalDocumentsFeatureFlag = config.features.documents
 const originalOffenceDetailsFeatureFlag = config.features.offenceDetails
 
 beforeEach(() => {
-  peopleOnProbationService = { getSentences: jest.fn(), getDocuments: jest.fn() }
+  peopleOnProbationService = {
+    getSentences: jest.fn(),
+    getDocuments: jest.fn(),
+    getLicences: jest.fn().mockResolvedValue([]),
+  }
   app = appWithAllRoutes({
     services: { peopleOnProbationService } as unknown as Partial<Services>,
   })
@@ -62,7 +70,21 @@ const sentenceWithDates = (startDate: string, expectedEndDate: string): Sentence
 })
 
 describe('GET /requirements', () => {
-  it('redirects licence sentences to the licence page', async () => {
+  it('titles the order page "Your probation"', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [{ requirements: [{ mainCategory: { code: 'F', description: 'RAR' } }], licenceConditions: [] }],
+    })
+
+    const response = await request(app)
+      .get('/your-probation')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('Your probation – Check your probation account – GOV.UK')
+    expect(response.text).toContain('<h1 class="govuk-heading-xl">Your probation</h1>')
+  })
+
+  it('shows the licence page instead for licence sentences', async () => {
     config.features.licence = true
     peopleOnProbationService.getSentences.mockResolvedValue({
       sentences: [
@@ -73,11 +95,12 @@ describe('GET /requirements', () => {
       ],
     })
 
-    await request(app)
-      .get('/requirements')
+    const response = await request(app)
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
-      .expect(302)
-      .expect('Location', '/licence')
+      .expect(200)
+
+    expect(response.text).toContain('Make sure you follow the licence conditions.')
   })
 
   it('does not render offence details by default', async () => {
@@ -86,7 +109,7 @@ describe('GET /requirements', () => {
     peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
     const res = await request(app)
-      .get('/requirements')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -100,7 +123,7 @@ describe('GET /requirements', () => {
     peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
     const res = await request(app)
-      .get('/requirements')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -126,7 +149,7 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -150,7 +173,7 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -164,7 +187,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -177,7 +200,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -192,7 +215,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -221,11 +244,11 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('class="pop-requirement-card" href="/requirements/unpaid-work"')
+      expect(res.text).toContain('class="pop-requirement-card" href="/your-probation/unpaid-work"')
       expect(res.text).toContain('pop-requirement-card__title">Unpaid Work')
     })
 
@@ -249,11 +272,11 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('href="/requirements/community-payback-unpaid-work"')
+      expect(res.text).toContain('href="/your-probation/community-payback-unpaid-work"')
       expect(res.text).toContain('pop-requirement-card__title">Community payback (unpaid work)')
     })
 
@@ -277,11 +300,11 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('href="/requirements/rehabilitation-activity-requirement-rar"')
+      expect(res.text).toContain('href="/your-probation/rehabilitation-activity-requirement-rar"')
       expect(res.text).toContain('pop-requirement-card__title">Rehabilitation Activity Requirement (RAR)')
     })
 
@@ -304,11 +327,11 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('href="/requirements/wear-a-gps-tag"')
+      expect(res.text).toContain('href="/your-probation/wear-a-gps-tag"')
       expect(res.text).toContain('pop-requirement-card__title">Wear a GPS tag')
     })
 
@@ -333,11 +356,11 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('href="/requirements/wear-a-gps-tag"')
+      expect(res.text).toContain('href="/your-probation/wear-a-gps-tag"')
       expect(res.text).toContain('pop-requirement-card__title">Wear a GPS tag')
     })
 
@@ -360,11 +383,11 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('href="/requirements/follow-a-curfew"')
+      expect(res.text).toContain('href="/your-probation/follow-a-curfew"')
       expect(res.text).toContain('pop-requirement-card__title">Follow a curfew')
     })
 
@@ -387,11 +410,11 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('href="/requirements/supervision"')
+      expect(res.text).toContain('href="/your-probation/supervision"')
       expect(res.text).toContain('pop-requirement-card__title">Supervision')
     })
 
@@ -428,12 +451,12 @@ describe('GET /requirements', () => {
         peopleOnProbationService.getSentences.mockResolvedValue(unpaidWorkSentence)
 
         const res = await request(app)
-          .get('/requirements')
+          .get('/your-probation')
           .set('Cookie', await createAppSessionCookie('X123456'))
           .expect(200)
 
-        expect(res.text).toContain('href="/requirements/community-payback-unpaid-work-regular"')
-        expect(res.text).toContain('href="/requirements/community-payback-unpaid-work-additional-hours"')
+        expect(res.text).toContain('href="/your-probation/community-payback-unpaid-work-regular"')
+        expect(res.text).toContain('href="/your-probation/community-payback-unpaid-work-additional-hours"')
         expect(res.text).toContain('Community payback (unpaid work) – Regular')
         expect(res.text).toContain('Community payback (unpaid work) – Additional Hours')
       })
@@ -443,7 +466,7 @@ describe('GET /requirements', () => {
         peopleOnProbationService.getSentences.mockResolvedValue(unpaidWorkSentence)
 
         const res = await request(app)
-          .get('/requirements/community-payback-unpaid-work-additional-hours')
+          .get('/your-probation/community-payback-unpaid-work-additional-hours')
           .set('Cookie', await createAppSessionCookie('X123456'))
           .expect(200)
 
@@ -452,7 +475,7 @@ describe('GET /requirements', () => {
         expect(res.text).not.toContain('150 hours')
       })
 
-      it('falls back to a numeric slug suffix when sub-categories are missing', async () => {
+      it('shows the same requirement once, adding up its hours, when sub-categories are missing', async () => {
         fakeDate('2026-10-01')
         peopleOnProbationService.getSentences.mockResolvedValue({
           sentences: [
@@ -468,12 +491,19 @@ describe('GET /requirements', () => {
         })
 
         const res = await request(app)
-          .get('/requirements')
+          .get('/your-probation')
           .set('Cookie', await createAppSessionCookie('X123456'))
           .expect(200)
 
-        expect(res.text).toContain('href="/requirements/community-payback-unpaid-work"')
-        expect(res.text).toContain('href="/requirements/community-payback-unpaid-work-2"')
+        expect(res.text.match(/href="\/your-probation\/community-payback-unpaid-work"/g)).toHaveLength(1)
+        expect(res.text).not.toContain('href="/your-probation/community-payback-unpaid-work-2"')
+
+        const detail = await request(app)
+          .get('/your-probation/community-payback-unpaid-work')
+          .set('Cookie', await createAppSessionCookie('X123456'))
+          .expect(200)
+
+        expect(detail.text).toContain('70 hours')
       })
     })
 
@@ -498,11 +528,11 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).toContain('href="/requirements/programme-requirement"')
+      expect(res.text).toContain('href="/your-probation/programme-requirement"')
       expect(res.text).toContain('pop-requirement-card__title">Programme requirement')
     })
 
@@ -526,7 +556,7 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements/programme-requirement')
+        .get('/your-probation/programme-requirement')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -543,7 +573,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -553,12 +583,25 @@ describe('GET /requirements', () => {
   })
 
   describe('overall order', () => {
+    it('is headed "Progress and details"', async () => {
+      fakeDate('2025-01-01')
+      peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
+
+      const res = await request(app)
+        .get('/your-probation')
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(res.text).toContain('pop-requirements__section-heading">Progress and details</h2>')
+      expect(res.text).not.toContain('Overall order')
+    })
+
     it('labels the total length row as "Total order length"', async () => {
       fakeDate('2025-01-01')
       peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -574,7 +617,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentence)
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -592,7 +635,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentence)
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -608,7 +651,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentence)
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -623,7 +666,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentence)
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -639,7 +682,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentence)
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -655,7 +698,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -691,7 +734,7 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -722,7 +765,7 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -752,7 +795,7 @@ describe('GET /requirements', () => {
       })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -783,11 +826,11 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getDocuments.mockResolvedValue({ documents: [] })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(res.text).not.toContain('Overall order')
+      expect(res.text).not.toContain('Progress and details')
       expect(res.text).not.toContain('Court order</dt>')
       expect(res.text).not.toContain('You can find this information in your court order')
       expect(res.text).not.toContain('pop-summary-card--flat')
@@ -816,7 +859,7 @@ describe('GET /requirements', () => {
       peopleOnProbationService.getDocuments.mockResolvedValue({ documents: [] })
 
       const res = await request(app)
-        .get('/requirements')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -827,13 +870,179 @@ describe('GET /requirements', () => {
   })
 })
 
+describe('concurrent orders of the same type', () => {
+  const twoOrders: SentenceProgressResponse = {
+    sentences: [1, 2].map(
+      (eventNumber): SentenceResponse => ({
+        eventNumber,
+        type: 'SA2020 Community Order',
+        typeCode: '340',
+        startDate: '2024-01-01',
+        expectedEndDate: '2026-01-01',
+        licenceConditions: [],
+        requirements:
+          eventNumber === 1
+            ? [{ mainCategory: { code: 'W', description: 'Unpaid Work' }, required: 120, completed: 40, unit: 'HOURS' }]
+            : [
+                {
+                  mainCategory: { code: 'RM49', description: 'Curfew' },
+                  expectedStartDate: '2025-01-01',
+                  expectedEndDate: '2025-12-31',
+                },
+              ],
+      }),
+    ),
+  }
+
+  it('shows one progress bar and the requirements from both orders, in API order', async () => {
+    fakeDate('2025-01-01')
+    peopleOnProbationService.getSentences.mockResolvedValue(twoOrders)
+
+    const res = await request(app)
+      .get('/your-probation')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text.match(/pop-requirements__section-heading">Progress and details</g)).toHaveLength(1)
+    expect(res.text.match(/<div class="pop-progress__row/g)).toHaveLength(1)
+    const unpaidWork = res.text.indexOf('href="/your-probation/community-payback-unpaid-work"')
+    const curfew = res.text.indexOf('href="/your-probation/follow-a-curfew"')
+    expect(unpaidWork).toBeGreaterThan(-1)
+    expect(curfew).toBeGreaterThan(unpaidWork)
+  })
+
+  it('opens a requirement from the second order on its own page', async () => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue(twoOrders)
+
+    const res = await request(app)
+      .get('/your-probation/follow-a-curfew')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('>Follow a curfew</h1>')
+  })
+})
+
+describe('orders that do not match', () => {
+  const twoOrders: SentenceProgressResponse = {
+    sentences: [
+      {
+        eventNumber: 3,
+        type: 'SA2020 Suspended Sentence Order',
+        typeCode: '341',
+        startDate: '2024-09-20',
+        expectedEndDate: '2026-09-21',
+        licenceConditions: [],
+        requirements: [
+          { mainCategory: { code: 'W', description: 'Unpaid Work' }, required: 120, completed: 40, unit: 'HOURS' },
+          { mainCategory: { code: '3', description: 'Residential' }, imposedDate: '2024-09-20' },
+        ],
+      },
+      {
+        eventNumber: 1,
+        type: 'SA2020 Community Order',
+        typeCode: '340',
+        startDate: '2024-01-14',
+        expectedEndDate: '2026-01-14',
+        licenceConditions: [],
+        requirements: [
+          { mainCategory: { code: 'W', description: 'Unpaid Work' }, required: 80, completed: 10, unit: 'HOURS' },
+        ],
+      },
+    ],
+  }
+
+  beforeEach(() => {
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue(twoOrders)
+  })
+
+  it('shows a numbered summary linking to each order, in API order, without an overall progress bar', async () => {
+    const res = await request(app)
+      .get('/your-probation')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('pop-requirements__section-heading">Summary</h2>')
+    expect(res.text).toContain('You have two court orders.')
+    const suspended = res.text.indexOf('href="/your-probation/orders/3"')
+    const community = res.text.indexOf('href="/your-probation/orders/1"')
+    expect(suspended).toBeGreaterThan(-1)
+    expect(community).toBeGreaterThan(suspended)
+    expect(res.text).toMatch(/href="\/your-probation\/orders\/3"[^>]*>Suspended Sentence Order<\/a>/)
+    expect(res.text).toContain('End date: 21 September 2026')
+    expect(res.text).toMatch(/href="\/your-probation\/orders\/1"[^>]*>Community Order<\/a>/)
+    expect(res.text).toContain('End date: 14 January 2026')
+    expect(res.text).not.toContain('Progress and details')
+    expect(res.text).not.toContain('role="progressbar"')
+  })
+
+  it('lists every requirement once under "Requirements in your orders"', async () => {
+    const res = await request(app)
+      .get('/your-probation')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('Requirements in your orders</h2>')
+    expect(res.text.match(/class="pop-requirement-card"/g)).toHaveLength(2)
+
+    const detail = await request(app)
+      .get('/your-probation/community-payback-unpaid-work')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(detail.text).toContain('200 hours')
+  })
+
+  it("shows an order's own page with its progress and details", async () => {
+    peopleOnProbationService.getDocuments.mockResolvedValue({ documents: [] })
+
+    const res = await request(app)
+      .get('/your-probation/orders/3')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('<title>Suspended Sentence Order – Check your probation account – GOV.UK</title>')
+    expect(res.text).toContain('<span class="govuk-caption-l">Your probation</span>')
+    expect(res.text).toContain('<h1 class="govuk-heading-xl">Suspended Sentence Order</h1>')
+    expect(res.text).toContain('href="/your-probation"')
+    expect(res.text).toContain('Progress and details</h2>')
+    expect(res.text.match(/role="progressbar"/g)).toHaveLength(1)
+    expect(res.text).toContain('20 September 2024')
+    expect(res.text).toContain('21 September 2026')
+    expect(res.text).not.toContain('pop-requirement-card')
+  })
+
+  it('links the court order on an order page when one of its requirements needs it', async () => {
+    config.features.documents = true
+    peopleOnProbationService.getDocuments.mockResolvedValue({
+      documents: [{ id: 'court-order-1', name: 'x', documentType: 'COURT_ORDER', uploadedAt: '2025-01-01T00:00:00Z' }],
+    })
+
+    const res = await request(app)
+      .get('/your-probation/orders/3')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('<a class="govuk-link" href="/documents/court-order-1">View your court order</a>')
+  })
+
+  it('404s for an order that does not exist', async () => {
+    await request(app)
+      .get('/your-probation/orders/99')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(404)
+  })
+})
+
 describe('GET /requirements/:slug', () => {
   it('404s when no requirement matches the slug', async () => {
     fakeDate('2025-06-01')
     peopleOnProbationService.getSentences.mockResolvedValue(sentenceWithDates('2024-01-01', '2026-01-01'))
 
     await request(app)
-      .get('/requirements/does-not-exist')
+      .get('/your-probation/does-not-exist')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(404)
   })
@@ -858,10 +1067,11 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/follow-a-curfew')
+      .get('/your-probation/follow-a-curfew')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
+    expect(res.text).toContain('<span class="govuk-caption-l">Your probation</span>')
     expect(res.text).toContain('>Follow a curfew</h1>')
     expect(res.text).toContain('>Start date<')
     expect(res.text).toContain('>End date<')
@@ -896,7 +1106,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/follow-a-curfew')
+      .get('/your-probation/follow-a-curfew')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -930,7 +1140,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/follow-a-curfew')
+      .get('/your-probation/follow-a-curfew')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -958,7 +1168,7 @@ describe('GET /requirements/:slug', () => {
     peopleOnProbationService.getDocuments.mockRejectedValue(new Error('API failure'))
 
     const res = await request(app)
-      .get('/requirements/follow-a-curfew')
+      .get('/your-probation/follow-a-curfew')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -987,7 +1197,7 @@ describe('GET /requirements/:slug', () => {
     peopleOnProbationService.getDocuments.mockResolvedValue({ documents: [] })
 
     const res = await request(app)
-      .get('/requirements/follow-a-curfew')
+      .get('/your-probation/follow-a-curfew')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1015,7 +1225,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/follow-a-curfew')
+      .get('/your-probation/follow-a-curfew')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1044,7 +1254,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/supervision')
+      .get('/your-probation/supervision')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1080,7 +1290,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/things-you-are-not-allowed-to-do')
+      .get('/your-probation/things-you-are-not-allowed-to-do')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1109,7 +1319,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/community-payback-unpaid-work')
+      .get('/your-probation/community-payback-unpaid-work')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1143,7 +1353,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/rehabilitation-activity-requirement-rar')
+      .get('/your-probation/rehabilitation-activity-requirement-rar')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1174,7 +1384,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/rehabilitation-activity-requirement-rar')
+      .get('/your-probation/rehabilitation-activity-requirement-rar')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1204,7 +1414,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/community-payback-unpaid-work')
+      .get('/your-probation/community-payback-unpaid-work')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1235,7 +1445,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/rehabilitation-activity-requirement-rar')
+      .get('/your-probation/rehabilitation-activity-requirement-rar')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1266,7 +1476,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/wear-a-gps-tag')
+      .get('/your-probation/wear-a-gps-tag')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1294,7 +1504,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/follow-a-curfew')
+      .get('/your-probation/follow-a-curfew')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1325,7 +1535,7 @@ describe('GET /requirements/:slug', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/things-you-are-not-allowed-to-do')
+      .get('/your-probation/things-you-are-not-allowed-to-do')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1440,7 +1650,7 @@ describe('toRequirementView progress', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/address-your-mental-health')
+      .get('/your-probation/address-your-mental-health')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1455,7 +1665,7 @@ describe('requirement types on the detail page', () => {
       sentences: [{ type: 'ORA Community Order', requirements: [{ mainCategory: { code } }], licenceConditions: [] }],
     })
     return request(app)
-      .get(`/requirements/${slug}`)
+      .get(`/your-probation/${slug}`)
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
   }
@@ -1578,7 +1788,7 @@ describe('curfew link to the rules for wearing a tag', () => {
       sentences: [{ type: 'ORA Community Order', requirements, licenceConditions: [] }],
     })
     return request(app)
-      .get('/requirements/follow-a-curfew')
+      .get('/your-probation/follow-a-curfew')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
   }
@@ -1587,7 +1797,7 @@ describe('curfew link to the rules for wearing a tag', () => {
     const res = await renderCurfew([curfew, gpsTag])
 
     expect(res.text).toContain(
-      'This means you will also have to <a class="govuk-link" href="/requirements/wear-a-gps-tag" data-tracking-id="requirement_detail_curfew_tag_rules_link">follow the rules for wearing a tag</a>.',
+      'This means you will also have to <a class="govuk-link" href="/your-probation/wear-a-gps-tag" data-tracking-id="requirement_detail_curfew_tag_rules_link">follow the rules for wearing a tag</a>.',
     )
   })
 
@@ -1595,7 +1805,7 @@ describe('curfew link to the rules for wearing a tag', () => {
     const res = await renderCurfew([curfew, alcoholTag])
 
     expect(res.text).toContain(
-      'href="/requirements/wear-an-alcohol-tag" data-tracking-id="requirement_detail_curfew_tag_rules_link"',
+      'href="/your-probation/wear-an-alcohol-tag" data-tracking-id="requirement_detail_curfew_tag_rules_link"',
     )
   })
 
@@ -1603,9 +1813,9 @@ describe('curfew link to the rules for wearing a tag', () => {
     const res = await renderCurfew([curfew, alcoholTag, gpsTag])
 
     expect(res.text).toContain(
-      'href="/requirements/wear-a-gps-tag" data-tracking-id="requirement_detail_curfew_tag_rules_link"',
+      'href="/your-probation/wear-a-gps-tag" data-tracking-id="requirement_detail_curfew_tag_rules_link"',
     )
-    expect(res.text).not.toContain('href="/requirements/wear-an-alcohol-tag"')
+    expect(res.text).not.toContain('href="/your-probation/wear-an-alcohol-tag"')
   })
 
   it('shows the sentence without a link when the person has no tag requirement', async () => {
@@ -1622,7 +1832,7 @@ describe('dates for unpaid work and RAR', () => {
       sentences: [{ type: 'ORA Community Order', requirements: [requirement], licenceConditions: [] }],
     })
     return request(app)
-      .get(`/requirements/${slug}`)
+      .get(`/your-probation/${slug}`)
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
   }
@@ -1696,7 +1906,7 @@ describe('help with this requirement panel', () => {
       ],
     })
     return request(app)
-      .get(`/requirements/${slug}`)
+      .get(`/your-probation/${slug}`)
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
   }
@@ -1801,12 +2011,12 @@ describe('administrative RAR requirement from MPOP', () => {
     mockSentence([adminRar, rar])
 
     const res = await request(app)
-      .get('/requirements')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
     expect(res.text.match(/class="pop-requirement-card"/g)).toHaveLength(1)
-    expect(res.text).toContain('href="/requirements/rehabilitation-activity-requirement-rar"')
+    expect(res.text).toContain('href="/your-probation/rehabilitation-activity-requirement-rar"')
     expect(res.text).not.toContain('30 September 2026')
   })
 
@@ -1814,7 +2024,7 @@ describe('administrative RAR requirement from MPOP', () => {
     mockSentence([adminRar])
 
     await request(app)
-      .get('/requirements/rehabilitation-activity-requirement')
+      .get('/your-probation/rehabilitation-activity-requirement')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(404)
   })
@@ -1948,7 +2158,7 @@ describe('progress rules', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/rehabilitation-activity-requirement-rar')
+      .get('/your-probation/rehabilitation-activity-requirement-rar')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1968,7 +2178,7 @@ describe('progress rules', () => {
     })
 
     const res = await request(app)
-      .get('/requirements/wear-an-alcohol-tag')
+      .get('/your-probation/wear-an-alcohol-tag')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -1980,7 +2190,7 @@ describe('progress rules', () => {
 })
 
 describe('licence or community order journey', () => {
-  it('redirects a custodial sentence with a book number to /licence, even before licence conditions are recorded', async () => {
+  it('shows the licence page for a custodial sentence with a book number, even before licence conditions are recorded', async () => {
     config.features.licence = true
     peopleOnProbationService.getSentences.mockResolvedValue({
       sentences: [
@@ -1995,11 +2205,11 @@ describe('licence or community order journey', () => {
     })
 
     const res = await request(app)
-      .get('/requirements')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
 
-    expect(res.status).toBe(302)
-    expect(res.headers.location).toBe('/licence')
+    expect(res.status).toBe(200)
+    expect(res.text).toContain('Make sure you follow the licence conditions.')
   })
 
   it('keeps a community order without a book number on /requirements', async () => {
@@ -2015,8 +2225,122 @@ describe('licence or community order journey', () => {
     })
 
     await request(app)
-      .get('/requirements')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
+  })
+})
+
+describe('on licence and an order', () => {
+  // The order first, as in the API's data for Y057368: the licence is still listed first.
+  const licenceAndOrder: SentenceProgressResponse = {
+    sentences: [
+      {
+        eventNumber: 2,
+        type: 'SA2020 Suspended Sentence Order',
+        typeCode: '341',
+        startDate: '2025-01-15',
+        expectedEndDate: '2027-01-14',
+        licenceConditions: [],
+        requirements: [{ mainCategory: { code: 'RM49', description: 'Curfew' }, required: 8, unit: 'MONTHS' }],
+      },
+      {
+        eventNumber: 1,
+        type: 'ORA Adult Custody (not PSS)',
+        typeCode: '327',
+        startDate: '2024-01-15',
+        expectedEndDate: '2027-09-21',
+        requirements: [],
+        licenceConditions: [{ mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }],
+      },
+    ],
+  }
+
+  beforeEach(() => {
+    config.features.licence = true
+    fakeDate('2025-06-01')
+    peopleOnProbationService.getSentences.mockResolvedValue(licenceAndOrder)
+    peopleOnProbationService.getDocuments.mockResolvedValue({ documents: [] })
+  })
+
+  it('shows a summary linking to the licence first, then the order, without requirements', async () => {
+    const res = await request(app)
+      .get('/your-probation')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('<h1 class="govuk-heading-xl">Your probation</h1>')
+    expect(res.text).toContain('Make sure you follow the requirements included in your order.')
+    expect(res.text).toContain('You also need to follow the licence conditions.')
+    expect(res.text).toContain('Your probation includes licence conditions and order requirements.')
+    expect(res.text).not.toContain('court orders.')
+    const licence = res.text.indexOf('href="/your-probation/licence"')
+    const order = res.text.indexOf('href="/your-probation/orders/2"')
+    expect(licence).toBeGreaterThan(-1)
+    expect(order).toBeGreaterThan(licence)
+    expect(res.text).toMatch(/href="\/your-probation\/licence"[^>]*>Your sentence and licence<\/a>/)
+    expect(res.text).toContain('End date: 21 September 2027')
+    expect(res.text).toMatch(/href="\/your-probation\/orders\/2"[^>]*>Suspended Sentence Order<\/a>/)
+    expect(res.text).toContain('End date: 14 January 2027')
+    expect(res.text).not.toContain('pop-requirement-card')
+    expect(res.text).not.toContain('role="progressbar"')
+  })
+
+  it('leaves out the end date of a licence for an indeterminate sentence', async () => {
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, indeterminateSentence: true }])
+
+    const res = await request(app)
+      .get('/your-probation')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toMatch(/href="\/your-probation\/licence"[^>]*>Your sentence and licence<\/a>/)
+    expect(res.text).not.toContain('End date: 21 September 2027')
+    expect(res.text).toContain('End date: 14 January 2027')
+  })
+
+  it('shows the licence page under "Your sentence and licence", linking back to the summary', async () => {
+    const res = await request(app)
+      .get('/your-probation/licence')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('<title>Your sentence and licence – Check your probation account – GOV.UK</title>')
+    expect(res.text).toContain('<span class="govuk-caption-l">Your probation</span>')
+    expect(res.text).toContain('<h1 class="govuk-heading-xl">Your sentence and licence</h1>')
+    expect(res.text).toMatch(
+      /class="govuk-back-link"[^>]*href="\/your-probation"|href="\/your-probation"[^>]*class="govuk-back-link"/,
+    )
+    expect(res.text).not.toContain('Make sure you follow the licence conditions.')
+    expect(res.text).toContain('You are on licence')
+    expect(res.text).toContain('Your licence conditions</h2>')
+  })
+
+  it("lists the order's requirements on its own page", async () => {
+    const res = await request(app)
+      .get('/your-probation/orders/2')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('<h1 class="govuk-heading-xl">Suspended Sentence Order</h1>')
+    expect(res.text).toContain('Requirements in your order</h2>')
+    expect(res.text).toContain('href="/your-probation/follow-a-curfew"')
+  })
+
+  it("captions a requirement with its order's type and links back to the order", async () => {
+    const res = await request(app)
+      .get('/your-probation/follow-a-curfew')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(res.text).toContain('<span class="govuk-caption-l">Suspended Sentence Order</span>')
+    expect(res.text).toContain('href="/your-probation/orders/2"')
+  })
+
+  it('does not show the licence as an order page', async () => {
+    await request(app)
+      .get('/your-probation/orders/1')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(404)
   })
 })

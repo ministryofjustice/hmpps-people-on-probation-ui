@@ -58,7 +58,7 @@ describe('GET /', () => {
     expect(response.text).toContain('href="/sign-in/start?returnTo=%2Fappointments&amp;token=invite-token"')
   })
 
-  it('should render the authenticated home page with appointment and order progress summaries', async () => {
+  it('should render the authenticated home page with appointment summaries', async () => {
     peopleOnProbationService.getFutureAppointments.mockResolvedValue({
       content: [
         {
@@ -102,10 +102,8 @@ describe('GET /', () => {
     expect(response.text).toContain('Wednesday 10 June 2026, 9am to 10am')
     expect(response.text).toContain('Missed mandatory appointment or activity')
     expect(response.text).toContain('Monday 1 June 2026')
-    expect(response.text).toContain('Progress in overall order')
     expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 50)
     expect(peopleOnProbationService.getPastAppointments).toHaveBeenCalledWith('X123456', 0, 50)
-    expect(peopleOnProbationService.getSentences).toHaveBeenCalledWith('X123456')
   })
 
   it('should not render the missed appointment alert when the feature flag is disabled', async () => {
@@ -146,27 +144,6 @@ describe('GET /', () => {
       .expect('Location', '/session-timeout')
   })
 
-  it('should not render order progress when the first sentence has no start or expected end date', async () => {
-    peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [] })
-    peopleOnProbationService.getPastAppointments.mockResolvedValue({ content: [] })
-    peopleOnProbationService.getSentences.mockResolvedValue({
-      sentences: [
-        {
-          requirements: [],
-          licenceConditions: [],
-        },
-      ],
-    })
-
-    const response = await request(app)
-      .get('/')
-      .set('Cookie', await createAppSessionCookie('X123456'))
-      .expect('Content-Type', /html/)
-      .expect(200)
-
-    expect(response.text).not.toContain('Progress in overall order')
-  })
-
   describe('when the licence feature is off', () => {
     const licenceSentence: SentenceResponse = {
       requirements: [],
@@ -179,7 +156,7 @@ describe('GET /', () => {
       peopleOnProbationService.getPastAppointments.mockResolvedValue({ content: [] })
     })
 
-    it.each(['/', '/appointments', '/goals', '/requirements', '/licence', '/probation-officer', '/details'])(
+    it.each(['/', '/appointments', '/goals', '/your-probation', '/probation-officer', '/details'])(
       'sends a licence user on %s to the error page',
       async path => {
         peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence] })
@@ -209,7 +186,7 @@ describe('GET /', () => {
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(response.text).toContain('Progress in overall order')
+      expect(response.text).toContain('<a href="/your-probation" class="pop-card">')
     })
 
     it('still shows the start page to signed-out visitors', async () => {
@@ -244,7 +221,7 @@ describe('GET /', () => {
         .expect(200)
     }
 
-    it('shows the licence status and time until the licence ends', async () => {
+    it('does not show the licence status or a progress bar', async () => {
       const response = await renderHome({
         startDate: '2026-01-01',
         expectedEndDate: '2027-07-15',
@@ -252,83 +229,24 @@ describe('GET /', () => {
         licenceConditions: [licenceCondition],
       })
 
-      expect(response.text).toContain('Your progress')
-      expect(response.text).not.toContain('Progress in overall order')
-      expect(response.text).not.toContain('Time in prison completed')
-      expect(response.text).toContain('You are on licence')
-      expect(response.text).toContain('Until 15 July 2027')
-      expect(response.text).not.toContain('pop-licence-progress__item--centred')
-      expect(response.text).toContain('<img src="/assets/images/licence-pin.svg" alt=""')
-      expect(response.text).toContain('Time until your licence ends')
-      expect(response.text).toContain('Remaining: ')
-      expect(response.text).toContain('role="progressbar"')
-      expect(response.text).toContain('pop-progress__bar-area--bar-only')
-      expect(response.text).not.toContain('Completed: ')
-    })
-
-    it('shows the time until the licence ends as a percentage of the licence', async () => {
-      jest.useFakeTimers({ now: new Date('2026-07-01T12:00:00Z'), doNotFake: ['nextTick', 'setImmediate'] })
-      try {
-        const response = await renderHome({
-          startDate: '2026-01-01',
-          expectedEndDate: '2026-12-31',
-          requirements: [],
-          licenceConditions: [licenceCondition],
-        })
-
-        expect(response.text).toContain('aria-valuenow="50"')
-        expect(response.text).toContain('Remaining: 6 months')
-      } finally {
-        jest.useRealTimers()
-      }
-    })
-
-    it('omits the time until the licence ends when the start date is not populated', async () => {
-      const response = await renderHome({
-        expectedEndDate: '2027-07-15',
-        requirements: [],
-        licenceConditions: [licenceCondition],
-      })
-
-      expect(response.text).toContain('Until 15 July 2027')
-      expect(response.text).not.toContain('Time until your licence ends')
+      expect(response.text).not.toContain('Your progress')
+      expect(response.text).not.toContain('You are on licence')
       expect(response.text).not.toContain('role="progressbar"')
     })
 
-    it('does not show electronic monitoring tags on the home page', async () => {
-      const response = await renderHome({
-        startDate: '2026-01-01',
-        expectedEndDate: '2027-07-15',
-        requirements: [],
-        licenceConditions: [{ mainCategory: { code: 'EM01' }, expectedEndDate: '2027-03-19' }],
-      })
-
-      expect(response.text).toContain('You are on licence')
-      expect(response.text).not.toContain('You need to wear')
-    })
-
-    it('labels the requirements tile "Your sentence and licence" and the nav item "Your licence"', async () => {
+    it('links the "Your probation" card and nav item to the licence page', async () => {
       const response = await renderHome({ requirements: [], licenceConditions: [licenceCondition] })
 
-      expect(response.text).toContain('Your sentence and licence</h2>')
-      expect(response.text).toContain('See your sentence information and check your licence conditions')
-      expect(response.text).toMatch(/govuk-service-navigation__link"[^>]*href="\/licence"[^>]*>\s*Your licence\s*</)
-      expect(response.text).toContain('<a href="/licence" class="pop-card">')
-      expect(response.text).not.toContain('href="/requirements"')
+      expect(response.text).toContain('Your probation</h2>')
+      expect(response.text).toContain('See the details of your probation including what you need to do')
+      expect(response.text).toMatch(
+        /govuk-service-navigation__link"[^>]*href="\/your-probation"[^>]*>\s*Your probation\s*</,
+      )
+      expect(response.text).toContain('<a href="/your-probation" class="pop-card">')
       expect(response.text).not.toContain('Order requirements')
     })
 
-    it('omits the expiry date when it is not populated', async () => {
-      const response = await renderHome({ requirements: [], licenceConditions: [licenceCondition] })
-
-      expect(response.text).toContain('You are on licence')
-      expect(response.text).not.toContain('Until ')
-      expect(response.text).not.toContain('Time until your licence ends')
-      expect(response.text).toContain('pop-licence-progress__item--centred')
-      expect(response.text).not.toContain('role="progressbar"')
-    })
-
-    it('shows the progress bar and no licence status for a community order', async () => {
+    it('shows no progress bar and links the "Your probation" card and nav item to the requirements page for a community order', async () => {
       const response = await renderHome({
         startDate: '2026-01-01',
         expectedEndDate: '2027-07-15',
@@ -336,12 +254,14 @@ describe('GET /', () => {
         licenceConditions: [],
       })
 
-      expect(response.text).toContain('role="progressbar"')
-      expect(response.text).toContain('Progress in overall order')
-      expect(response.text).toContain('Order requirements')
-      expect(response.text).toContain('See progress against your order requirements')
-      expect(response.text).not.toContain('Your licence')
-      expect(response.text).not.toContain('Your sentence and licence')
+      expect(response.text).not.toContain('role="progressbar"')
+      expect(response.text).not.toContain('Progress in overall order')
+      expect(response.text).toContain('Your probation</h2>')
+      expect(response.text).toContain('See the details of your probation including what you need to do')
+      expect(response.text).toContain('<a href="/your-probation" class="pop-card">')
+      expect(response.text).toMatch(
+        /govuk-service-navigation__link"[^>]*href="\/your-probation"[^>]*>\s*Your probation\s*</,
+      )
       expect(response.text).not.toContain('Your progress')
       expect(response.text).not.toContain('You are on licence')
     })
@@ -429,6 +349,22 @@ describe('GET /', () => {
   })
 })
 
+describe('old licence and requirements URLs', () => {
+  it.each([
+    ['/licence', '/your-probation'],
+    ['/requirements', '/your-probation'],
+    ['/licence/standard-conditions', '/your-probation/standard-conditions'],
+    ['/licence/specific-conditions/take-drug-tests', '/your-probation/specific-conditions/take-drug-tests'],
+    ['/requirements/unpaid-work?from=progress', '/your-probation/unpaid-work?from=progress'],
+  ])('redirects %s to %s', async (from, to) => {
+    await request(app)
+      .get(from)
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(301)
+      .expect('Location', to)
+  })
+})
+
 describe('home page cards', () => {
   const originalDocumentsFlag = config.features.documents
 
@@ -456,7 +392,7 @@ describe('home page cards', () => {
 
     const response = await renderHome()
 
-    expect(cardHrefs(response.text)).toEqual(['/appointments', '/progress', '/goals', '/requirements', '/documents'])
+    expect(cardHrefs(response.text)).toEqual(['/appointments', '/progress', '/goals', '/your-probation', '/documents'])
     expect(response.text).toContain('See a summary of your progress, including your attendance, requirements and goals')
     expect(response.text).toMatch(/href="\/progress"[^>]*>\s*Progress and achievements/)
   })
@@ -474,7 +410,7 @@ describe('home page cards', () => {
 
     const response = await renderHome()
 
-    expect(cardHrefs(response.text)).toEqual(['/appointments', '/progress', '/goals', '/requirements'])
+    expect(cardHrefs(response.text)).toEqual(['/appointments', '/progress', '/goals', '/your-probation'])
     expect(response.text.match(/class="govuk-grid-row pop-card-row/g)).toHaveLength(2)
   })
 })

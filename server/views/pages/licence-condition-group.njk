@@ -6,12 +6,12 @@
 {% set currentPage = "licence" %}
 
 {% block breadcrumb %}
-  {{ govukBackLink({ text: "Back", href: "/licence/specific-conditions" }) }}
+  {{ govukBackLink({ text: "Back", href: "/your-probation/specific-conditions" }) }}
 {% endblock %}
 
 {% block content %}
 
-  <span class="govuk-caption-l">Your licence conditions</span>
+  <span class="govuk-caption-l">{{ "Your sentence and licence" if withOrders else "Your probation" }}</span>
   <h1 class="govuk-heading-xl">{{ group.title }}</h1>
 
   <h2 class="govuk-heading-l">Your licence conditions</h2>

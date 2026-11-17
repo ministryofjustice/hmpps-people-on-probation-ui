@@ -1,8 +1,12 @@
-import { Router } from 'express'
+import { Router, type Request, type Response } from 'express'
 import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 
 import type { Services } from '../services'
-import type { LicenceConditionImage } from '../data/peopleOnProbationApiClient'
+import type {
+  LicenceConditionImage,
+  LicenceSummaryResponse,
+  SentenceResponse,
+} from '../data/peopleOnProbationApiClient'
 import config from '../config'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
@@ -11,7 +15,6 @@ import {
   formatDate,
   formatDateTimeWithDay,
   formatLicenceSentenceType,
-  isLicenceSentence,
   isLongerThanMonths,
 } from '../utils/utils'
 import { findDocumentIdByType } from '../utils/documentTypes'
@@ -27,7 +30,8 @@ import {
   toLicenceTags,
   type AdditionalConditionGroupView,
 } from '../utils/licenceConditions'
-import findCurrentLicence from '../utils/currentLicence'
+import findCurrentLicence, { findCurrentLicenceSummary, findLicenceById } from '../utils/currentLicence'
+import { findLicence } from '../utils/concurrentOrders'
 
 type LicenceTagView = {
   tagType: string
@@ -45,45 +49,59 @@ type LicenceSentenceView = {
   tags: LicenceTagView[]
 }
 
+// The licence page: "Your probation" for someone on licence only, or "Your sentence and licence" for
+// someone also on an order. /your-probation decides which page to show (see yourProbation.ts), so this
+// takes the sentence it already looked up.
+export async function renderLicenceOverview(
+  services: Services,
+  req: Request,
+  res: Response,
+  crn: string,
+  sentence: SentenceResponse,
+  withOrders = false,
+) {
+  // The licence (for the tag rows and whether the sentence ends) and the licence document don't depend
+  // on each other.
+  const [{ tags, indeterminate }, licenceDocumentId] = await Promise.all([
+    findLicenceDetails(services, crn, req.id),
+    config.features.documents ? findDocumentIdByType(services, crn, 'LICENCE_CONDITION') : undefined,
+  ])
+
+  // An indeterminate sentence (such as life) has no end date, so there's no end date, length or time
+  // left to show, whatever end date nDelius has.
+  const endDate = indeterminate ? undefined : sentence.expectedEndDate
+  const progress = sentence.startDate && endDate ? calculateDateProgress(sentence.startDate, endDate) : undefined
+
+  const licenceSentence: LicenceSentenceView = {
+    type: formatLicenceSentenceType(sentence.type),
+    typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode, 'licence'),
+    startDate: formatDate(sentence.startDate),
+    endDate: formatDate(endDate),
+    totalLength: progress?.totalLength,
+    percentComplete: progress?.percentComplete,
+    remainingDuration: progress?.remainingDuration,
+    tags,
+  }
+
+  return res.render('pages/licence', { licenceSentence, licenceDocumentId, withOrders })
+}
+
 export default function licenceRoutes(services: Services): Router {
   const router = Router()
 
   router.use(requireAuthentication)
 
-  router.get('/', async (req, res, next) => {
+  // The licence's own page, linked from the "Your probation" summary for someone also on an order.
+  router.get('/licence', async (req, res, next) => {
     try {
       const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
-      const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
-      const sentence = sentenceProgress.sentences[0]
+      const { sentences } = await services.peopleOnProbationService.getSentences(crn)
+      const { licence, withOrders } = findLicence(sentences)
+      if (!licence) return next()
 
-      // Community orders (and people with no sentence yet) keep the requirements page.
-      if (!isLicenceSentence(sentence)) return res.redirect('/requirements')
-
-      const progress =
-        sentence.startDate && sentence.expectedEndDate
-          ? calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
-          : undefined
-
-      // The licence (for the tag rows) and the licence document don't depend on each other.
-      const [tags, licenceDocumentId] = await Promise.all([
-        findLicenceTags(services, crn, req.id),
-        config.features.documents ? findDocumentIdByType(services, crn, 'LICENCE_CONDITION') : undefined,
-      ])
-
-      const licenceSentence: LicenceSentenceView = {
-        type: formatLicenceSentenceType(sentence.type),
-        typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode, 'licence'),
-        startDate: formatDate(sentence.startDate),
-        endDate: formatDate(sentence.expectedEndDate),
-        totalLength: progress?.totalLength,
-        percentComplete: progress?.percentComplete,
-        remainingDuration: progress?.remainingDuration,
-        tags,
-      }
-
-      return res.render('pages/licence', { licenceSentence, licenceDocumentId })
+      return await renderLicenceOverview(services, req, res, crn, licence, withOrders)
     } catch (error) {
       return next(error)
     }
@@ -94,17 +112,21 @@ export default function licenceRoutes(services: Services): Router {
       const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
-      const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
-      const sentence = sentenceProgress.sentences[0]
-      if (!isLicenceSentence(sentence)) return res.redirect('/requirements')
+      const { sentences } = await services.peopleOnProbationService.getSentences(crn)
+      const { licence: sentence, withOrders } = findLicence(sentences)
+      if (!sentence) return res.redirect('/your-probation')
 
       const licence = await findCurrentLicence(services, crn)
       return res.render('pages/licence-standard-conditions', {
         // CVL's own wording, in CVL's order, so they match the person's licence document.
         conditions: (licence?.conditions?.AP?.standard ?? []).map(({ text }) => text).filter(Boolean),
         lastUpdatedAt: formatDateTimeWithDay(licence?.updatedDateTime ?? licence?.approvedDateTime),
-        // The firearms restriction applies to sentences longer than 3 months.
-        showFirearms: isLongerThanMonths(sentence.startDate, sentence.expectedEndDate, 3),
+        // The firearms restriction applies to sentences longer than 3 months, which an indeterminate
+        // sentence always is.
+        showFirearms:
+          licence?.indeterminateSentence === true ||
+          isLongerThanMonths(sentence.startDate, sentence.expectedEndDate, 3),
+        withOrders,
       })
     } catch (error) {
       return next(error)
@@ -116,8 +138,9 @@ export default function licenceRoutes(services: Services): Router {
       const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
-      const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
-      if (!isLicenceSentence(sentenceProgress.sentences[0])) return res.redirect('/requirements')
+      const { sentences } = await services.peopleOnProbationService.getSentences(crn)
+      const { licence: sentence, withOrders } = findLicence(sentences)
+      if (!sentence) return res.redirect('/your-probation')
 
       const licence = await findCurrentLicence(services, crn)
       const { groups, unknownCodes, hasUnshownElectronicMonitoring } = toAdditionalConditionGroups(
@@ -146,6 +169,7 @@ export default function licenceRoutes(services: Services): Router {
           toBespokeConditionGroup(licence?.conditions?.AP?.additional, licence?.conditions?.AP?.bespoke),
         ),
         lastUpdatedAt: formatDateTimeWithDay(licence?.updatedDateTime ?? licence?.approvedDateTime),
+        withOrders,
       })
     } catch (error) {
       return next(error)
@@ -199,8 +223,9 @@ export default function licenceRoutes(services: Services): Router {
       const crn = getSessionCrn(res.locals.user)
       if (!crn) return res.redirect('/autherror')
 
-      const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
-      if (!isLicenceSentence(sentenceProgress.sentences[0])) return res.redirect('/requirements')
+      const { sentences } = await services.peopleOnProbationService.getSentences(crn)
+      const { licence: sentence, withOrders } = findLicence(sentences)
+      if (!sentence) return res.redirect('/your-probation')
 
       const licence = await findCurrentLicence(services, crn)
       const additional = licence?.conditions?.AP?.additional
@@ -218,6 +243,7 @@ export default function licenceRoutes(services: Services): Router {
         helpTemplate: licenceConditionHelpTemplate(group.key),
         // The curfew help links to the person's tag conditions, when they have some.
         tagGroupKey: TAG_CONDITION_GROUP_KEYS.find(key => groups.some(g => g.key === key)),
+        withOrders,
       })
     } catch (error) {
       return next(error)
@@ -227,18 +253,38 @@ export default function licenceRoutes(services: Services): Router {
   return router
 }
 
-// The person's electronic monitoring tags from their CVL licence, for the licence page. If the licence
-// can't be loaded, the page is still shown, without them.
-const findLicenceTags = async (services: Services, crn: string, correlationId: string): Promise<LicenceTagView[]> => {
+// From the person's CVL licence, for the licence page: whether their sentence is indeterminate (from
+// Prisoner Search, on the licence summary) and their electronic monitoring tags (from the licence's
+// details). Each is looked up on its own, so if the details can't be loaded the page still knows the
+// sentence is indeterminate and only the tags are left out. If the summary can't be loaded either, the
+// page is shown with the sentence's end date.
+const findLicenceDetails = async (
+  services: Services,
+  crn: string,
+  correlationId: string,
+): Promise<{ tags: LicenceTagView[]; indeterminate: boolean }> => {
+  let summary: LicenceSummaryResponse | undefined
   try {
-    const licence = await findCurrentLicence(services, crn)
-    return toLicenceTags(licence?.conditions?.AP?.additional).map(({ tagType, endDate }) => ({
-      tagType,
-      endDate: formatDate(endDate),
-    }))
+    summary = await findCurrentLicenceSummary(services, crn)
+  } catch (error) {
+    logger.warn({ correlationId, err: error }, 'Could not load the licence summary for the licence page')
+    return { tags: [], indeterminate: false }
+  }
+  const indeterminate = summary?.indeterminateSentence === true
+  if (!summary) return { tags: [], indeterminate }
+
+  try {
+    const licence = await findLicenceById(services, crn, summary.id)
+    return {
+      tags: toLicenceTags(licence?.conditions?.AP?.additional).map(({ tagType, endDate }) => ({
+        tagType,
+        endDate: formatDate(endDate),
+      })),
+      indeterminate,
+    }
   } catch (error) {
     logger.warn({ correlationId, err: error }, 'Could not load the licence for the electronic monitoring tags')
-    return []
+    return { tags: [], indeterminate }
   }
 }
 
@@ -282,7 +328,7 @@ const withMaps = (group: AdditionalConditionGroupView, licenceId: number): Addit
         ...group,
         conditions: group.conditions.map(condition =>
           condition.hasImageUpload && condition.id
-            ? { ...condition, mapUrl: `/licence/conditions/${licenceId}/${condition.id}/image` }
+            ? { ...condition, mapUrl: `/your-probation/conditions/${licenceId}/${condition.id}/image` }
             : condition,
         ),
       }

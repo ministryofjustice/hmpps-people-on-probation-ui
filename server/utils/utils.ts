@@ -211,7 +211,7 @@ export const formatLicenceSentenceType = (type?: string): string | undefined => 
 
 export type SentenceKind = 'LICENCE' | 'COMMUNITY_ORDER'
 
-// Decides the licence or community order journey (navigation, home page, /licence or /requirements):
+// Decides the licence or community order journey (navigation, home page, which page /your-probation shows):
 // - a prison book number means a custodial sentence, so the person is on licence, whether or not
 //   their licence conditions have been recorded yet
 // - otherwise licence conditions still mean licence, as a fallback for a missing book number
@@ -226,6 +226,11 @@ export const getSentenceKind = (sentence?: SentenceResponse): SentenceKind | und
 }
 
 export const isLicenceSentence = (sentence?: SentenceResponse): boolean => getSentenceKind(sentence) === 'LICENCE'
+
+// The journey for everything someone is serving: licence if any sentence is a licence (wherever it is in
+// the list, as someone can be on licence and an order), otherwise the first sentence's kind that's known.
+export const getSentencesKind = (sentences: SentenceResponse[] = []): SentenceKind | undefined =>
+  sentences.some(isLicenceSentence) ? 'LICENCE' : sentences.map(getSentenceKind).find(Boolean)
 
 export const formatPersonName = (name?: PersonNameResponse): string | undefined => {
   if (!name) return undefined

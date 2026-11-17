@@ -126,6 +126,8 @@ export interface LicenceSummaryResponse {
   sentenceStartDate?: string
   sentenceExpiryDate?: string
   licenceExpiryDate?: string
+  // True for a sentence with no end date, such as life or IPP, so the licence never expires.
+  indeterminateSentence?: boolean
 }
 
 export interface StandardLicenceConditionResponse {

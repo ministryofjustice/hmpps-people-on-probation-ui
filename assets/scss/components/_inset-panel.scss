@@ -1,0 +1,10 @@
+// A light blue panel for guidance that stands apart from the page, such as "Ending your probation early"
+// on the progress page.
+.pop-inset-panel {
+  padding: govuk-spacing(5);
+  background-color: #f4f8fb;
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}

@@ -8,7 +8,7 @@ import type {
 const normalise = (code: string): string => code.trim().toLowerCase()
 
 // Additional licence conditions from CVL (conditions.AP.additional), grouped into the topics we show
-// people on probation. Each group has a key (its page is /licence/specific-conditions/<key>), the title
+// people on probation. Each group has a key (its page is /your-probation/specific-conditions/<key>), the title
 // shown on its card and as its page heading (as on its page in the design), and the CVL condition codes
 // it covers. To add a code, add it to its group's codes. This list
 // doesn't decide the order things are shown in: that follows the CVL response (see below).

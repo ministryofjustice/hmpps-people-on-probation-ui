@@ -55,18 +55,18 @@ describe('GET /licence', () => {
     peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
 
     const response = await request(app)
-      .get('/licence')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect('Content-Type', /html/)
       .expect(200)
 
-    expect(response.text).toContain('Your sentence and licence – Check your probation account – GOV.UK')
-    expect(response.text).toContain('<h1 class="govuk-heading-xl">Your sentence and licence</h1>')
+    expect(response.text).toContain('Your probation – Check your probation account – GOV.UK')
+    expect(response.text).toContain('<h1 class="govuk-heading-xl">Your probation</h1>')
     expect(response.text).toContain(
       'Make sure you follow the licence conditions. If you do not, conditions could be added or made stricter. In some cases, you could go back to prison.',
     )
     expect(response.text).toContain('href="/probation-agreement"')
-    expect(response.text).toContain('Your sentence')
+    expect(response.text).toContain('pop-requirements__section-heading">Progress and details</h2>')
     expect(response.text).not.toContain('Time in prison completed')
     expect(response.text).toContain('You are on licence')
     expect(response.text).toContain('Until 14 March 2027')
@@ -104,7 +104,7 @@ describe('GET /licence', () => {
       peopleOnProbationService.getLicence.mockResolvedValue(tagLicence(additional))
 
       return request(app)
-        .get('/licence')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
     }
@@ -154,7 +154,7 @@ describe('GET /licence', () => {
       peopleOnProbationService.getLicences.mockRejectedValue(new Error('API down'))
 
       const response = await request(app)
-        .get('/licence')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -167,7 +167,7 @@ describe('GET /licence', () => {
     const renderLicence = async (typeCode?: string) => {
       peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence({ typeCode })] })
       return request(app)
-        .get('/licence')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
     }
@@ -212,16 +212,16 @@ describe('GET /licence', () => {
     peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
 
     const response = await request(app)
-      .get('/licence')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
     expect(response.text).toMatch(
-      /<a href="\/licence\/specific-conditions" class="pop-card"[^>]*>\s*<h3[^>]*>Additional and bespoke licence conditions<\/h3>/,
+      /<a href="\/your-probation\/specific-conditions" class="pop-card"[^>]*>\s*<h3[^>]*>Additional and bespoke licence conditions<\/h3>/,
     )
     expect(response.text).toContain('These licence conditions are specific to you and can change')
     expect(response.text).toMatch(
-      /<a href="\/licence\/standard-conditions" class="pop-card"[^>]*>\s*<h3[^>]*>Standard licence conditions<\/h3>/,
+      /<a href="\/your-probation\/standard-conditions" class="pop-card"[^>]*>\s*<h3[^>]*>Standard licence conditions<\/h3>/,
     )
     expect(response.text).toContain('Everyone on licence must follow these conditions')
   })
@@ -230,12 +230,11 @@ describe('GET /licence', () => {
     peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
 
     const response = await request(app)
-      .get('/licence')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).toMatch(/govuk-service-navigation__item--active[\s\S]*?href="\/licence"/)
-    expect(response.text).not.toContain('href="/requirements"')
+    expect(response.text).toMatch(/govuk-service-navigation__item--active[\s\S]*?href="\/your-probation"/)
   })
 
   it('omits rows and the "Until" line when the sentence has no dates or type', async () => {
@@ -244,7 +243,7 @@ describe('GET /licence', () => {
     })
 
     const response = await request(app)
-      .get('/licence')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -266,7 +265,7 @@ describe('GET /licence', () => {
       })
 
       const response = await request(app)
-        .get('/licence')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -291,7 +290,7 @@ describe('GET /licence', () => {
     })
 
     const response = await request(app)
-      .get('/licence')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
@@ -306,15 +305,15 @@ describe('GET /licence', () => {
     })
 
     const response = await request(app)
-      .get('/licence')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).toContain('<h1 class="govuk-heading-xl">Your sentence and licence</h1>')
+    expect(response.text).toContain('Make sure you follow the licence conditions.')
     expect(response.text).toContain('You must follow your licence conditions until your licence ends.')
   })
 
-  it('redirects community orders to the requirements page', async () => {
+  it('shows the order requirements page instead for community orders', async () => {
     peopleOnProbationService.getSentences.mockResolvedValue({
       sentences: [
         licenceSentence({
@@ -324,26 +323,28 @@ describe('GET /licence', () => {
       ],
     })
 
-    await request(app)
-      .get('/licence')
+    const response = await request(app)
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
-      .expect(302)
-      .expect('Location', '/requirements')
+      .expect(200)
+
+    expect(response.text).toContain('Make sure you follow the requirements included in your order.')
   })
 
-  it('redirects to the requirements page when there is no sentence', async () => {
+  it('shows the order requirements page when there is no sentence', async () => {
     peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [] })
 
-    await request(app)
-      .get('/licence')
+    const response = await request(app)
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
-      .expect(302)
-      .expect('Location', '/requirements')
+      .expect(200)
+
+    expect(response.text).toContain('Make sure you follow the requirements included in your order.')
   })
 
   it('redirects users without a person reference to auth error', async () => {
     await request(app)
-      .get('/licence')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie())
       .expect(302)
       .expect('Location', '/autherror')
@@ -354,11 +355,30 @@ describe('GET /licence', () => {
     peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
 
     await request(app)
-      .get('/licence')
+      .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(302)
       .expect('Location', '/autherror')
   })
+
+  it.each(['/your-probation', '/your-probation/licence', '/your-probation/standard-conditions'])(
+    'sends someone on an order and a licence to the error page from %s when the licence feature is off',
+    async path => {
+      config.features.licence = false
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          { requirements: [{ mainCategory: { code: 'F', description: 'RAR' } }], licenceConditions: [] },
+          licenceSentence(),
+        ],
+      })
+
+      await request(app)
+        .get(path)
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(302)
+        .expect('Location', '/autherror')
+    },
+  )
 
   describe('licence document', () => {
     beforeEach(() => {
@@ -375,7 +395,7 @@ describe('GET /licence', () => {
       })
 
       const response = await request(app)
-        .get('/licence')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -397,7 +417,7 @@ describe('GET /licence', () => {
       })
 
       const response = await request(app)
-        .get('/licence')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -408,11 +428,11 @@ describe('GET /licence', () => {
       peopleOnProbationService.getDocuments.mockRejectedValue(new Error('API down'))
 
       const response = await request(app)
-        .get('/licence')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
-      expect(response.text).toContain('Your sentence')
+      expect(response.text).toContain('pop-requirements__section-heading">Progress and details</h2>')
       expect(response.text).not.toContain('View your licence document')
     })
 
@@ -420,7 +440,7 @@ describe('GET /licence', () => {
       config.features.documents = false
 
       const response = await request(app)
-        .get('/licence')
+        .get('/your-probation')
         .set('Cookie', await createAppSessionCookie('X123456'))
         .expect(200)
 
@@ -440,7 +460,7 @@ describe('GET /licence/standard-conditions', () => {
 
   const renderPage = async () =>
     request(app)
-      .get('/licence/standard-conditions')
+      .get('/your-probation/standard-conditions')
       .set('Cookie', await createAppSessionCookie('X123456'))
 
   beforeEach(() => {
@@ -465,10 +485,10 @@ describe('GET /licence/standard-conditions', () => {
     expect(response.status).toBe(200)
     expect(response.text).toContain('Standard licence conditions – Check your probation account – GOV.UK')
     expect(response.text).toContain('<h1 class="govuk-heading-xl">Standard licence conditions</h1>')
-    expect(response.text).toContain('href="/licence"')
+    expect(response.text).toContain('href="/your-probation"')
     expect(response.text).toContain('Last updated on Thursday 14 May 2026')
     expect(response.text).toContain('These are conditions that everyone on licence must follow.')
-    expect(response.text).toContain('href="/licence/specific-conditions"')
+    expect(response.text).toContain('href="/your-probation/specific-conditions"')
     expect(response.text).toContain('You need to:')
     expect(response.text).toContain('Using firearms and ammunition')
     expect(peopleOnProbationService.getLicence).toHaveBeenCalledWith('X123456', 7)
@@ -553,7 +573,21 @@ describe('GET /licence/standard-conditions', () => {
     expect(response.text.includes('Using firearms and ammunition')).toBe(shown)
   })
 
-  it('redirects community orders to the requirements page', async () => {
+  it('shows the firearms section for an indeterminate sentence, which has no end date', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({
+      sentences: [licenceSentence({ startDate: '2026-01-01', expectedEndDate: undefined })],
+    })
+    peopleOnProbationService.getLicences.mockResolvedValue([
+      { id: 7, updatedDateTime: '2026-05-14T10:00:00', indeterminateSentence: true },
+    ])
+    peopleOnProbationService.getLicence.mockResolvedValue(licence([]))
+
+    const response = await renderPage()
+
+    expect(response.text).toContain('Using firearms and ammunition')
+  })
+
+  it('shows the order requirements page instead for community orders', async () => {
     peopleOnProbationService.getSentences.mockResolvedValue({
       sentences: [
         licenceSentence({
@@ -566,7 +600,7 @@ describe('GET /licence/standard-conditions', () => {
     const response = await renderPage()
 
     expect(response.status).toBe(302)
-    expect(response.headers.location).toBe('/requirements')
+    expect(response.headers.location).toBe('/your-probation')
   })
 })
 
@@ -588,7 +622,7 @@ describe('GET /licence/specific-conditions', () => {
 
   const renderPage = async () =>
     request(app)
-      .get('/licence/specific-conditions')
+      .get('/your-probation/specific-conditions')
       .set('Cookie', await createAppSessionCookie('X123456'))
 
   const cardTitles = (html: string) =>
@@ -617,11 +651,11 @@ describe('GET /licence/specific-conditions', () => {
     expect(response.text).toContain('<h1 class="govuk-heading-xl">Licence conditions specific to you</h1>')
     expect(response.text).toContain('Last updated on Thursday 14 May 2026, 12:29pm')
     expect(response.text).toContain('These conditions can be added, removed or changed.')
-    expect(response.text).toContain('href="/licence/standard-conditions"')
-    expect(response.text).toContain('href="/licence"')
+    expect(response.text).toContain('href="/your-probation/standard-conditions"')
+    expect(response.text).toContain('href="/your-probation"')
     expect(cardTitles(response.text)).toEqual(['Wear a GPS tag', 'Follow a curfew', 'Areas you must not leave'])
-    expect(response.text).toContain('href="/licence/specific-conditions/wear-a-gps-tag"')
-    expect(response.text).toContain('href="/licence/specific-conditions/follow-a-curfew"')
+    expect(response.text).toContain('href="/your-probation/specific-conditions/wear-a-gps-tag"')
+    expect(response.text).toContain('href="/your-probation/specific-conditions/follow-a-curfew"')
   })
 
   it('shows the bespoke conditions card only when there are bespoke conditions', async () => {
@@ -635,7 +669,7 @@ describe('GET /licence/specific-conditions', () => {
     const withoutBespoke = await renderPage()
 
     expect(cardTitles(withBespoke.text)).toEqual(['Follow a curfew', 'Bespoke licence conditions'])
-    expect(withBespoke.text).toContain('href="/licence/specific-conditions/bespoke-licence-conditions"')
+    expect(withBespoke.text).toContain('href="/your-probation/specific-conditions/bespoke-licence-conditions"')
     expect(cardTitles(withoutBespoke.text)).toEqual(['Follow a curfew'])
   })
 
@@ -707,7 +741,7 @@ describe('GET /licence/specific-conditions', () => {
     expect(response.text).toContain('Your licence conditions specific to you are not available yet.')
   })
 
-  it('redirects community orders to the requirements page', async () => {
+  it('shows the order requirements page instead for community orders', async () => {
     peopleOnProbationService.getSentences.mockResolvedValue({
       sentences: [
         licenceSentence({
@@ -720,7 +754,7 @@ describe('GET /licence/specific-conditions', () => {
     const response = await renderPage()
 
     expect(response.status).toBe(302)
-    expect(response.headers.location).toBe('/requirements')
+    expect(response.headers.location).toBe('/your-probation')
   })
 })
 
@@ -743,7 +777,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
 
   const renderPage = async (groupKey: string) =>
     request(app)
-      .get(`/licence/specific-conditions/${groupKey}`)
+      .get(`/your-probation/specific-conditions/${groupKey}`)
       .set('Cookie', await createAppSessionCookie('X123456'))
 
   beforeEach(() => {
@@ -764,9 +798,9 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
 
     expect(response.status).toBe(200)
     expect(response.text).toContain('Follow a curfew – Check your probation account – GOV.UK')
-    expect(response.text).toContain('<span class="govuk-caption-l">Your licence conditions</span>')
+    expect(response.text).toContain('<span class="govuk-caption-l">Your probation</span>')
     expect(response.text).toContain('<h1 class="govuk-heading-xl">Follow a curfew</h1>')
-    expect(response.text).toContain('href="/licence/specific-conditions"')
+    expect(response.text).toContain('href="/your-probation/specific-conditions"')
     expect(response.text).toContain(
       '<li class="pop-condition-list__item"><span class="pop-condition-list__number">2.</span><span>(a) Stay at home from 7pm</span></li>',
     )
@@ -785,10 +819,10 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     const withoutTag = await renderPage('follow-a-curfew')
 
     expect(withTag.text).toContain('Help with this licence condition')
-    expect(withTag.text).toContain('href="/licence/specific-conditions/wear-a-gps-tag"')
+    expect(withTag.text).toContain('href="/your-probation/specific-conditions/wear-a-gps-tag"')
     expect(withoutTag.text).toContain('Help with this licence condition')
     expect(withoutTag.text).toContain('also have to follow your licence conditions for wearing a tag.')
-    expect(withoutTag.text).not.toContain('href="/licence/specific-conditions/wear-a-gps-tag"')
+    expect(withoutTag.text).not.toContain('href="/your-probation/specific-conditions/wear-a-gps-tag"')
   })
 
   it('shows the electronic monitoring condition and the tag help on a tag page', async () => {
@@ -1111,7 +1145,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       const response = await renderPage('areas-and-places-you-must-not-go-to')
 
       expect(response.text).toContain('Map of the area you must not enter</h3>')
-      expect(response.text).toContain('src="/licence/conditions/1440/204/image"')
+      expect(response.text).toContain('src="/your-probation/conditions/1440/204/image"')
       expect(response.text).toContain('alt="Map of the area you must not enter for licence condition 1. (a)"')
     })
 
@@ -1123,7 +1157,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       const response = await renderPage('areas-and-places-you-must-not-go-to')
 
       expect(response.text).toContain(
-        '<a class="govuk-link" href="/licence/conditions/1440/204/image" download="map-licence-condition-1a" data-tracking-id="licence_condition_download_map">Download map<span class="govuk-visually-hidden"> for licence condition 1. (a)</span></a>',
+        '<a class="govuk-link" href="/your-probation/conditions/1440/204/image" download="map-licence-condition-1a" data-tracking-id="licence_condition_download_map">Download map<span class="govuk-visually-hidden"> for licence condition 1. (a)</span></a>',
       )
     })
 
@@ -1140,9 +1174,9 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
 
       const items = [...response.text.matchAll(/<li class="pop-condition-list__item">([\s\S]*?)<\/li>/g)].map(m => m[1])
       expect(items).toHaveLength(3)
-      expect(items[0]).toContain('src="/licence/conditions/1440/204/image"')
+      expect(items[0]).toContain('src="/your-probation/conditions/1440/204/image"')
       expect(items[1]).not.toContain('Map of')
-      expect(items[2]).toContain('src="/licence/conditions/1440/229/image"')
+      expect(items[2]).toContain('src="/your-probation/conditions/1440/229/image"')
       expect(items[2]).toContain('for licence condition 1. (c)')
     })
 
@@ -1165,7 +1199,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       expect(response.text).toContain(
         '<h3 class="govuk-heading-s govuk-!-margin-bottom-2">Map of the area you must not leave</h3>',
       )
-      expect(response.text).toContain('src="/licence/conditions/1440/211/image"')
+      expect(response.text).toContain('src="/your-probation/conditions/1440/211/image"')
       expect(response.text).toContain('alt="Map of the area you must not leave for licence condition 1. (a)"')
       expect(response.text).toContain('Download map')
     })
@@ -1286,7 +1320,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     expect((await renderPage('not-a-group')).status).toBe(404)
   })
 
-  it('redirects community orders to the requirements page', async () => {
+  it('shows the order requirements page instead for community orders', async () => {
     peopleOnProbationService.getSentences.mockResolvedValue({
       sentences: [
         licenceSentence({
@@ -1299,7 +1333,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     const response = await renderPage('follow-a-curfew')
 
     expect(response.status).toBe(302)
-    expect(response.headers.location).toBe('/requirements')
+    expect(response.headers.location).toBe('/your-probation')
   })
 })
 
@@ -1321,7 +1355,7 @@ describe('GET /licence/conditions/:licenceId/:conditionId/image', () => {
   it('serves the image with its content type and safe headers', async () => {
     peopleOnProbationService.getLicenceConditionImage.mockResolvedValue({ body: png, contentType: 'image/png' })
 
-    const response = await getImage('/licence/conditions/1440/204/image')
+    const response = await getImage('/your-probation/conditions/1440/204/image')
 
     expect(response.status).toBe(200)
     expect(response.headers['content-type']).toBe('image/png')
@@ -1335,7 +1369,7 @@ describe('GET /licence/conditions/:licenceId/:conditionId/image', () => {
   it('serves a JPEG as image/jpeg', async () => {
     peopleOnProbationService.getLicenceConditionImage.mockResolvedValue({ body: jpeg, contentType: 'image/jpeg' })
 
-    const response = await getImage('/licence/conditions/1440/204/image')
+    const response = await getImage('/your-probation/conditions/1440/204/image')
 
     expect(response.status).toBe(200)
     expect(response.headers['content-type']).toBe('image/jpeg')
@@ -1347,7 +1381,7 @@ describe('GET /licence/conditions/:licenceId/:conditionId/image', () => {
     async contentType => {
       peopleOnProbationService.getLicenceConditionImage.mockResolvedValue({ body: png, contentType })
 
-      const response = await getImage('/licence/conditions/1440/204/image')
+      const response = await getImage('/your-probation/conditions/1440/204/image')
 
       expect(response.status).toBe(502)
       expect(response.body).not.toEqual(png)
@@ -1357,15 +1391,15 @@ describe('GET /licence/conditions/:licenceId/:conditionId/image', () => {
   it('uses the CRN from the session, not the URL', async () => {
     peopleOnProbationService.getLicenceConditionImage.mockResolvedValue({ body: jpeg, contentType: 'image/jpeg' })
 
-    await getImage('/licence/conditions/1440/204/image?crn=Z999999')
+    await getImage('/your-probation/conditions/1440/204/image?crn=Z999999')
 
     expect(peopleOnProbationService.getLicenceConditionImage).toHaveBeenCalledWith('X123456', 1440, 204)
   })
 
   it.each([
-    '/licence/conditions/0/204/image',
-    '/licence/conditions/1440/-1/image',
-    '/licence/conditions/abc/204/image',
+    '/your-probation/conditions/0/204/image',
+    '/your-probation/conditions/1440/-1/image',
+    '/your-probation/conditions/abc/204/image',
   ])('returns not found for an invalid id (%s) without calling the API', async path => {
     const response = await getImage(path)
 
@@ -1376,7 +1410,7 @@ describe('GET /licence/conditions/:licenceId/:conditionId/image', () => {
   it.each([404, 400])('returns not found when the API returns %s', async status => {
     peopleOnProbationService.getLicenceConditionImage.mockRejectedValue({ responseStatus: status })
 
-    const response = await getImage('/licence/conditions/1440/204/image')
+    const response = await getImage('/your-probation/conditions/1440/204/image')
 
     expect(response.status).toBe(404)
   })
@@ -1384,16 +1418,130 @@ describe('GET /licence/conditions/:licenceId/:conditionId/image', () => {
   it('passes other API errors to the error handler', async () => {
     peopleOnProbationService.getLicenceConditionImage.mockRejectedValue({ responseStatus: 500, message: 'boom' })
 
-    const response = await getImage('/licence/conditions/1440/204/image')
+    const response = await getImage('/your-probation/conditions/1440/204/image')
 
     expect(response.status).toBe(500)
   })
 
   it('redirects an unauthenticated request to sign in, like the other licence routes', async () => {
-    const response = await request(app).get('/licence/conditions/1440/204/image')
+    const response = await request(app).get('/your-probation/conditions/1440/204/image')
 
     expect(response.status).toBe(302)
-    expect(response.headers.location).toBe(`/?returnTo=${encodeURIComponent('/licence/conditions/1440/204/image')}`)
+    expect(response.headers.location).toBe(
+      `/?returnTo=${encodeURIComponent('/your-probation/conditions/1440/204/image')}`,
+    )
     expect(peopleOnProbationService.getLicenceConditionImage).not.toHaveBeenCalled()
+  })
+})
+
+describe('licence condition pages for someone also on an order', () => {
+  const order: SentenceResponse = {
+    eventNumber: 2,
+    type: 'SA2020 Suspended Sentence Order',
+    typeCode: '341',
+    startDate: '2025-01-15',
+    expectedEndDate: '2027-01-14',
+    licenceConditions: [],
+    requirements: [{ mainCategory: { code: 'RM49', description: 'Curfew' } }],
+  }
+
+  beforeEach(() => {
+    // The order first: the licence is found wherever it is.
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [order, licenceSentence()] })
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, updatedDateTime: '2026-05-14T10:00:00' }])
+    peopleOnProbationService.getLicence.mockResolvedValue({
+      id: 7,
+      conditions: { AP: { standard: [], additional: [], bespoke: [] } },
+    })
+  })
+
+  it.each(['standard-conditions', 'specific-conditions'])(
+    'captions /%s "Your sentence and licence" and links back to the licence page',
+    async page => {
+      const response = await request(app)
+        .get(`/your-probation/${page}`)
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(200)
+
+      expect(response.text).toContain('<span class="govuk-caption-l">Your sentence and licence</span>')
+      expect(response.text).toContain('href="/your-probation/licence"')
+    },
+  )
+
+  it('keeps the caption and back link to the summary for someone on licence only', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
+
+    const response = await request(app)
+      .get('/your-probation/standard-conditions')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).not.toContain('Your sentence and licence')
+    expect(response.text).not.toContain('href="/your-probation/licence"')
+  })
+})
+
+describe('licence page for an indeterminate sentence', () => {
+  const lifeSentence = licenceSentence({
+    type: 'Life imprisonment (Adult)',
+    typeCode: '308',
+    startDate: '2026-01-15',
+    // nDelius may still have an end date; Prisoner Search's flag says the sentence never ends.
+    expectedEndDate: '2099-01-01',
+  })
+
+  const renderLicencePage = async () =>
+    request(app)
+      .get('/your-probation')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+  beforeEach(() => {
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [lifeSentence] })
+    peopleOnProbationService.getLicence.mockResolvedValue({
+      id: 7,
+      conditions: { AP: { standard: [], additional: [], bespoke: [] } },
+    })
+  })
+
+  it('shows the start date only, with no end date, length or time until the licence ends', async () => {
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, indeterminateSentence: true }])
+
+    const response = await renderLicencePage()
+
+    expect(response.text).toContain('You are on licence')
+    expect(response.text).not.toContain('Until 1 January 2099')
+    expect(response.text).not.toContain('Time until your licence ends')
+    expect(response.text).not.toContain('role="progressbar"')
+    expect(response.text).toContain('Sentence start date')
+    expect(response.text).toContain('15 January 2026')
+    expect(response.text).not.toContain('Sentence end date')
+    expect(response.text).not.toContain('Total sentence length')
+    expect(response.text).toContain('Sentence type')
+  })
+
+  it.each([
+    ['fail', () => peopleOnProbationService.getLicence.mockRejectedValue(new Error('CVL down'))],
+    ['are not found', () => peopleOnProbationService.getLicence.mockRejectedValue({ responseStatus: 404 })],
+  ])('still leaves out the end date when the licence details %s', async (_, mockDetails) => {
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, indeterminateSentence: true }])
+    mockDetails()
+
+    const response = await renderLicencePage()
+
+    expect(response.text).toContain('You are on licence')
+    expect(response.text).not.toContain('Until 1 January 2099')
+    expect(response.text).not.toContain('role="progressbar"')
+    expect(response.text).not.toContain('Sentence end date')
+    expect(response.text).not.toContain('Total sentence length')
+  })
+
+  it("shows the sentence's end date when the licence does not say it is indeterminate", async () => {
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7 }])
+
+    const response = await renderLicencePage()
+
+    expect(response.text).toContain('Until 1 January 2099')
+    expect(response.text).toContain('Sentence end date')
   })
 })

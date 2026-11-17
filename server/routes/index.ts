@@ -7,22 +7,18 @@ import type { Services } from '../services'
 import { isBlockedLicenceUser, loadCurrentUser, requireAuthentication } from '../auth/currentUser'
 import normaliseReturnTo from '../auth/returnTo'
 import { getSessionCrn } from '../auth/sessionStore'
-import type { AppointmentResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
+import type { AppointmentResponse } from '../data/peopleOnProbationApiClient'
 import {
-  calculateDateProgress,
-  formatDate,
   formatDateWithDay,
   formatTimeRange,
   isMissedMandatoryAppointmentOrActivity,
   shouldIncludeMissedAppointmentInAlert,
-  isLicenceSentence,
   APPOINTMENTS_OVERVIEW_SIZE,
 } from '../utils/utils'
 import appointmentsRoutes from './appointments'
 import goalsRoutes from './goals'
 import progressRoutes from './progress'
-import requirementsRoutes from './requirements'
-import licenceRoutes from './licence'
+import yourProbationRoutes from './yourProbation'
 import probationOfficerRoutes from './probationOfficer'
 import detailsRoutes from './details'
 import chatbotRoutes from './chatbot'
@@ -49,18 +45,6 @@ type MissedAppointmentView = {
   timeRange?: string
 }
 
-type OrderProgressView = {
-  percentComplete: number
-  completedDuration: string
-  remainingDuration: string
-}
-
-type LicenceProgressView = {
-  expiryDate?: string
-  percentComplete?: number
-  remainingDuration?: string
-}
-
 function toNextAppointmentView(appointment?: AppointmentResponse): NextAppointmentView | null {
   if (!appointment) return null
 
@@ -82,30 +66,6 @@ function toMissedAppointmentView(appointment?: AppointmentResponse): MissedAppoi
     date: formatDateWithDay(appointment.date),
     timeRange: appointment.unpaidWork ? undefined : formatTimeRange(appointment.startTime, appointment.endTime),
   }
-}
-
-function toLicenceProgressView(sentences: SentenceResponse[]): LicenceProgressView | null {
-  const sentence = sentences[0]
-  if (!isLicenceSentence(sentence)) return null
-
-  const expiryDate = formatDate(sentence.expectedEndDate)
-  if (!sentence.startDate || !sentence.expectedEndDate) return { expiryDate }
-
-  const { percentComplete, remainingDuration } = calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
-  return { expiryDate, percentComplete, remainingDuration }
-}
-
-function toOrderProgressView(sentences: SentenceResponse[]): OrderProgressView | null {
-  const sentence = sentences[0]
-  // Licence sentences show the licence status and time remaining instead (see toLicenceProgressView).
-  if (isLicenceSentence(sentence)) return null
-  if (!sentence?.startDate || !sentence?.expectedEndDate) return null
-
-  const { percentComplete, completedDuration, remainingDuration } = calculateDateProgress(
-    sentence.startDate,
-    sentence.expectedEndDate,
-  )
-  return { percentComplete, completedDuration, remainingDuration }
 }
 
 export default function routes(services: Services): Router {
@@ -139,8 +99,11 @@ export default function routes(services: Services): Router {
   router.use('/appointments', appointmentsRoutes(services))
   router.use('/progress', progressRoutes(services))
   router.use('/goals', goalsRoutes(services))
-  router.use('/requirements', requirementsRoutes(services))
-  router.use('/licence', licenceRoutes(services))
+  router.use('/your-probation', yourProbationRoutes(services))
+  // The licence and order pages used to have their own URLs. Keep old links and bookmarks working.
+  router.use(['/licence', '/requirements'], (req, res) =>
+    res.redirect(301, `/your-probation${req.url === '/' ? '' : req.url}`),
+  )
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
   router.use('/api/chatbot', chatbotRoutes(services))
@@ -175,10 +138,9 @@ export default function routes(services: Services): Router {
         return res.redirect('/autherror')
       }
 
-      const [futureAppointments, pastAppointments, sentenceProgress] = await Promise.all([
+      const [futureAppointments, pastAppointments] = await Promise.all([
         services.peopleOnProbationService.getFutureAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
         services.peopleOnProbationService.getPastAppointments(crn, 0, APPOINTMENTS_OVERVIEW_SIZE),
-        services.peopleOnProbationService.getSentences(crn),
       ])
 
       const [nextAppointment] = futureAppointments.content
@@ -198,8 +160,6 @@ export default function routes(services: Services): Router {
         nextAppointment: toNextAppointmentView(nextAppointment),
         missedAppointment: missedAlertEnabled ? toMissedAppointmentView(missedAppointments[0]) : null,
         missedAppointmentsCount: missedAlertEnabled ? missedAppointments.length : 0,
-        orderProgress: toOrderProgressView(sentenceProgress.sentences),
-        licenceProgress: toLicenceProgressView(sentenceProgress.sentences),
       })
     } catch (error) {
       return next(error)
