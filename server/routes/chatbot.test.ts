@@ -3,6 +3,7 @@ import request from 'supertest'
 import jwt from 'jsonwebtoken'
 import chatbotRoutes from './chatbot'
 import type { Services } from '../services'
+import type { SentenceResponse } from '../data/peopleOnProbationApiClient'
 import type { AuthenticatedUserSession } from '../auth/sessionStore'
 import config from '../config'
 import logger from '../../logger'
@@ -457,11 +458,17 @@ describe('POST /api/chatbot/chat', () => {
             sentences: [
               {
                 type: 'Community Order',
+                typeCode: '340',
+                startDate: '2026-01-01',
+                expectedEndDate: '2027-01-01',
                 requirements: [{ mainCategory: { code: 'W', description: 'Unpaid Work' } }],
                 licenceConditions: [],
               },
               {
                 type: 'Community Order',
+                typeCode: '340',
+                startDate: '2026-01-01',
+                expectedEndDate: '2027-01-01',
                 requirements: [{ mainCategory: { code: 'RM49', description: 'Curfew' } }],
                 licenceConditions: [],
               },
@@ -555,6 +562,78 @@ describe('POST /api/chatbot/chat', () => {
     expect(ctx.sentenceProgress.sentences).toHaveLength(1)
     expect(ctx.sentenceProgress.sentences[0].startDate).toBe('2026-01-15')
     expect(ctx.sentenceProgress.sentences[0].expectedEndDate).toBeUndefined()
+  })
+
+  describe('orders that do not match', () => {
+    const communityOrder: SentenceResponse = {
+      type: 'SA2020 Community Order',
+      typeCode: '340',
+      startDate: '2025-01-01',
+      expectedEndDate: '2026-12-31',
+      requirements: [{ mainCategory: { code: 'W', description: 'Unpaid Work' }, required: 120, completed: 40 }],
+      licenceConditions: [],
+    }
+    const suspendedSentenceOrder: SentenceResponse = {
+      type: 'SA2020 Suspended Sentence Order',
+      typeCode: '341',
+      startDate: '2025-06-01',
+      expectedEndDate: '2027-06-01',
+      requirements: [
+        { mainCategory: { code: 'W', description: 'Unpaid Work' }, required: 80, completed: 10 },
+        { mainCategory: { code: 'RM49', description: 'Curfew' } },
+      ],
+      licenceConditions: [],
+    }
+    const licence: SentenceResponse = {
+      type: 'ORA Adult Custody (not PSS)',
+      typeCode: '327',
+      requirements: [],
+      licenceConditions: [{ mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }],
+    }
+
+    const userContextFor = async (sentences: SentenceResponse[]) => {
+      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-orders"}\n\n']),
+      } as unknown as Response)
+      const app = buildApp({
+        services: {
+          peopleOnProbationService: {
+            getSentences: jest.fn().mockResolvedValue({ sentences }),
+            getLicences: jest.fn().mockResolvedValue([]),
+          },
+        },
+      })
+      await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+      return JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string).user_context
+    }
+
+    const labels = (requirements: { label: string }[]) => requirements.map(r => r.label)
+
+    it('keeps each order with its own requirements, after the licence, as on the order pages', async () => {
+      const ctx = await userContextFor([communityOrder, licence, suspendedSentenceOrder])
+
+      const [licenceSentence, first, second] = ctx.sentenceProgress.sentences
+      expect(licenceSentence.type).toBe('ORA Adult Custody (not PSS)')
+      expect(licenceSentence.requirements).toEqual([])
+      expect(first.type).toBe('SA2020 Community Order')
+      expect(labels(first.requirements)).toEqual(['Community payback (unpaid work)'])
+      expect(second.type).toBe('SA2020 Suspended Sentence Order')
+      expect(labels(second.requirements)).toEqual(['Community payback (unpaid work)', 'Follow a curfew'])
+      expect(ctx.sentenceProgress.requirements).toBeUndefined()
+    })
+
+    it('also lists the requirements together, each once, apart from the orders, as on the summary', async () => {
+      const ctx = await userContextFor([communityOrder, suspendedSentenceOrder])
+
+      expect(labels(ctx.sentenceProgress.sentences[0].requirements)).toEqual(['Community payback (unpaid work)'])
+      expect(labels(ctx.sentenceProgress.sentences[1].requirements)).toEqual([
+        'Community payback (unpaid work)',
+        'Follow a curfew',
+      ])
+      expect(labels(ctx.sentenceProgress.requirements)).toEqual(['Community payback (unpaid work)', 'Follow a curfew'])
+      expect(ctx.sentenceProgress.requirements[0].required).toBe(200)
+    })
   })
 
   it('still builds user_context from the working endpoints when one upstream call rejects', async () => {

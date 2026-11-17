@@ -163,6 +163,18 @@ describe('groupOrders', () => {
     expect(orders[1].requirements).toEqual([requirement('F', 'RARREQ')])
   })
 
+  it.each([['typeCode'], ['startDate'], ['expectedEndDate']] as const)(
+    'keeps orders apart when both are missing their %s',
+    field => {
+      const orders = groupOrders([
+        order({ eventNumber: 1, [field]: undefined }),
+        order({ eventNumber: 2, [field]: undefined }),
+      ])
+
+      expect(orders.map(o => o.eventNumber)).toEqual([1, 2])
+    },
+  )
+
   it('shows matching orders once and other orders separately, in API order', () => {
     const orders = groupOrders([
       order({ eventNumber: 1 }),

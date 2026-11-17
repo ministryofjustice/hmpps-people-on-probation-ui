@@ -227,6 +227,11 @@ export const getSentenceKind = (sentence?: SentenceResponse): SentenceKind | und
 
 export const isLicenceSentence = (sentence?: SentenceResponse): boolean => getSentenceKind(sentence) === 'LICENCE'
 
+// The journey for everything someone is serving: licence if any sentence is a licence (wherever it is in
+// the list, as someone can be on licence and an order), otherwise the first sentence's kind that's known.
+export const getSentencesKind = (sentences: SentenceResponse[] = []): SentenceKind | undefined =>
+  sentences.some(isLicenceSentence) ? 'LICENCE' : sentences.map(getSentenceKind).find(Boolean)
+
 export const formatPersonName = (name?: PersonNameResponse): string | undefined => {
   if (!name) return undefined
   return [name.forename, name.middleName, name.surname].filter(Boolean).join(' ')

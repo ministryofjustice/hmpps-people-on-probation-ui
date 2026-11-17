@@ -2,7 +2,11 @@ import { Router, type Request, type Response } from 'express'
 import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 
 import type { Services } from '../services'
-import type { LicenceConditionImage, SentenceResponse } from '../data/peopleOnProbationApiClient'
+import type {
+  LicenceConditionImage,
+  LicenceSummaryResponse,
+  SentenceResponse,
+} from '../data/peopleOnProbationApiClient'
 import config from '../config'
 import { requireAuthentication } from '../auth/currentUser'
 import { getSessionCrn } from '../auth/sessionStore'
@@ -26,7 +30,7 @@ import {
   toLicenceTags,
   type AdditionalConditionGroupView,
 } from '../utils/licenceConditions'
-import findCurrentLicence from '../utils/currentLicence'
+import findCurrentLicence, { findCurrentLicenceSummary, findLicenceById } from '../utils/currentLicence'
 import { findLicence } from '../utils/concurrentOrders'
 
 type LicenceTagView = {
@@ -249,26 +253,38 @@ export default function licenceRoutes(services: Services): Router {
   return router
 }
 
-// From the person's CVL licence, for the licence page: their electronic monitoring tags, and whether
-// their sentence is indeterminate (from Prisoner Search). If the licence can't be loaded, the page is
-// still shown, without the tags and with the sentence's end date.
+// From the person's CVL licence, for the licence page: whether their sentence is indeterminate (from
+// Prisoner Search, on the licence summary) and their electronic monitoring tags (from the licence's
+// details). Each is looked up on its own, so if the details can't be loaded the page still knows the
+// sentence is indeterminate and only the tags are left out. If the summary can't be loaded either, the
+// page is shown with the sentence's end date.
 const findLicenceDetails = async (
   services: Services,
   crn: string,
   correlationId: string,
 ): Promise<{ tags: LicenceTagView[]; indeterminate: boolean }> => {
+  let summary: LicenceSummaryResponse | undefined
   try {
-    const licence = await findCurrentLicence(services, crn)
+    summary = await findCurrentLicenceSummary(services, crn)
+  } catch (error) {
+    logger.warn({ correlationId, err: error }, 'Could not load the licence summary for the licence page')
+    return { tags: [], indeterminate: false }
+  }
+  const indeterminate = summary?.indeterminateSentence === true
+  if (!summary) return { tags: [], indeterminate }
+
+  try {
+    const licence = await findLicenceById(services, crn, summary.id)
     return {
       tags: toLicenceTags(licence?.conditions?.AP?.additional).map(({ tagType, endDate }) => ({
         tagType,
         endDate: formatDate(endDate),
       })),
-      indeterminate: licence?.indeterminateSentence === true,
+      indeterminate,
     }
   } catch (error) {
     logger.warn({ correlationId, err: error }, 'Could not load the licence for the electronic monitoring tags')
-    return { tags: [], indeterminate: false }
+    return { tags: [], indeterminate }
   }
 }
 

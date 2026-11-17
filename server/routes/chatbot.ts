@@ -18,6 +18,7 @@ import type {
   PersonalContactResponse,
   ManagerResponse,
   SentenceProgressResponse,
+  RequirementResponse,
   SentenceResponse,
   AppointmentResponse,
   SentencePlanResponse,
@@ -154,13 +155,16 @@ function sanitizePersonalDetails(personalDetails: PersonalDetailsResponse): Reco
 // ever shown on a single requirement's own detail page (never the requirements
 // list this context is built from), so it's stripped here the same way
 // sanitizeAddress strips it.
+const sanitizeRequirements = (requirements?: RequirementResponse[]) =>
+  toRequirementViews(requirements).map(({ lastUpdatedAt, ...rest }) => rest)
+
 function sanitizeSentence(sentence: SentenceResponse): Record<string, unknown> {
   return {
     type: sentence.type,
     startDate: sentence.startDate,
     expectedEndDate: sentence.expectedEndDate,
     mainOffence: sentence.mainOffence?.description ? { description: sentence.mainOffence.description } : undefined,
-    requirements: toRequirementViews(sentence.requirements).map(({ lastUpdatedAt, ...rest }) => rest),
+    requirements: sanitizeRequirements(sentence.requirements),
     // licenceConditions is never rendered anywhere in the UI — dropped entirely.
   }
 }
@@ -169,13 +173,11 @@ function sanitizeSentenceProgress(
   sentenceProgress: SentenceProgressResponse,
   indeterminate = false,
 ): Record<string, unknown> {
-  // The same view as the "Your probation" page: the licence first, if there is one, then each order
-  // (matching orders as one, see groupOrders), with every requirement listed once. The requirements go
-  // on the first order, as the page lists them together rather than by order. A licence for an
-  // indeterminate sentence (such as life) has no end date, as on the licence page.
+  // The same view as the "Your probation" pages: the licence first, if there is one, then each order
+  // (matching orders as one, see groupOrders) with its own requirements, as on the order's page. A
+  // licence for an indeterminate sentence (such as life) has no end date, as on the licence page.
   const { licence } = findLicence(sentenceProgress.sentences)
   const orders = groupOrders(sentenceProgress.sentences?.filter(sentence => sentence !== licence))
-  const requirements = combineSentences(orders)?.requirements ?? []
   return {
     sentences: [
       ...(licence
@@ -187,8 +189,14 @@ function sanitizeSentenceProgress(
             }),
           ]
         : []),
-      ...orders.map((order, index) => sanitizeSentence({ ...order, requirements: index === 0 ? requirements : [] })),
+      ...orders.map(order => sanitizeSentence(order)),
     ],
+    // Orders that don't match, without a licence, also have their requirements listed together on the
+    // summary, each once ("Requirements in your orders"); kept apart from any one order.
+    ...(!licence &&
+      orders.length > 1 && {
+        requirements: sanitizeRequirements(combineSentences(orders)?.requirements),
+      }),
   }
 }
 

@@ -85,6 +85,16 @@ describe('loadSentenceKind', () => {
     expect(getSentences).not.toHaveBeenCalled()
   })
 
+  it('flags a licence that comes after an order in the sentences', async () => {
+    getSentences.mockResolvedValue({ sentences: [communityOrderSentence, licenceSentence] })
+    const user = session()
+
+    const response = await request(testApp(user)).get('/').expect(200)
+
+    expect(response.body).toEqual({ isLicence: true, sentenceKind: 'LICENCE' })
+    expect((await getAuthenticatedUserSession(user.id))?.sentenceKind).toEqual('LICENCE')
+  })
+
   it('falls back to not licence and leaves the kind uncached when the API fails', async () => {
     getSentences.mockRejectedValue(new Error('API down'))
     const user = session()

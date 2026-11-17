@@ -361,6 +361,25 @@ describe('GET /licence', () => {
       .expect('Location', '/autherror')
   })
 
+  it.each(['/your-probation', '/your-probation/licence', '/your-probation/standard-conditions'])(
+    'sends someone on an order and a licence to the error page from %s when the licence feature is off',
+    async path => {
+      config.features.licence = false
+      peopleOnProbationService.getSentences.mockResolvedValue({
+        sentences: [
+          { requirements: [{ mainCategory: { code: 'F', description: 'RAR' } }], licenceConditions: [] },
+          licenceSentence(),
+        ],
+      })
+
+      await request(app)
+        .get(path)
+        .set('Cookie', await createAppSessionCookie('X123456'))
+        .expect(302)
+        .expect('Location', '/autherror')
+    },
+  )
+
   describe('licence document', () => {
     beforeEach(() => {
       config.features.documents = true
@@ -1499,6 +1518,22 @@ describe('licence page for an indeterminate sentence', () => {
     expect(response.text).not.toContain('Sentence end date')
     expect(response.text).not.toContain('Total sentence length')
     expect(response.text).toContain('Sentence type')
+  })
+
+  it.each([
+    ['fail', () => peopleOnProbationService.getLicence.mockRejectedValue(new Error('CVL down'))],
+    ['are not found', () => peopleOnProbationService.getLicence.mockRejectedValue({ responseStatus: 404 })],
+  ])('still leaves out the end date when the licence details %s', async (_, mockDetails) => {
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, indeterminateSentence: true }])
+    mockDetails()
+
+    const response = await renderLicencePage()
+
+    expect(response.text).toContain('You are on licence')
+    expect(response.text).not.toContain('Until 1 January 2099')
+    expect(response.text).not.toContain('role="progressbar"')
+    expect(response.text).not.toContain('Sentence end date')
+    expect(response.text).not.toContain('Total sentence length')
   })
 
   it("shows the sentence's end date when the licence does not say it is indeterminate", async () => {

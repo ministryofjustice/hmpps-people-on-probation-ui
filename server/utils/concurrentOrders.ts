@@ -3,10 +3,10 @@ import { getRequirementType } from './requirementTypes'
 import { isLicenceSentence } from './utils'
 
 // Concurrent orders of the same type, starting and ending on the same dates, are shown as one order.
+// All three must be known: an order missing any of them is shown on its own rather than merged.
+const MATCHING_FIELDS = ['typeCode', 'startDate', 'expectedEndDate'] as const
 const isSameOrder = (order: SentenceResponse, other: SentenceResponse): boolean =>
-  order.typeCode === other.typeCode &&
-  order.startDate === other.startDate &&
-  order.expectedEndDate === other.expectedEndDate
+  MATCHING_FIELDS.every(field => Boolean(order[field]) && order[field] === other[field])
 
 // The same requirement has the same main and sub-category. Without a main category there's nothing to
 // match on, so it's kept on its own.
