@@ -4,6 +4,7 @@ import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import type { Services } from '../services'
 import type { LicenceResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import config from '../config'
+import { BESPOKE_CONDITIONS_KEY } from '../utils/licenceConditions'
 
 let app: Express
 let peopleOnProbationService: {
@@ -667,7 +668,8 @@ describe('GET /licence/specific-conditions', () => {
     const withoutBespoke = await renderPage()
 
     expect(cardTitles(withBespoke.text)).toEqual(['Follow a curfew', 'Other conditions specific to you'])
-    expect(withBespoke.text).toContain('href="/your-probation/specific-conditions/other-conditions-specific-to-you"')
+    expect(withBespoke.text).toContain(`href="/your-probation/specific-conditions/${BESPOKE_CONDITIONS_KEY}"`)
+    expect(withBespoke.text).toContain(`data-tracking-id="licence_condition_group_${BESPOKE_CONDITIONS_KEY}"`)
     expect(withBespoke.text).toContain('These are also called bespoke licence conditions')
     expect(cardTitles(withoutBespoke.text)).toEqual(['Follow a curfew'])
   })
@@ -688,7 +690,7 @@ describe('GET /licence/specific-conditions', () => {
 
     const response = await renderPage()
 
-    expect(response.text).toContain('You do not have any licence conditions specific to you.')
+    expect(response.text).toContain('You do not have any additional or bespoke licence conditions.')
   })
 
   it('still shows an unknown condition under its CVL category', async () => {
@@ -706,7 +708,7 @@ describe('GET /licence/specific-conditions', () => {
 
     const response = await renderPage()
 
-    expect(response.text).toContain('You do not have any licence conditions specific to you.')
+    expect(response.text).toContain('You do not have any additional or bespoke licence conditions.')
     expect(response.text).not.toContain('not available yet')
     expect(cardTitles(response.text)).toEqual([])
   })
@@ -722,9 +724,9 @@ describe('GET /licence/specific-conditions', () => {
       const response = await renderPage()
 
       expect(response.status).toBe(200)
-      expect(response.text).toContain('Your licence conditions specific to you are not available yet.')
+      expect(response.text).toContain('Your additional and bespoke licence conditions are not available yet.')
       expect(response.text).toContain('data-tracking-id="specific_conditions_unavailable_probation_officer_link"')
-      expect(response.text).not.toContain('You do not have any licence conditions specific to you.')
+      expect(response.text).not.toContain('You do not have any additional or bespoke licence conditions.')
       expect(response.text).not.toContain('Last updated on')
       expect(cardTitles(response.text)).toEqual([])
       expect(peopleOnProbationService.getLicence).not.toHaveBeenCalled()
@@ -737,7 +739,7 @@ describe('GET /licence/specific-conditions', () => {
     const response = await renderPage()
 
     expect(response.status).toBe(200)
-    expect(response.text).toContain('Your licence conditions specific to you are not available yet.')
+    expect(response.text).toContain('Your additional and bespoke licence conditions are not available yet.')
   })
 
   it('shows the order requirements page instead for community orders', async () => {

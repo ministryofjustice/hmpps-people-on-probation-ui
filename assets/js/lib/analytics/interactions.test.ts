@@ -1,4 +1,4 @@
-import { resolveInteractionElementId, isDetailsToggleClick } from './interactions'
+import { resolveInteractionElementId, isDetailsToggleClick, isClickInsideTrackedDetails } from './interactions'
 
 // No jsdom in this project's test environment (jest.config.mjs runs
 // testEnvironment: 'node'), so these fakes implement just the `closest`
@@ -92,5 +92,22 @@ describe('isDetailsToggleClick', () => {
     const target = fakeChainElement({ summary: null })
 
     expect(isDetailsToggleClick(target)).toBe(false)
+  })
+})
+
+describe('isClickInsideTrackedDetails', () => {
+  const fakeTarget = (tracked: { tagName: string } | null): Element =>
+    ({ closest: (selector: string) => (selector === '[data-tracking-id]' ? tracked : null) }) as unknown as Element
+
+  it('returns true when the closest tracked element is a <details>, such as a click on a map inside it', () => {
+    expect(isClickInsideTrackedDetails(fakeTarget({ tagName: 'DETAILS' }))).toBe(true)
+  })
+
+  it('returns false when the closest tracked element is a link inside the <details>', () => {
+    expect(isClickInsideTrackedDetails(fakeTarget({ tagName: 'A' }))).toBe(false)
+  })
+
+  it('returns false when nothing tracked contains the click', () => {
+    expect(isClickInsideTrackedDetails(fakeTarget(null))).toBe(false)
   })
 })
