@@ -65,17 +65,19 @@
     </div>
   {% endif %}
 
-  <div class="pop-inset-panel govuk-!-margin-bottom-6">
-    <h2 class="govuk-heading-s">Ending your probation early</h2>
-    <p class="govuk-body">Your probation officer may consider if your probation could end early. They recommend it if you:</p>
-    <ul class="govuk-list govuk-list--bullet">
-      <li>are making positive progress on probation</li>
-      <li>are engaging with probation</li>
-      <li>complete your requirements</li>
-      <li>achieve your sentence goals</li>
-    </ul>
-    <p class="govuk-body">Ending your probation early is not automatic. Your probation officer will consider your specific situation, but the panel will make the final decision.</p>
-    <p class="govuk-body">Your probation officer can help you understand how you are doing and if you could be considered for ending your probation early.</p>
-  </div>
+  {% if features.earlyTermination %}
+    <div class="pop-inset-panel govuk-!-margin-bottom-6">
+      <h2 class="govuk-heading-s">Ending your probation early</h2>
+      <p class="govuk-body">Your probation officer may consider if your probation could end early. They recommend it if you:</p>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>are making positive progress on probation</li>
+        <li>are engaging with probation</li>
+        <li>complete your requirements</li>
+        <li>achieve your sentence goals</li>
+      </ul>
+      <p class="govuk-body">Ending your probation early is not automatic. Your probation officer will consider your specific situation, but the panel will make the final decision.</p>
+      <p class="govuk-body">Your probation officer can help you understand how you are doing and if you could be considered for ending your probation early.</p>
+    </div>
+  {% endif %}
 
 {% endblock %}

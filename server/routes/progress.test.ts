@@ -243,13 +243,16 @@ describe('GET /progress', () => {
 
 describe('GET /progress overall progress and ending early', () => {
   const originalLicenceFlag = config.features.licence
+  const originalEarlyTerminationFlag = config.features.earlyTermination
 
   beforeEach(() => {
     config.features.licence = true
+    config.features.earlyTermination = true
   })
 
   afterEach(() => {
     config.features.licence = originalLicenceFlag
+    config.features.earlyTermination = originalEarlyTerminationFlag
   })
 
   const mockSentences = (sentences: SentenceResponse[]) => {
@@ -408,6 +411,17 @@ describe('GET /progress overall progress and ending early', () => {
 
     expect(response.text).toContain('<h2 class="govuk-heading-s">Ending your probation early</h2>')
     expect(response.text).toContain('the panel will make the final decision')
+  })
+
+  it('hides the ending your probation early guidance when the feature is off', async () => {
+    config.features.earlyTermination = false
+    mockSentences([communityOrder()])
+
+    const response = await renderProgress()
+
+    expect(response.status).toBe(200)
+    expect(response.text).toContain('Your achievements')
+    expect(response.text).not.toContain('Ending your probation early')
   })
 
   it('still shows the achievements and guidance, without any progress, when sentences cannot be loaded', async () => {
