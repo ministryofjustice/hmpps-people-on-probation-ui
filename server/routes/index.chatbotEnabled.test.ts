@@ -51,13 +51,14 @@ describe('when the chatbot is live', () => {
     expect(peopleOnProbationService.getFutureAppointments).toHaveBeenCalledWith('X123456', 0, 50)
   })
 
-  it('GET / shows the Chat nav item and points Home at /, not /home', async () => {
+  it('GET / shows the AI assistant nav item and points Home at /, not /home', async () => {
     const response = await request(app)
       .get('/')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).toContain('href="/chat"')
+    expect(response.text).toMatch(/href="\/chat"[^>]*>\s*AI assistant\s*</)
+    expect(response.text).not.toMatch(/>\s*Chat\s*</)
     expect(response.text).not.toContain('href="/home"')
   })
 
