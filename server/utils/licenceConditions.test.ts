@@ -209,11 +209,11 @@ describe('toBespokeConditionGroup', () => {
 
   it('numbers bespoke conditions on from the additional condition categories, without letters', () => {
     expect(toBespokeConditionGroup(additional, [{ text: 'First' }, { text: '' }, { text: 'Second' }])).toEqual({
-      key: 'bespoke-licence-conditions',
-      title: 'Bespoke licence conditions',
+      key: 'other-conditions-specific-to-you',
+      title: 'Other conditions specific to you',
       conditions: [
-        { groupKey: 'bespoke-licence-conditions', number: 3, text: 'First' },
-        { groupKey: 'bespoke-licence-conditions', number: 4, text: 'Second' },
+        { groupKey: 'other-conditions-specific-to-you', number: 3, text: 'First' },
+        { groupKey: 'other-conditions-specific-to-you', number: 4, text: 'Second' },
       ],
     })
   })

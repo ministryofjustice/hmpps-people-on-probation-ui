@@ -281,7 +281,7 @@ export const toAdditionalConditionGroup = (
   }
 }
 
-export const BESPOKE_CONDITIONS_KEY = 'bespoke-licence-conditions'
+export const BESPOKE_CONDITIONS_KEY = 'other-conditions-specific-to-you'
 
 // The person's bespoke conditions page, or undefined when they have none. On the licence document they
 // come after the additional conditions, each with its own number and no letter: the first is numbered
@@ -295,7 +295,7 @@ export const toBespokeConditionGroup = (
   const additionalCategoryCount = new Set(additional.map(({ category }) => category ?? '')).size
   return {
     key: BESPOKE_CONDITIONS_KEY,
-    title: 'Bespoke licence conditions',
+    title: 'Other conditions specific to you',
     conditions: conditions.map(({ text }, index) => ({
       groupKey: BESPOKE_CONDITIONS_KEY,
       number: additionalCategoryCount + index + 1,

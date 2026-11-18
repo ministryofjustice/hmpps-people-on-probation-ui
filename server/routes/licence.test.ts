@@ -626,9 +626,7 @@ describe('GET /licence/specific-conditions', () => {
       .set('Cookie', await createAppSessionCookie('X123456'))
 
   const cardTitles = (html: string) =>
-    [...html.matchAll(/<h2 class="govuk-heading-m pop-card__title govuk-!-margin-bottom-0">([^<]*)<\/h2>/g)].map(
-      m => m[1],
-    )
+    [...html.matchAll(/<h2 class="govuk-heading-m pop-card__title[^"]*">([^<]*)<\/h2>/g)].map(m => m[1])
 
   beforeEach(() => {
     peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
@@ -647,8 +645,8 @@ describe('GET /licence/specific-conditions', () => {
     const response = await renderPage()
 
     expect(response.status).toBe(200)
-    expect(response.text).toContain('Licence conditions specific to you – Check your probation account – GOV.UK')
-    expect(response.text).toContain('<h1 class="govuk-heading-xl">Licence conditions specific to you</h1>')
+    expect(response.text).toContain('Additional and bespoke licence conditions – Check your probation account – GOV.UK')
+    expect(response.text).toContain('<h1 class="govuk-heading-xl">Additional and bespoke licence conditions</h1>')
     expect(response.text).toContain('Last updated on Thursday 14 May 2026, 12:29pm')
     expect(response.text).toContain('These conditions can be added, removed or changed.')
     expect(response.text).toContain('href="/your-probation/standard-conditions"')
@@ -668,8 +666,9 @@ describe('GET /licence/specific-conditions', () => {
     )
     const withoutBespoke = await renderPage()
 
-    expect(cardTitles(withBespoke.text)).toEqual(['Follow a curfew', 'Bespoke licence conditions'])
-    expect(withBespoke.text).toContain('href="/your-probation/specific-conditions/bespoke-licence-conditions"')
+    expect(cardTitles(withBespoke.text)).toEqual(['Follow a curfew', 'Other conditions specific to you'])
+    expect(withBespoke.text).toContain('href="/your-probation/specific-conditions/other-conditions-specific-to-you"')
+    expect(withBespoke.text).toContain('These are also called bespoke licence conditions')
     expect(cardTitles(withoutBespoke.text)).toEqual(['Follow a curfew'])
   })
 
@@ -681,7 +680,7 @@ describe('GET /licence/specific-conditions', () => {
     const response = await renderPage()
 
     expect(cardTitles(response.text)).toEqual(['Follow a curfew'])
-    expect(response.text).not.toContain('bespoke-licence-conditions')
+    expect(response.text).not.toContain('other-conditions-specific-to-you')
   })
 
   it('says there are none when the only bespoke conditions are empty', async () => {
@@ -845,6 +844,9 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     )
     expect(response.text).toContain('Help with this licence condition')
     expect(response.text).toContain('You need to wear this tag all of the time.')
+    expect(response.text).toContain(
+      'tell <a class="govuk-link" href="/probation-officer" data-tracking-id="licence_condition_help_tag_probation_officer_link">your probation officer</a> if it stops working',
+    )
   })
 
   it('shows the title and help for areas and places you must not go to', async () => {
@@ -865,6 +867,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     expect(response.text).toContain('<h1 class="govuk-heading-xl">Areas and places you must not go to</h1>')
     expect(response.text).toContain('(a) Not to enter the area as defined by the attached map.')
     expect(response.text).toContain('Help with this licence condition')
+    expect(response.text).toContain('In your licence document, this is called an <strong>exclusion zone</strong>.')
     expect(response.text).toContain('Make sure you understand all the places you cannot go to')
   })
 
@@ -879,7 +882,9 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     expect(response.text).toContain('<h1 class="govuk-heading-xl">Areas you must not leave</h1>')
     expect(response.text).toContain('(a) You must remain within the area.')
     expect(response.text).toContain('Help with this licence condition')
-    expect(response.text).toContain('A tag may be used to check that you are not leaving the area.')
+    expect(response.text).toContain(
+      'In your licence document, this is called an <strong>inclusion zone</strong>. A tag may be used to check that you are not leaving the area.',
+    )
   })
 
   it('shows the help for things you are not allowed to do', async () => {
@@ -1089,11 +1094,11 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
         withBespoke([{ text: 'Do not attend the O2 Arena.' }, { text: 'Do not visit Leeds.' }]),
       )
 
-      const response = await renderPage('bespoke-licence-conditions')
+      const response = await renderPage('other-conditions-specific-to-you')
 
       expect(response.status).toBe(200)
-      expect(response.text).toContain('Bespoke licence conditions – Check your probation account – GOV.UK')
-      expect(response.text).toContain('<h1 class="govuk-heading-xl">Bespoke licence conditions</h1>')
+      expect(response.text).toContain('Other conditions specific to you – Check your probation account – GOV.UK')
+      expect(response.text).toContain('<h1 class="govuk-heading-xl">Other conditions specific to you</h1>')
       expect(response.text).toContain('<h2 class="govuk-heading-l">Your licence conditions</h2>')
       expect(response.text).toContain(
         '<span class="pop-condition-list__number">3.</span><span>Do not attend the O2 Arena.</span>',
@@ -1104,18 +1109,18 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       expect(response.text).not.toContain('pop-help-panel')
     })
 
-    it('says "Your licence conditions" even when there is only one', async () => {
+    it('says "Your licence condition" when there is only one', async () => {
       peopleOnProbationService.getLicence.mockResolvedValue(withBespoke([{ text: 'Do not attend the O2 Arena.' }]))
 
-      const response = await renderPage('bespoke-licence-conditions')
+      const response = await renderPage('other-conditions-specific-to-you')
 
-      expect(response.text).toContain('<h2 class="govuk-heading-l">Your licence conditions</h2>')
+      expect(response.text).toContain('<h2 class="govuk-heading-l">Your licence condition</h2>')
     })
 
     it('returns not found when there are no bespoke conditions', async () => {
       peopleOnProbationService.getLicence.mockResolvedValue(withBespoke([]))
 
-      expect((await renderPage('bespoke-licence-conditions')).status).toBe(404)
+      expect((await renderPage('other-conditions-specific-to-you')).status).toBe(404)
     })
   })
 
@@ -1161,7 +1166,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       )
     })
 
-    it('shows each map directly under its own condition', async () => {
+    it('puts each map in its own collapsed section under its condition when there are two or more', async () => {
       peopleOnProbationService.getLicence.mockResolvedValue(
         mapLicence([
           { id: 204, code: EXCLUSION_ZONE, hasImageUpload: true },
@@ -1175,9 +1180,31 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       const items = [...response.text.matchAll(/<li class="pop-condition-list__item">([\s\S]*?)<\/li>/g)].map(m => m[1])
       expect(items).toHaveLength(3)
       expect(items[0]).toContain('src="/your-probation/conditions/1440/204/image"')
-      expect(items[1]).not.toContain('Map of')
+      expect(items[0]).toContain(
+        'View map and description<span class="govuk-visually-hidden"> for licence condition 1. (a)</span>',
+      )
+      expect(items[1]).not.toContain('/image"')
       expect(items[2]).toContain('src="/your-probation/conditions/1440/229/image"')
-      expect(items[2]).toContain('for licence condition 1. (c)')
+      expect(items[2]).toContain(
+        'View map and description<span class="govuk-visually-hidden"> for licence condition 1. (c)</span>',
+      )
+      expect(response.text.match(/<details class="govuk-details/g)).toHaveLength(2)
+      expect(response.text).not.toMatch(/<details[^>]*\bopen\b/)
+      expect(response.text).not.toContain('Map of the area you must not enter</h3>')
+    })
+
+    it('shows a single map on the page, not in a collapsed section', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        mapLicence([
+          { id: 204, code: EXCLUSION_ZONE, hasImageUpload: true },
+          { id: 205, code: '42f71b40-84cd-446d-8647-f00bbb6c079c' },
+        ]),
+      )
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      expect(response.text).toContain('Map of the area you must not enter</h3>')
+      expect(response.text).not.toContain('View map and description')
     })
 
     it('shows no map for conditions without an uploaded image', async () => {
