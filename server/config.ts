@@ -207,6 +207,9 @@ const config = {
     // Master switch for the public /research/* participant guidance pages. Off by default:
     // the pages still hold placeholder content ([what], booking link, privacy notice link).
     researchGuidance: get('FEATURE_RESEARCH_GUIDANCE', 'false') === 'true',
+    // Master switch for the "Ending your probation early" guidance on the progress page. Off by
+    // default: the content isn't finalised yet.
+    earlyTermination: get('FEATURE_EARLY_TERMINATION', 'false') === 'true',
   },
 }
 
