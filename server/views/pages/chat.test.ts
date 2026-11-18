@@ -22,6 +22,21 @@ describe('Chat page banners', () => {
     expect(html.includes('govuk-phase-banner')).toBe(enabled)
   })
 
+  it('tells the widget about voice only when the environment has it enabled', () => {
+    const on = env.render('pages/chat.njk', {
+      user: {},
+      feedbackBanner: { enabled: false },
+      chatbotVoiceEnabled: true,
+      chatbotVoiceMaxSeconds: 600,
+    })
+    expect(on).toContain('data-voice-enabled="true"')
+    expect(on).toContain('data-voice-max-seconds="600"')
+
+    const off = env.render('pages/chat.njk', { user: {}, feedbackBanner: { enabled: false } })
+    expect(off).not.toContain('data-voice-enabled')
+    expect(off).not.toContain('data-voice-max-seconds')
+  })
+
   it('renders the beta banner without preview controls for a citizen', () => {
     const html = env.render('pages/chat.njk', { user: {}, feedbackBanner: { enabled: true } })
 

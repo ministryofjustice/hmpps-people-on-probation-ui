@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import express, { Router, Request, Response, NextFunction } from 'express'
 import helmet from 'helmet'
-import config from '../config'
+import config, { isChatbotVoiceEnabled } from '../config'
 
 export default function setUpWebSecurity(): Router {
   const router = express.Router()
@@ -44,6 +44,10 @@ export default function setUpWebSecurity(): Router {
           // (URL.createObjectURL) before anything is uploaded.
           connectSrc: ["'self'", 'https://www.smartsurvey.co.uk', 'https://*.s3.eu-west-2.amazonaws.com', 'blob:'],
           frameSrc: ['https://www.smartsurvey.co.uk', 'https://www.veed.io'],
+          // Spoken chatbot replies are fetched from our own /api/chatbot/voice/speak
+          // and played from a blob: URL (the audio never has a fetchable URL of
+          // its own, so <audio src> can't point at 'self' directly).
+          mediaSrc: ["'self'", 'blob:'],
           formAction: [`'self' ${config.oneLogin.issuerUrl}`],
           ...(config.production ? {} : { upgradeInsecureRequests: null }),
         },
@@ -59,6 +63,14 @@ export default function setUpWebSecurity(): Router {
       referrerPolicy: { policy: 'same-origin' },
     }),
   )
+  // helmet doesn't set Permissions-Policy. The only thing on this site that
+  // ever asks for the microphone is the chatbot's voice input, and only from
+  // our own origin — so allow exactly that when voice is on, and say so
+  // explicitly when it's off rather than leaving the browser default.
+  router.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Permissions-Policy', isChatbotVoiceEnabled() ? 'microphone=(self)' : 'microphone=()')
+    next()
+  })
   router.use((req: Request, res: Response, next: NextFunction) => {
     if (!feedbackBanner.enabled && !isFeedbackPage(req) && !isWelcomePage(req)) {
       res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')

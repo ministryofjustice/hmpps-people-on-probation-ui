@@ -20,6 +20,7 @@
     <div
       id="chatbot-root"
       {% if greetingName %}data-display-title="Hi, {{ greetingName }}"{% endif %}
+      {% if chatbotVoiceEnabled %}data-voice-enabled="true" data-voice-max-seconds="{{ chatbotVoiceMaxSeconds }}"{% endif %}
     ></div>
   </main>
 {% endblock %}

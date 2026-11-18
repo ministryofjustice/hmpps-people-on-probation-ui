@@ -2,7 +2,7 @@ import { Router, type Response, type NextFunction } from 'express'
 import { differenceInDays } from 'date-fns'
 
 import logger from '../../logger'
-import config, { chatbotEnabled } from '../config'
+import config, { chatbotEnabled, isChatbotVoiceEnabled } from '../config'
 import type { Services } from '../services'
 import { isBlockedLicenceUser, loadCurrentUser, requireAuthentication } from '../auth/currentUser'
 import normaliseReturnTo from '../auth/returnTo'
@@ -22,6 +22,7 @@ import yourProbationRoutes from './yourProbation'
 import probationOfficerRoutes from './probationOfficer'
 import detailsRoutes from './details'
 import chatbotRoutes from './chatbot'
+import chatbotVoiceRoutes, { MAX_RECORDING_SECONDS } from './chatbotVoice'
 import expectationsRoutes from './expectations'
 import feedbackRoutes from './feedback'
 import adminRoutes from './admin'
@@ -107,6 +108,7 @@ export default function routes(services: Services): Router {
   router.use('/probation-officer', probationOfficerRoutes(services))
   router.use('/details', detailsRoutes(services))
   router.use('/api/chatbot', chatbotRoutes(services))
+  router.use('/api/chatbot/voice', chatbotVoiceRoutes())
   router.use('/probation-agreement', expectationsRoutes(services))
   router.use('/feedback', feedbackRoutes(services))
 
@@ -200,7 +202,13 @@ export default function routes(services: Services): Router {
           // Non-fatal — fall back to the widget's default greeting.
         }
       }
-      return res.render('pages/chat', { greetingName })
+      // Voice is a per-environment opt-in (speech key + flag); the page tells the
+      // widget whether to show the microphone and Listen controls at all.
+      return res.render('pages/chat', {
+        greetingName,
+        chatbotVoiceEnabled: isChatbotVoiceEnabled(),
+        chatbotVoiceMaxSeconds: MAX_RECORDING_SECONDS,
+      })
     })
   }
 
