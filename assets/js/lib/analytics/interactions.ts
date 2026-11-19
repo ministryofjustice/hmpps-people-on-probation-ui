@@ -36,3 +36,14 @@ export function resolveInteractionElementId(target: Element): string | undefined
 export function isDetailsToggleClick(target: Element): boolean {
   return Boolean(target.closest('summary')?.closest('details'))
 }
+
+/**
+ * True when the click's closest tracked element is a <details> itself, i.e. a
+ * click on its open content (text, an image) rather than on a tracked link or
+ * button inside it. Opening the details is already counted by the 'toggle'
+ * listener, so counting these clicks under the same id would report the
+ * section as opened again.
+ */
+export function isClickInsideTrackedDetails(target: Element): boolean {
+  return target.closest('[data-tracking-id]')?.tagName === 'DETAILS'
+}

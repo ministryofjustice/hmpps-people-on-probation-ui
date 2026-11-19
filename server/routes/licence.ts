@@ -159,15 +159,16 @@ export default function licenceRoutes(services: Services): Router {
         )
       }
 
+      // Only shown when the licence has bespoke conditions. Its key and title come from the bespoke group,
+      // so the card always matches the page it links to.
+      const bespoke = toBespokeConditionGroup(licence?.conditions?.AP?.additional, licence?.conditions?.AP?.bespoke)
+
       return res.render('pages/licence-specific-conditions', {
         // False when CVL has no licence for the person yet (an empty list or 404), so we can't say
         // whether they have conditions specific to them.
         licenceAvailable: Boolean(licence),
         groups,
-        // Only shown when the licence has bespoke conditions.
-        hasBespokeConditions: Boolean(
-          toBespokeConditionGroup(licence?.conditions?.AP?.additional, licence?.conditions?.AP?.bespoke),
-        ),
+        bespokeGroup: bespoke && { key: bespoke.key, title: bespoke.title },
         lastUpdatedAt: formatDateTimeWithDay(licence?.updatedDateTime ?? licence?.approvedDateTime),
         withOrders,
       })

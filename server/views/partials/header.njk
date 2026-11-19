@@ -9,14 +9,14 @@
    should. Off /admin pages (adminUser unset) any citizen session counts, as
    before. #}
 {% if user and (not adminUser or user.previewedByAdmin) %}
-  {# Home is always the dashboard at /. When the chatbot is enabled a "Chat" item
+  {# Home is always the dashboard at /. When the chatbot is enabled an "AI assistant" item
      is added below it — the only way into the chat page. #}
   {% set citizenNav = [
     { href: "/", text: "Home", active: currentPage === "home" }
   ] %}
   {% if chatbotEnabled %}
     {% set citizenNav = citizenNav.concat([
-      { href: "/chat", text: "Chat", active: currentPage === "chat" }
+      { href: "/chat", text: "AI assistant", active: currentPage === "chat" }
     ]) %}
   {% endif %}
   {% set citizenNav = citizenNav.concat([

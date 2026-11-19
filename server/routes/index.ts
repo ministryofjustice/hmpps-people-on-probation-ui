@@ -166,7 +166,7 @@ export default function routes(services: Services): Router {
     }
   }
 
-  // Full-screen chat page, reached only via the "Chat" item in the service nav
+  // Full-screen chat page, reached only via the "AI assistant" item in the service nav
   // (the dashboard at / is always the landing page). Gated behind
   // `chatbotEnabled` (the flag AND the backend creds — the same check the nav
   // uses, so routes and nav can't disagree). With it off, /chat doesn't exist.

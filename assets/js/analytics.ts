@@ -1,7 +1,11 @@
 import { AnalyticsClient } from './lib/analytics/client'
 import { buildDeviceInfo, type ClientHints, type DeviceInfo } from './lib/analytics/deviceInfo'
 import { createEvent, type CreateEventContext } from './lib/analytics/events'
-import { resolveInteractionElementId, isDetailsToggleClick } from './lib/analytics/interactions'
+import {
+  resolveInteractionElementId,
+  isDetailsToggleClick,
+  isClickInsideTrackedDetails,
+} from './lib/analytics/interactions'
 import { computeScrollDepthPercent } from './lib/analytics/scrollDepth'
 
 const APPLICATION = 'hmpps-people-on-probation-ui'
@@ -182,6 +186,9 @@ try {
     // double-count a single details expansion as two interaction_clicked
     // events.
     if (isDetailsToggleClick(event.target)) return
+    // Clicks on a tracked <details>' open content (not a tracked link inside it)
+    // would be counted as opening it again.
+    if (isClickInsideTrackedDetails(event.target)) return
     const elementId = resolveInteractionElementId(event.target)
     if (!elementId) return
     client.send(createEvent(eventContext(), 'interaction_clicked', { elementId }), true)

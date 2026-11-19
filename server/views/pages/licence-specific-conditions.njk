@@ -1,7 +1,7 @@
 {% extends "../partials/layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 
-{% set pageTitle = "Licence conditions specific to you – Check your probation account – GOV.UK" %}
+{% set pageTitle = "Additional and bespoke licence conditions – Check your probation account – GOV.UK" %}
 {% set currentPage = "licence" %}
 
 {% block breadcrumb %}
@@ -11,7 +11,7 @@
 {% block content %}
 
   {% if withOrders %}<span class="govuk-caption-l">Your sentence and licence</span>{% endif %}
-  <h1 class="govuk-heading-xl">Licence conditions specific to you</h1>
+  <h1 class="govuk-heading-xl">Additional and bespoke licence conditions</h1>
 
   {% if lastUpdatedAt %}
     <div class="govuk-inset-text guidance-panel govuk-!-margin-bottom-6">
@@ -26,8 +26,8 @@
   <p class="govuk-body"><a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="specific_conditions_probation_officer_link">Your probation officer</a> can help you understand your licence conditions if you are not sure.</p>
 
   {% if not licenceAvailable %}
-    <p class="govuk-body">Your licence conditions specific to you are not available yet. Ask <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="specific_conditions_unavailable_probation_officer_link">your probation officer</a> if you need to know what they are.</p>
-  {% elif groups.length or hasBespokeConditions %}
+    <p class="govuk-body">Your additional and bespoke licence conditions are not available yet. Ask <a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="specific_conditions_unavailable_probation_officer_link">your probation officer</a> if you need to know what they are.</p>
+  {% elif groups.length or bespokeGroup %}
     <ul class="pop-condition-groups">
       {% for group in groups %}
         <li class="pop-condition-groups__card">
@@ -36,16 +36,17 @@
           </a>
         </li>
       {% endfor %}
-      {% if hasBespokeConditions %}
+      {% if bespokeGroup %}
         <li class="pop-condition-groups__card">
-          <a href="/your-probation/specific-conditions/bespoke-licence-conditions" class="pop-card" data-tracking-id="licence_condition_group_bespoke-licence-conditions">
-            <h2 class="govuk-heading-m pop-card__title govuk-!-margin-bottom-0">Bespoke licence conditions</h2>
+          <a href="/your-probation/specific-conditions/{{ bespokeGroup.key }}" class="pop-card" data-tracking-id="licence_condition_group_{{ bespokeGroup.key }}">
+            <h2 class="govuk-heading-m pop-card__title">{{ bespokeGroup.title }}</h2>
+            <p class="govuk-body pop-card__body">These are also called bespoke licence conditions</p>
           </a>
         </li>
       {% endif %}
     </ul>
   {% else %}
-    <p class="govuk-body">You do not have any licence conditions specific to you.</p>
+    <p class="govuk-body">You do not have any additional or bespoke licence conditions.</p>
   {% endif %}
 
 {% endblock %}

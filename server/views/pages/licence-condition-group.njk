@@ -1,5 +1,6 @@
 {% extends "../partials/layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
 {% from "../macros/helpPanel.njk" import helpPanel %}
 
 {% set pageTitle = group.title + " – Check your probation account – GOV.UK" %}
@@ -14,7 +15,9 @@
   <span class="govuk-caption-l">{{ "Your sentence and licence" if withOrders else "Your probation" }}</span>
   <h1 class="govuk-heading-xl">{{ group.title }}</h1>
 
-  <h2 class="govuk-heading-l">Your licence conditions</h2>
+  <h2 class="govuk-heading-l">{{ "Your licence condition" if group.conditions.length == 1 else "Your licence conditions" }}</h2>
+  {# With two or more maps, each one is in its own collapsed "View map and description" section. #}
+  {% set mapCount = group.conditions | selectattr("mapUrl") | length %}
   {# Numbered as on the licence document, e.g. "7. (a)" - see toNumberedAdditionalConditions. Bespoke
      conditions have a number only. #}
   <ol class="govuk-list pop-condition-list">
@@ -24,10 +27,22 @@
           {% set conditionLabel = condition.number + "." + (" (" + condition.letter + ")" if condition.letter else "") %}
           {# No extension: the browser adds one from the served content type. #}
           {% set mapFilename = "map-licence-condition-" + condition.number + (condition.letter or "") %}
-          <div class="pop-condition-list__map">
-            <h3 class="govuk-heading-s govuk-!-margin-bottom-2">{{ mapHeading }}</h3>
+          {% set mapHtml %}
             <img class="pop-condition-map" src="{{ condition.mapUrl }}" alt="{{ mapHeading }} for licence condition {{ conditionLabel }}">
             <p class="govuk-body govuk-!-margin-bottom-0"><a class="govuk-link" href="{{ condition.mapUrl }}" download="{{ mapFilename }}" data-tracking-id="licence_condition_download_map">Download map<span class="govuk-visually-hidden"> for licence condition {{ conditionLabel }}</span></a></p>
+          {% endset %}
+          <div class="pop-condition-list__map">
+            {% if mapCount > 1 %}
+              {{ govukDetails({
+                summaryHtml: 'View map and description<span class="govuk-visually-hidden"> for licence condition ' + conditionLabel + '</span>',
+                html: mapHtml,
+                classes: "govuk-!-margin-bottom-0",
+                attributes: { "data-tracking-id": "licence_condition_view_map" }
+              }) }}
+            {% else %}
+              <h3 class="govuk-heading-s govuk-!-margin-bottom-2">{{ mapHeading }}</h3>
+              {{ mapHtml | safe }}
+            {% endif %}
           </div>
         {%- endif %}</li>
     {% endfor %}
