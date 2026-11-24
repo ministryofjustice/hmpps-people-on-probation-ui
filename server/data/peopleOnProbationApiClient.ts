@@ -27,6 +27,7 @@ export interface TeamResponse {
 
 export interface ManagerResponse {
   name: PersonNameResponse
+  telephoneNumber?: string | null
   team?: TeamResponse
   officeLocationUrl?: string | null
   officeName?: string | null

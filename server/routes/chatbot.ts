@@ -6,6 +6,7 @@ import type { Services } from '../services'
 import { getSessionCrn } from '../auth/sessionStore'
 import { combineSentences, findLicence, groupOrders } from '../utils/concurrentOrders'
 import { hasIndeterminateSentence } from '../utils/currentLicence'
+import { formatPractitionerName, sanitiseOfficeLocationUrl } from '../utils/utils'
 import { toAppointmentCardView } from './appointments'
 import type { AppointmentCardView } from './appointments'
 import { toRequirementViews } from './requirements'
@@ -51,7 +52,6 @@ function flattenForEmbedContext(raw: UserContext): Record<string, unknown> {
   const sentence = ((sentenceProgress.sentences as Array<Record<string, unknown>> | undefined) ?? [])[0] ?? {}
   const practitioner = (personalDetails.practitioner ?? {}) as Record<string, unknown>
   const practitionerName = (practitioner.name ?? {}) as Record<string, unknown>
-  const practitionerTeam = (practitioner.team ?? {}) as Record<string, unknown>
   const futureAppointments = (raw.futureAppointments ?? []) as SanitizedAppointment[]
   const nextAppt = futureAppointments[0]
   const requirements = (sentence.requirements as RequirementView[] | undefined) ?? []
@@ -61,7 +61,7 @@ function flattenForEmbedContext(raw: UserContext): Record<string, unknown> {
     preferred_name: personalDetails.preferredName,
     order_type: sentence.type,
     probation_practitioner_name: [practitionerName.forename, practitionerName.surname].filter(Boolean).join(' '),
-    probation_practitioner_phone: practitionerTeam.telephoneNumber,
+    probation_practitioner_phone: practitioner.telephoneNumber,
     // date/timeRange/address are the same fields the appointments page shows
     // via toAppointmentCardView — see sanitizeAppointment above.
     next_appointment_date: nextAppt?.date,
@@ -125,16 +125,24 @@ function sanitizePersonalDetails(personalDetails: PersonalDetailsResponse): Reco
     emailAddress: contact.emailAddress,
   })
 
-  const sanitizePractitioner = (mgr: ManagerResponse) => ({
-    name: mgr.name,
-    // Only the first office address is ever shown (see probationOfficer.ts).
-    team: mgr.team
-      ? {
-          telephoneNumber: mgr.team.telephoneNumber,
-          officeAddresses: [sanitizeAddress(mgr.team.officeAddresses?.[0])].filter(Boolean),
-        }
-      : undefined,
-  })
+  // Mirrors the probation officer page (see probationOfficer.ts): the PP's own
+  // number and the office's phone, address and location link. The team's
+  // telephoneNumber and officeAddresses are never shown on screen, so they are
+  // not forwarded. The page hides the officer card, the PP's name and number,
+  // when the practitioner is unallocated, but still shows the office details.
+  const sanitizePractitioner = (mgr: ManagerResponse) => {
+    const showOfficer = Boolean(formatPractitionerName(mgr.name))
+    const officeLocationUrl = sanitiseOfficeLocationUrl(mgr.officeLocationUrl)
+    const showOfficeLink = Boolean(officeLocationUrl && mgr.officeName)
+    return {
+      name: showOfficer ? mgr.name : undefined,
+      telephoneNumber: showOfficer ? mgr.telephoneNumber : undefined,
+      officePhoneNumber: mgr.officePhoneNumber,
+      officeAddress: sanitizeAddress(mgr.officeAddress ?? undefined),
+      officeName: showOfficeLink ? mgr.officeName : undefined,
+      officeLocationUrl: showOfficeLink ? officeLocationUrl : undefined,
+    }
+  }
 
   return {
     name,

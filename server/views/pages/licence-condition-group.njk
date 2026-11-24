@@ -19,14 +19,27 @@
   {# With two or more maps, each one is in its own collapsed "View map and description" section. #}
   {% set mapCount = group.conditions | selectattr("mapUrl") | length %}
   {# Numbered as on the licence document, e.g. "7. (a)" - see toNumberedAdditionalConditions. Bespoke
-     conditions have a number only. #}
-  <ol class="govuk-list pop-condition-list">
+     conditions have a number only. The numbers are hidden unless features.licenceConditionNumbers is on;
+     the maps are then labelled by the condition's position on this page instead. #}
+  {% set showNumbers = features.licenceConditionNumbers %}
+  {# Without numbers the order means nothing to the reader, so it's an unordered list, divided by the
+     item borders. role="list" keeps Safari and VoiceOver announcing it as a list despite list-style: none. #}
+  {% set listTag = "ol" if showNumbers else "ul" %}
+  <{{ listTag }} class="govuk-list pop-condition-list" role="list">
     {% for condition in group.conditions %}
-      <li class="pop-condition-list__item"><span class="pop-condition-list__number">{{ condition.number }}.</span><span>{% if condition.letter %}({{ condition.letter }}) {% endif %}{{ condition.text }}</span>
+      <li class="pop-condition-list__item">
+        {%- if showNumbers %}<span class="pop-condition-list__number">{{ condition.number }}.</span><span>{% if condition.letter %}({{ condition.letter }}) {% endif %}{{ condition.text }}</span>
+        {%- else %}<span>{{ condition.text }}</span>{% endif %}
         {%- if condition.mapUrl %}
-          {% set conditionLabel = condition.number + "." + (" (" + condition.letter + ")" if condition.letter else "") %}
+          {% if showNumbers %}
+            {% set conditionLabel = condition.number + "." + (" (" + condition.letter + ")" if condition.letter else "") %}
+            {% set conditionRef = condition.number + (condition.letter or "") %}
+          {% else %}
+            {% set conditionLabel = loop.index %}
+            {% set conditionRef = loop.index %}
+          {% endif %}
           {# No extension: the browser adds one from the served content type. #}
-          {% set mapFilename = "map-licence-condition-" + condition.number + (condition.letter or "") %}
+          {% set mapFilename = "map-licence-condition-" + conditionRef %}
           {% set mapHtml %}
             <img class="pop-condition-map" src="{{ condition.mapUrl }}" alt="{{ mapHeading }} for licence condition {{ conditionLabel }}">
             <p class="govuk-body govuk-!-margin-bottom-0"><a class="govuk-link" href="{{ condition.mapUrl }}" download="{{ mapFilename }}" data-tracking-id="licence_condition_download_map">Download map<span class="govuk-visually-hidden"> for licence condition {{ conditionLabel }}</span></a></p>
@@ -46,7 +59,7 @@
           </div>
         {%- endif %}</li>
     {% endfor %}
-  </ol>
+  </{{ listTag }}>
 
   {% if nextDrugTest %}
     {% set appointment = nextDrugTest %}

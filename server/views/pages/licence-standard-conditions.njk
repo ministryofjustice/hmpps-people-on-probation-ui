@@ -25,7 +25,7 @@
 
   {% if conditions.length %}
     <h2 class="govuk-heading-l">You need to:</h2>
-    <ol class="govuk-list pop-condition-list">
+    <ol class="govuk-list pop-condition-list" role="list">
       {% for condition in conditions %}
         <li class="pop-condition-list__item"><span class="pop-condition-list__number">{{ loop.index }}.</span><span>{{ condition }}</span></li>
       {% endfor %}

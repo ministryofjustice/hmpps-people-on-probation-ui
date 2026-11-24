@@ -24,6 +24,12 @@
               <dt class="pop-summary-card__key">Name</dt>
               <dd class="pop-summary-card__value">{{ officer.name }}</dd>
             </div>
+            {% if officer.telephoneNumber %}
+              <div class="pop-summary-card__row">
+                <dt class="pop-summary-card__key">Officer phone number</dt>
+                <dd class="pop-summary-card__value">{{ officer.telephoneNumber }}</dd>
+              </div>
+            {% endif %}
           </dl>
         </div>
       {% endif %}
@@ -35,13 +41,13 @@
           <dl class="pop-summary-card__details">
             {% if officer.officePhoneNumber %}
               <div class="pop-summary-card__row">
-                <dt class="pop-summary-card__key">Phone number</dt>
+                <dt class="pop-summary-card__key">Office phone number</dt>
                 <dd class="pop-summary-card__value">{{ officer.officePhoneNumber }}</dd>
               </div>
             {% endif %}
             {% if officer.officeAddress.length %}
               <div class="pop-summary-card__row">
-                <dt class="pop-summary-card__key">Address</dt>
+                <dt class="pop-summary-card__key">Office address</dt>
                 <dd class="pop-summary-card__value">
                   {% for line in officer.officeAddress %}
                     {{ line }}{% if not loop.last %}<br>{% endif %}
@@ -53,7 +59,7 @@
               <div class="pop-summary-card__row">
                 <dt class="pop-summary-card__key">More details</dt>
                 <dd class="pop-summary-card__value">
-                  Learn more about <a class="govuk-link govuk-link--no-visited-state" href="{{ officer.officeLocationUrl }}" target="_blank" rel="noopener noreferrer" data-tracking-id="probation_office_location_link">{{ officer.officeName }}<span class="govuk-visually-hidden"> (opens in new tab)</span></a>
+                  <a class="govuk-link govuk-link--no-visited-state" href="{{ officer.officeLocationUrl }}" target="_blank" rel="noopener noreferrer" data-tracking-id="probation_office_location_link">{{ officer.officeName }} (opens in new tab)</a>
                 </dd>
               </div>
             {% endif %}

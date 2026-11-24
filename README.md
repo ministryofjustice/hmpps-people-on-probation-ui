@@ -113,6 +113,7 @@ All variables are configured in `.env` (copy from `.env.example`). The key ones 
 | `FEATURE_MISSED_APPOINTMENT_ALERT` | Show the missed appointment banner on the home page | `false` |
 | `FEATURE_OFFENCE_DETAILS` | Show the "Offence" row on the requirements page | `false` |
 | `FEATURE_EARLY_TERMINATION` | Show the "Ending your probation early" guidance on the progress page | `false` |
+| `FEATURE_LICENCE_CONDITION_NUMBERS` | Show the licence document's numbers on additional and bespoke licence conditions. Standard conditions are always numbered | `false` |
 | `FEATURE_CHATBOT` | Master switch for the chatbot. It is only live when `POP_CHATBOT_API_URL` and `POP_CHATBOT_API_KEY` are also set | `true` |
 | `FEATURE_ANALYTICS` | Send analytics events | `true` |
 | `POP_CHATBOT_API_URL` | Chatbot backend URL | — |
