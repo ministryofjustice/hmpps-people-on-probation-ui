@@ -785,6 +785,50 @@ describe('POST /api/chatbot/chat', () => {
     expect(decoded.ctx.probation_practitioner_phone).toBe('07700900456')
   })
 
+  it("does not forward an unallocated practitioner's name or number, but keeps the office details", async () => {
+    config.popChatbot.userTokenSecret = 'test-shared-secret-do-not-use-in-prod'
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getPersonalDetails: jest.fn().mockResolvedValue({
+            ...minimalPersonalDetails,
+            practitioner: {
+              name: { forename: 'Unallocated', surname: 'Staff' },
+              telephoneNumber: '07700900456',
+              officePhoneNumber: '01708123456',
+              officeAddress: { street: '27-35 New Road', postcode: 'ME4 4QR' },
+              officeName: 'Havering Pioneer House',
+              officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
+            },
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const init = fetchSpy.mock.calls[0][1] as RequestInit
+    const { practitioner } = JSON.parse(init.body as string).user_context.personalDetails
+    expect(practitioner.name).toBeUndefined()
+    expect(practitioner.telephoneNumber).toBeUndefined()
+    expect(practitioner).toMatchObject({
+      officePhoneNumber: '01708123456',
+      officeAddress: { street: '27-35 New Road', postcode: 'ME4 4QR' },
+      officeName: 'Havering Pioneer House',
+      officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
+    })
+
+    const token = (init.headers as Record<string, string>)['X-POP-User-Token']
+    const decoded = jwt.verify(token, 'test-shared-secret-do-not-use-in-prod') as { ctx: Record<string, unknown> }
+    expect(decoded.ctx).not.toHaveProperty('probation_practitioner_name')
+    expect(decoded.ctx).not.toHaveProperty('probation_practitioner_phone')
+  })
+
   it('rejects a JWT that was tampered with (verify with wrong secret throws)', async () => {
     config.popChatbot.userTokenSecret = 'the-real-secret'
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({

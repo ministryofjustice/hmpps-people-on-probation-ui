@@ -6,7 +6,7 @@ import type { Services } from '../services'
 import { getSessionCrn } from '../auth/sessionStore'
 import { combineSentences, findLicence, groupOrders } from '../utils/concurrentOrders'
 import { hasIndeterminateSentence } from '../utils/currentLicence'
-import { sanitiseOfficeLocationUrl } from '../utils/utils'
+import { formatPractitionerName, sanitiseOfficeLocationUrl } from '../utils/utils'
 import { toAppointmentCardView } from './appointments'
 import type { AppointmentCardView } from './appointments'
 import { toRequirementViews } from './requirements'
@@ -128,13 +128,15 @@ function sanitizePersonalDetails(personalDetails: PersonalDetailsResponse): Reco
   // Mirrors the probation officer page (see probationOfficer.ts): the PP's own
   // number and the office's phone, address and location link. The team's
   // telephoneNumber and officeAddresses are never shown on screen, so they are
-  // not forwarded.
+  // not forwarded. The page hides the officer card, the PP's name and number,
+  // when the practitioner is unallocated, but still shows the office details.
   const sanitizePractitioner = (mgr: ManagerResponse) => {
+    const showOfficer = Boolean(formatPractitionerName(mgr.name))
     const officeLocationUrl = sanitiseOfficeLocationUrl(mgr.officeLocationUrl)
     const showOfficeLink = Boolean(officeLocationUrl && mgr.officeName)
     return {
-      name: mgr.name,
-      telephoneNumber: mgr.telephoneNumber,
+      name: showOfficer ? mgr.name : undefined,
+      telephoneNumber: showOfficer ? mgr.telephoneNumber : undefined,
       officePhoneNumber: mgr.officePhoneNumber,
       officeAddress: sanitizeAddress(mgr.officeAddress ?? undefined),
       officeName: showOfficeLink ? mgr.officeName : undefined,
