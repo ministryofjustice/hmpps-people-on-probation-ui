@@ -22,7 +22,10 @@
      conditions have a number only. The numbers are hidden unless features.licenceConditionNumbers is on;
      the maps are then labelled by the condition's position on this page instead. #}
   {% set showNumbers = features.licenceConditionNumbers %}
-  <ol class="govuk-list pop-condition-list">
+  {# Without numbers the order means nothing to the reader, so it's an unordered list, divided by the
+     item borders. role="list" keeps Safari and VoiceOver announcing it as a list despite list-style: none. #}
+  {% set listTag = "ol" if showNumbers else "ul" %}
+  <{{ listTag }} class="govuk-list pop-condition-list" role="list">
     {% for condition in group.conditions %}
       <li class="pop-condition-list__item">
         {%- if showNumbers %}<span class="pop-condition-list__number">{{ condition.number }}.</span><span>{% if condition.letter %}({{ condition.letter }}) {% endif %}{{ condition.text }}</span>
@@ -56,7 +59,7 @@
           </div>
         {%- endif %}</li>
     {% endfor %}
-  </ol>
+  </{{ listTag }}>
 
   {% if nextDrugTest %}
     {% set appointment = nextDrugTest %}

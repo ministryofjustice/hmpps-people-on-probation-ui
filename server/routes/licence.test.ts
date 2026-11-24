@@ -818,6 +818,7 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     expect(response.text).toContain('<span class="govuk-caption-l">Your probation</span>')
     expect(response.text).toContain('<h1 class="govuk-heading-xl">Follow a curfew</h1>')
     expect(response.text).toContain('href="/your-probation/specific-conditions"')
+    expect(response.text).toContain('<ol class="govuk-list pop-condition-list" role="list">')
     expect(response.text).toContain(
       '<li class="pop-condition-list__item"><span class="pop-condition-list__number">2.</span><span>(a) Stay at home from 7pm</span></li>',
     )
@@ -839,6 +840,8 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     const response = await renderPage('follow-a-curfew')
 
     expect(response.status).toBe(200)
+    expect(response.text).toContain('<ul class="govuk-list pop-condition-list" role="list">')
+    expect(response.text).not.toContain('<ol class="govuk-list pop-condition-list"')
     expect(response.text).toContain('<li class="pop-condition-list__item"><span>Stay at home from 7pm</span></li>')
     expect(response.text).toContain('<li class="pop-condition-list__item"><span>Stay at home at weekends</span></li>')
     expect(response.text).not.toContain('pop-condition-list__number')
