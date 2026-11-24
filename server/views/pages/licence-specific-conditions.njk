@@ -22,7 +22,9 @@
   <p class="govuk-body">These are conditions that you must follow that have been added specifically for you. These conditions can be added, removed or changed.</p>
   <p class="govuk-body">They are aimed at helping you make positive changes or stopping you doing things that led you to prison.</p>
   <p class="govuk-body">Read these and <a class="govuk-link govuk-link--no-visited-state" href="/your-probation/standard-conditions" data-tracking-id="specific_conditions_standard_conditions_link">standard licence conditions</a> carefully.</p>
-  <p class="govuk-body">The numbers shown within each licence condition are the same as the condition numbers on your licence document.</p>
+  {% if features.licenceConditionNumbers %}
+    <p class="govuk-body">The numbers shown within each licence condition are the same as the condition numbers on your licence document.</p>
+  {% endif %}
   <p class="govuk-body"><a class="govuk-link govuk-link--no-visited-state" href="/probation-officer" data-tracking-id="specific_conditions_probation_officer_link">Your probation officer</a> can help you understand your licence conditions if you are not sure.</p>
 
   {% if not licenceAvailable %}

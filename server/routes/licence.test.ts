@@ -28,8 +28,12 @@ const licenceSentence = (overrides: Partial<SentenceResponse> = {}): SentenceRes
   ...overrides,
 })
 
+const originalConditionNumbersFeatureFlag = config.features.licenceConditionNumbers
+
 beforeEach(() => {
   config.features.licence = true
+  // The existing tests check the numbering; the "without numbers" tests turn this off.
+  config.features.licenceConditionNumbers = true
   peopleOnProbationService = {
     getSentences: jest.fn(),
     getDocuments: jest.fn(),
@@ -48,6 +52,7 @@ const originalDocumentsFeatureFlag = config.features.documents
 afterEach(() => {
   config.features.licence = false
   config.features.documents = originalDocumentsFeatureFlag
+  config.features.licenceConditionNumbers = originalConditionNumbersFeatureFlag
   jest.resetAllMocks()
 })
 
@@ -655,6 +660,17 @@ describe('GET /licence/specific-conditions', () => {
     expect(cardTitles(response.text)).toEqual(['Wear a GPS tag', 'Follow a curfew', 'Areas you must not leave'])
     expect(response.text).toContain('href="/your-probation/specific-conditions/wear-a-gps-tag"')
     expect(response.text).toContain('href="/your-probation/specific-conditions/follow-a-curfew"')
+    expect(response.text).toContain('The numbers shown within each licence condition are the same')
+  })
+
+  it('does not mention condition numbers when the numbers are turned off', async () => {
+    config.features.licenceConditionNumbers = false
+    peopleOnProbationService.getLicence.mockResolvedValue(licence([{ code: '524f2fd6-ad53-47dd-8edc-2161d3dd2ed4' }]))
+
+    const response = await renderPage()
+
+    expect(response.status).toBe(200)
+    expect(response.text).not.toContain('The numbers shown within each licence condition are the same')
   })
 
   it('shows the bespoke conditions card only when there are bespoke conditions', async () => {
@@ -809,6 +825,23 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       '<li class="pop-condition-list__item"><span class="pop-condition-list__number">2.</span><span>(b) Stay at home at weekends</span></li>',
     )
     expect(response.text).not.toContain('Stay in Leeds')
+  })
+
+  it("shows the group's conditions without numbers or letters when the numbers are turned off", async () => {
+    config.features.licenceConditionNumbers = false
+    peopleOnProbationService.getLicence.mockResolvedValue(
+      licence([
+        { code: CURFEW, category: 'Curfew arrangement', text: 'Stay at home from 7pm' },
+        { code: CURFEW, category: 'Curfew arrangement', text: 'Stay at home at weekends' },
+      ]),
+    )
+
+    const response = await renderPage('follow-a-curfew')
+
+    expect(response.status).toBe(200)
+    expect(response.text).toContain('<li class="pop-condition-list__item"><span>Stay at home from 7pm</span></li>')
+    expect(response.text).toContain('<li class="pop-condition-list__item"><span>Stay at home at weekends</span></li>')
+    expect(response.text).not.toContain('pop-condition-list__number')
   })
 
   it('shows the curfew help, linking to the tag conditions when the person has some', async () => {
@@ -1111,6 +1144,22 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       expect(response.text).not.toContain('pop-help-panel')
     })
 
+    it('shows bespoke conditions without numbers when the numbers are turned off', async () => {
+      config.features.licenceConditionNumbers = false
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        withBespoke([{ text: 'Do not attend the O2 Arena.' }, { text: 'Do not visit Leeds.' }]),
+      )
+
+      const response = await renderPage('other-conditions-specific-to-you')
+
+      expect(response.status).toBe(200)
+      expect(response.text).toContain(
+        '<li class="pop-condition-list__item"><span>Do not attend the O2 Arena.</span></li>',
+      )
+      expect(response.text).toContain('<li class="pop-condition-list__item"><span>Do not visit Leeds.</span></li>')
+      expect(response.text).not.toContain('pop-condition-list__number')
+    })
+
     it('says "Your licence condition" when there is only one', async () => {
       peopleOnProbationService.getLicence.mockResolvedValue(withBespoke([{ text: 'Do not attend the O2 Arena.' }]))
 
@@ -1193,6 +1242,30 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
       expect(response.text.match(/<details class="govuk-details/g)).toHaveLength(2)
       expect(response.text).not.toMatch(/<details[^>]*\bopen\b/)
       expect(response.text).not.toContain('Map of the area you must not enter</h3>')
+    })
+
+    it("labels each map by its condition's place on the page when the numbers are turned off", async () => {
+      config.features.licenceConditionNumbers = false
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        mapLicence([
+          { id: 204, code: EXCLUSION_ZONE, hasImageUpload: true },
+          { id: 205, code: '42f71b40-84cd-446d-8647-f00bbb6c079c' },
+          { id: 229, code: EXCLUSION_ZONE, hasImageUpload: true },
+        ]),
+      )
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      expect(response.text).not.toContain('pop-condition-list__number')
+      expect(response.text).not.toContain('1. (a)')
+      expect(response.text).toContain(
+        'View map and description<span class="govuk-visually-hidden"> for licence condition 1</span>',
+      )
+      expect(response.text).toContain(
+        'View map and description<span class="govuk-visually-hidden"> for licence condition 3</span>',
+      )
+      expect(response.text).toContain('alt="Map of the area you must not enter for licence condition 3"')
+      expect(response.text).toContain('download="map-licence-condition-3"')
     })
 
     it('shows a single map on the page, not in a collapsed section', async () => {

@@ -210,6 +210,10 @@ const config = {
     // Master switch for the "Ending your probation early" guidance on the progress page. Off by
     // default: the content isn't finalised yet.
     earlyTermination: get('FEATURE_EARLY_TERMINATION', 'false') === 'true',
+    // Show the licence document's numbers on additional and bespoke licence conditions, e.g. "7. (a)".
+    // Off by default: the numbering hasn't been checked against real CVL licences yet. Standard
+    // conditions are always numbered.
+    licenceConditionNumbers: get('FEATURE_LICENCE_CONDITION_NUMBERS', 'false') === 'true',
   },
 }
 
