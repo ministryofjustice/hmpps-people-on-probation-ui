@@ -255,6 +255,34 @@ describe('POST /api/chatbot/chat', () => {
     ])
   })
 
+  it('does not forward the office location link when the page would not show it', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getPersonalDetails: jest.fn().mockResolvedValue({
+            ...minimalPersonalDetails,
+            practitioner: {
+              name: { forename: 'Alex', surname: 'Murphy' },
+              officeName: 'Havering Pioneer House',
+              officeLocationUrl: `${'java'}script:alert(1)`,
+            },
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(ctx.personalDetails.practitioner.officeName).toBeUndefined()
+    expect(ctx.personalDetails.practitioner.officeLocationUrl).toBeUndefined()
+  })
+
   it('strips fields the POP UI never shows on any screen, so the chatbot cannot know more than the user can see', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
@@ -270,10 +298,15 @@ describe('POST /api/chatbot/chat', () => {
             mainAddress: { street: 'Holloway Road', postcode: 'N7 8JL', lastUpdatedAt: '2026-01-01T00:00:00Z' },
             practitioner: {
               name: { forename: 'Alex', surname: 'Murphy' },
+              telephoneNumber: '07700900456',
               team: {
                 telephoneNumber: '020 7946 0987',
-                officeAddresses: [{ street: 'Office One' }, { street: 'Office Two (hidden)' }],
+                officeAddresses: [{ street: 'Team Office (hidden)' }],
               },
+              officePhoneNumber: '01708123456',
+              officeAddress: { street: '27-35 New Road', postcode: 'ME4 4QR', lastUpdatedAt: '2026-01-01T00:00:00Z' },
+              officeName: 'Havering Pioneer House',
+              officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
             },
           }),
           getSentences: jest.fn().mockResolvedValue({
@@ -339,7 +372,14 @@ describe('POST /api/chatbot/chat', () => {
 
     expect(ctx.personalDetails.lastUpdatedAt).toBeUndefined()
     expect(ctx.personalDetails.mainAddress.lastUpdatedAt).toBeUndefined()
-    expect(ctx.personalDetails.practitioner.team.officeAddresses).toEqual([{ street: 'Office One' }])
+    expect(ctx.personalDetails.practitioner).toEqual({
+      name: { forename: 'Alex', surname: 'Murphy' },
+      telephoneNumber: '07700900456',
+      officePhoneNumber: '01708123456',
+      officeAddress: { street: '27-35 New Road', postcode: 'ME4 4QR' },
+      officeName: 'Havering Pioneer House',
+      officeLocationUrl: 'https://www.gov.uk/guidance/havering-pioneer-house',
+    })
 
     // A second, different order is shown on the "Your probation" page, so the chatbot gets its details too.
     expect(ctx.sentenceProgress.sentences).toHaveLength(2)
@@ -710,6 +750,39 @@ describe('POST /api/chatbot/chat', () => {
     expect(decoded.ctx).not.toHaveProperty('personalDetails')
     expect(decoded.ctx).not.toHaveProperty('metadata')
     expect(decoded.exp).toBeGreaterThan(Math.floor(Date.now() / 1000))
+  })
+
+  it("uses the practitioner's own telephoneNumber, not the team's, as probation_practitioner_phone", async () => {
+    config.popChatbot.userTokenSecret = 'test-shared-secret-do-not-use-in-prod'
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      body: mockUpstreamStreamBody(['data: {"type":"done"}\n\n']),
+    } as unknown as Response)
+
+    const app = buildApp({
+      services: {
+        peopleOnProbationService: {
+          getPersonalDetails: jest.fn().mockResolvedValue({
+            ...minimalPersonalDetails,
+            practitioner: {
+              name: { forename: 'Pat', surname: 'Jones' },
+              telephoneNumber: '07700900456',
+              team: { telephoneNumber: '01130000000', officeAddresses: [] },
+              officePhoneNumber: '01708123456',
+            },
+          }),
+        },
+      },
+    })
+
+    await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+
+    const headers = (fetchSpy.mock.calls[0][1] as RequestInit).headers as Record<string, string>
+    const decoded = jwt.verify(headers['X-POP-User-Token'], 'test-shared-secret-do-not-use-in-prod') as {
+      ctx: Record<string, unknown>
+    }
+    expect(decoded.ctx.probation_practitioner_name).toBe('Pat Jones')
+    expect(decoded.ctx.probation_practitioner_phone).toBe('07700900456')
   })
 
   it('rejects a JWT that was tampered with (verify with wrong secret throws)', async () => {
