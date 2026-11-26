@@ -40,7 +40,8 @@
   &__marker {
     position: absolute;
     top: 0;
-    left: max(15px, var(--pop-progress-pct, 0%));
+    // Kept inside the bar at 0% and 100%: the marker is 30px wide and centred on the fill's end.
+    left: clamp(15px, var(--pop-progress-pct, 0%), calc(100% - 15px));
     transform: translateX(-50%);
     line-height: 0;
   }

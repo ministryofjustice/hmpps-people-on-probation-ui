@@ -27,6 +27,9 @@
   // A map uploaded for the condition, under its text, across the full width.
   &__map {
     flex-basis: 100%;
+    // A flex item won't shrink below its content by default, so a wide map image would stretch it (and
+    // the description above) past the screen on mobile.
+    min-width: 0;
     margin-top: govuk-spacing(4);
   }
 

@@ -12,6 +12,7 @@ let peopleOnProbationService: {
   getSentences: jest.Mock
   getSentencePlan: jest.Mock
   getLicences: jest.Mock
+  getLicence: jest.Mock
 }
 
 const unpaidWork = (overrides: Partial<RequirementResponse> = {}): RequirementResponse => ({
@@ -61,6 +62,7 @@ beforeEach(() => {
     getSentences: jest.fn(),
     getSentencePlan: jest.fn(),
     getLicences: jest.fn().mockResolvedValue([]),
+    getLicence: jest.fn(),
   }
   app = appWithAllRoutes({ services: { peopleOnProbationService } as unknown as Partial<Services> })
 })
@@ -278,6 +280,16 @@ describe('GET /progress overall progress and ending early', () => {
     ...overrides,
   })
 
+  // The licence's own dates: CVL's licence start date and Prisoner Search's licence expiry date.
+  const mockLicenceDates = ({
+    licenceStartDate = '2026-06-01',
+    licenceExpiryDate = '2027-07-15',
+    indeterminateSentence,
+  }: { licenceStartDate?: string; licenceExpiryDate?: string; indeterminateSentence?: boolean } = {}) => {
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, licenceExpiryDate, indeterminateSentence }])
+    peopleOnProbationService.getLicence.mockResolvedValue({ id: 7, licenceStartDate })
+  }
+
   it('shows the progress in the overall order, above the achievements', async () => {
     mockSentences([communityOrder()])
 
@@ -343,6 +355,7 @@ describe('GET /progress overall progress and ending early', () => {
 
   it('shows only the time until the licence ends for someone on licence', async () => {
     mockSentences([licence()])
+    mockLicenceDates()
 
     const response = await renderProgress()
 
@@ -360,6 +373,7 @@ describe('GET /progress overall progress and ending early', () => {
   it('shows the time until the licence ends, then the order progress, for someone on licence and an order', async () => {
     // The order first, as in the API's data: the licence is still shown first.
     mockSentences([communityOrder(), licence()])
+    mockLicenceDates()
 
     const response = await renderProgress()
 
@@ -373,7 +387,7 @@ describe('GET /progress overall progress and ending early', () => {
 
   it('hides the time until the licence ends for an indeterminate sentence', async () => {
     mockSentences([licence()])
-    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, indeterminateSentence: true }])
+    mockLicenceDates({ indeterminateSentence: true })
 
     const response = await renderProgress()
 
@@ -383,17 +397,38 @@ describe('GET /progress overall progress and ending early', () => {
     expect(response.text).toContain('Ending your probation early')
   })
 
-  it('still shows the time until the licence ends when the licence cannot be loaded', async () => {
+  it('shows the time from release to the licence expiry date, not the whole sentence', async () => {
+    jest.useFakeTimers({ now: new Date('2026-07-01T12:00:00Z'), doNotFake: ['nextTick', 'setImmediate'] })
+    try {
+      mockSentences([licence({ startDate: '2021-01-01', expectedEndDate: '2026-12-31' })])
+      mockLicenceDates({ licenceStartDate: '2026-01-01', licenceExpiryDate: '2026-12-31' })
+
+      const response = await renderProgress()
+
+      expect(response.text).toContain('aria-valuenow="50"')
+      expect(response.text).toContain('Remaining: 6 months')
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('hides the time until the licence ends when the licence cannot be loaded', async () => {
     mockSentences([licence()])
     peopleOnProbationService.getLicences.mockRejectedValue(new Error('CVL down'))
 
     const response = await renderProgress()
 
-    expect(response.text).toContain('Time until your licence ends')
+    expect(response.status).toBe(200)
+    expect(response.text).not.toContain('Time until your licence ends')
+    expect(response.text).toContain('Your achievements')
   })
 
-  it('hides the licence progress when the licence has no start date', async () => {
-    mockSentences([licence({ startDate: undefined })])
+  it.each([
+    ['start date', { licenceStartDate: null as string }],
+    ['expiry date', { licenceExpiryDate: null as string }],
+  ])('hides the licence progress when the licence has no %s', async (_, dates) => {
+    mockSentences([licence()])
+    mockLicenceDates(dates)
 
     const response = await renderProgress()
 

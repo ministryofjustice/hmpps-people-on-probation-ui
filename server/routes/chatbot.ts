@@ -5,7 +5,7 @@ import logger from '../../logger'
 import type { Services } from '../services'
 import { getSessionCrn } from '../auth/sessionStore'
 import { combineSentences, findLicence, groupOrders } from '../utils/concurrentOrders'
-import { hasIndeterminateSentence } from '../utils/currentLicence'
+import { findCurrentLicenceSummary, findLicenceById } from '../utils/currentLicence'
 import { formatPractitionerName, sanitiseOfficeLocationUrl } from '../utils/utils'
 import { toAppointmentCardView } from './appointments'
 import type { AppointmentCardView } from './appointments'
@@ -177,24 +177,39 @@ function sanitizeSentence(sentence: SentenceResponse): Record<string, unknown> {
   }
 }
 
+// The licence's own dates and whether its sentence is indeterminate, as the licence page works them out.
+type LicenceDates = {
+  indeterminate: boolean
+  // From CVL: when the licence started, on release.
+  licenceStartDate?: string
+  // From Prisoner Search: when the licence ends.
+  licenceExpiryDate?: string
+}
+
 function sanitizeSentenceProgress(
   sentenceProgress: SentenceProgressResponse,
-  indeterminate = false,
+  licenceDates: LicenceDates = { indeterminate: false },
 ): Record<string, unknown> {
   // The same view as the "Your probation" pages: the licence first, if there is one, then each order
-  // (matching orders as one, see groupOrders) with its own requirements, as on the order's page. A
-  // licence for an indeterminate sentence (such as life) has no end date, as on the licence page.
+  // (matching orders as one, see groupOrders) with its own requirements, as on the order's page. The
+  // licence has the sentence's dates from nDelius and its own start and expiry dates, as on the licence
+  // page. A licence for an indeterminate sentence (such as life) has no end dates.
   const { licence } = findLicence(sentenceProgress.sentences)
   const orders = groupOrders(sentenceProgress.sentences?.filter(sentence => sentence !== licence))
+  const { indeterminate, licenceStartDate, licenceExpiryDate } = licenceDates
   return {
     sentences: [
       ...(licence
         ? [
-            sanitizeSentence({
-              ...licence,
-              requirements: [],
-              ...(indeterminate && { expectedEndDate: undefined }),
-            }),
+            {
+              ...sanitizeSentence({
+                ...licence,
+                requirements: [],
+                ...(indeterminate && { expectedEndDate: undefined }),
+              }),
+              licenceStartDate,
+              licenceExpiryDate: indeterminate ? undefined : licenceExpiryDate,
+            },
           ]
         : []),
       ...orders.map(order => sanitizeSentence(order)),
@@ -208,17 +223,33 @@ function sanitizeSentenceProgress(
   }
 }
 
-// Whether the licence is indeterminate, for someone on licence, as the licence page works it out. If the
-// licence can't be loaded, the sentence's end date is used, as on the page.
+// The licence's dates, for someone on licence, as the licence page works them out: whether it's
+// indeterminate and when it expires from the licence summary, and when it started from the licence's
+// details. Each is looked up on its own, so if one can't be loaded the other is still sent; if the summary
+// can't be loaded, no licence dates are sent and the sentence's end date is kept, as on the page.
+const loadLicenceDates = async (services: Services, crn: string): Promise<LicenceDates> => {
+  const summary = await findCurrentLicenceSummary(services, crn).catch((err): undefined => {
+    logger.warn({ err, crn }, 'Could not load the licence summary for the chatbot; using the sentence end date')
+    return undefined
+  })
+  if (!summary) return { indeterminate: false }
+  const licence = await findLicenceById(services, crn, summary.id).catch((err): undefined => {
+    logger.warn({ err, crn }, 'Could not load the licence for the chatbot; leaving out its start date')
+    return undefined
+  })
+  return {
+    indeterminate: summary.indeterminateSentence === true,
+    licenceStartDate: licence?.licenceStartDate,
+    licenceExpiryDate: summary.licenceExpiryDate,
+  }
+}
+
 const loadSentenceProgress = async (services: Services, crn: string) => {
   const sentenceProgress = await services.peopleOnProbationService.getSentences(crn)
-  const indeterminate =
-    Boolean(findLicence(sentenceProgress.sentences).licence) &&
-    (await hasIndeterminateSentence(services, crn).catch(err => {
-      logger.warn({ err, crn }, 'Could not load the licence for the chatbot; using the sentence end date')
-      return false
-    }))
-  return sanitizeSentenceProgress(sentenceProgress, indeterminate)
+  const licenceDates = findLicence(sentenceProgress.sentences).licence
+    ? await loadLicenceDates(services, crn)
+    : undefined
+  return sanitizeSentenceProgress(sentenceProgress, licenceDates)
 }
 
 type SanitizedAppointment = Omit<

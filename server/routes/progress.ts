@@ -9,7 +9,7 @@ import { calculateDateProgress, formatSentenceType, formatUnit, isLicenceSentenc
 import { combineSentences, findLicence, groupOrders } from '../utils/concurrentOrders'
 import type { AppointmentResponse, SentencePlanResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
 import { type RequirementKind, toRequirementViews } from './requirements'
-import { hasIndeterminateSentence } from '../utils/currentLicence'
+import findCurrentLicence from '../utils/currentLicence'
 
 type ProgressIcon = { src: string; width: number; height: number }
 
@@ -26,6 +26,8 @@ type LicenceProgressView = {
   remainingDuration: string
 }
 
+type CurrentLicence = Awaited<ReturnType<typeof findCurrentLicence>>
+
 type OrderProgressView = {
   type?: string
   percentComplete: number
@@ -33,11 +35,17 @@ type OrderProgressView = {
   remainingDuration: string
 }
 
-// Someone on licence sees the time until their licence ends; without both dates there's nothing to show.
-export const toLicenceProgressView = (sentence?: SentenceResponse): LicenceProgressView | undefined => {
-  if (!isLicenceSentence(sentence) || !sentence.startDate || !sentence.expectedEndDate) return undefined
+// Someone on licence sees the time until their licence ends: from their release (CVL's licence start date)
+// to the licence expiry date (from Prisoner Search), not the sentence's dates from nDelius, which include
+// the time in custody. Without both dates, or for an indeterminate sentence (such as life), which never
+// ends, there's nothing to show.
+export const toLicenceProgressView = (licence?: CurrentLicence): LicenceProgressView | undefined => {
+  if (!licence?.licenceStartDate || !licence.licenceExpiryDate || licence.indeterminateSentence) return undefined
 
-  const { percentComplete, remainingDuration } = calculateDateProgress(sentence.startDate, sentence.expectedEndDate)
+  const { percentComplete, remainingDuration } = calculateDateProgress(
+    licence.licenceStartDate,
+    licence.licenceExpiryDate,
+  )
   return { percentComplete, remainingDuration }
 }
 
@@ -174,19 +182,19 @@ export default function progressRoutes(services: Services): Router {
         })
       }
 
-      // An indeterminate sentence (such as life) has no end date, so there's no time until the licence
-      // ends to show. If the licence can't be loaded, the bar is shown from the sentence's dates.
-      const indeterminate =
+      // The time until the licence ends comes from the licence's own dates, so if the licence can't be
+      // loaded it isn't shown.
+      const currentLicence =
         licence &&
-        (await hasIndeterminateSentence(services, crn).catch(error => {
+        (await findCurrentLicence(services, crn).catch((error): undefined => {
           logger.warn({ correlationId: req.id, err: error }, 'Could not load the licence for the progress page')
-          return false
+          return undefined
         }))
 
       return res.render('pages/progress', {
         rows,
         // Someone on licence and an order sees both: the licence first, then the order.
-        licenceProgress: indeterminate ? undefined : toLicenceProgressView(licence),
+        licenceProgress: toLicenceProgressView(currentLicence),
         orderProgress: toOrderProgressViews(allSentences.filter(s => s !== licence)),
       })
     } catch (error) {
