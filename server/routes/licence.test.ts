@@ -2,7 +2,11 @@ import type { Express } from 'express'
 import request from 'supertest'
 import { appWithAllRoutes, createAppSessionCookie } from './testutils/appSetup'
 import type { Services } from '../services'
-import type { LicenceResponse, SentenceResponse } from '../data/peopleOnProbationApiClient'
+import type {
+  AdditionalLicenceConditionResponse,
+  LicenceResponse,
+  SentenceResponse,
+} from '../data/peopleOnProbationApiClient'
 import config from '../config'
 import { BESPOKE_CONDITIONS_KEY } from '../utils/licenceConditions'
 
@@ -89,7 +93,7 @@ describe('GET /licence', () => {
   })
 
   describe('electronic monitoring tags', () => {
-    const tagLicence = (additional: { code: string; text?: string }[]): LicenceResponse => ({
+    const tagLicence = (additional: { code: string; endDate?: string }[]): LicenceResponse => ({
       id: 7,
       conditions: {
         AP: {
@@ -104,7 +108,7 @@ describe('GET /licence', () => {
       },
     })
 
-    const renderLicence = async (additional: { code: string; text?: string }[]) => {
+    const renderLicence = async (additional: { code: string; endDate?: string }[]) => {
       peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
       peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, updatedDateTime: '2026-05-14T12:29:00' }])
       peopleOnProbationService.getLicence.mockResolvedValue(tagLicence(additional))
@@ -119,8 +123,8 @@ describe('GET /licence', () => {
       ['524f2fd6-ad53-47dd-8edc-2161d3dd2ed4', 'You need to wear a GPS tag'],
       ['86e6f2a9-bb60-40f8-9ac4-310ebc72ac2f', 'You need to wear a curfew or radio frequency (RF) tag'],
       ['d36a3b77-30ba-40ce-8953-83e761d3b487', 'You need to wear an alcohol tag'],
-    ])('shows the tag for CVL condition %s with the end date from its text', async (code, text) => {
-      const response = await renderLicence([{ code, text: 'Monitored until Friday 19 March 2027.' }])
+    ])('shows the tag for CVL condition %s with its end date', async (code, text) => {
+      const response = await renderLicence([{ code, endDate: '2027-03-19' }])
 
       expect(response.text).toContain(text)
       expect(response.text).toContain('Until 19 March 2027')
@@ -129,27 +133,28 @@ describe('GET /licence', () => {
 
     it('shows one tag per tag condition group', async () => {
       const response = await renderLicence([
-        { code: 'fd129172-bdd3-4d97-a4a0-efd7b47a49d4', text: 'Agree to a tag until 1 December 2026.' },
-        { code: '524f2fd6-ad53-47dd-8edc-2161d3dd2ed4', text: 'GPS ending on 19 March 2027.' },
-        { code: 'd36a3b77-30ba-40ce-8953-83e761d3b487', text: 'No alcohol.' },
+        { code: 'fd129172-bdd3-4d97-a4a0-efd7b47a49d4', endDate: '2026-12-01' },
+        { code: '524f2fd6-ad53-47dd-8edc-2161d3dd2ed4', endDate: '2027-03-19' },
+        { code: 'd36a3b77-30ba-40ce-8953-83e761d3b487' },
       ])
 
       expect(response.text).toContain('You need to wear a GPS tag')
       expect(response.text).toContain('Until 19 March 2027')
       expect(response.text).toContain('You need to wear an alcohol tag')
-      expect(response.text).toContain('Until 1 December 2026')
+      // The alcohol tag has no end date of its own, so the general condition's date isn't shown.
+      expect(response.text).not.toContain('Until 1 December 2026')
       expect(response.text.match(/licence-tag\.svg/g)).toHaveLength(2)
     })
 
     it('omits the "Until" line for a tag with no end date', async () => {
-      const response = await renderLicence([{ code: '524f2fd6-ad53-47dd-8edc-2161d3dd2ed4', text: 'GPS monitoring.' }])
+      const response = await renderLicence([{ code: '524f2fd6-ad53-47dd-8edc-2161d3dd2ed4' }])
 
       expect(response.text).toContain('You need to wear a GPS tag')
       expect(response.text).toMatch(/pop-licence-progress__item--tag pop-licence-progress__item--centred/)
     })
 
     it('shows no tag when the licence has no tag conditions', async () => {
-      const response = await renderLicence([{ code: '0a370862-5426-49c1-b6d4-3d074d78a81a', text: 'Curfew.' }])
+      const response = await renderLicence([{ code: '0a370862-5426-49c1-b6d4-3d074d78a81a' }])
 
       expect(response.text).not.toContain('You need to wear')
       expect(response.text).not.toContain('licence-tag.svg')
@@ -847,6 +852,302 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
     expect(response.text).not.toContain('pop-condition-list__number')
   })
 
+  describe('condition descriptions', () => {
+    const IMAGE_UPLOAD_EXCLUSION_ZONE = '0f9a20f4-35c7-4c77-8af8-f200f153fa11'
+
+    const withConditions = (additional: AdditionalLicenceConditionResponse[]): LicenceResponse => ({
+      id: 7,
+      conditions: { AP: { standard: [], additional, bespoke: [] } },
+    })
+
+    const exclusionZone = (id: number, description?: string | null): AdditionalLicenceConditionResponse => ({
+      id,
+      code: IMAGE_UPLOAD_EXCLUSION_ZONE,
+      type: 'IMAGE_UPLOAD',
+      category: 'Freedom of movement',
+      text: 'Do not enter the area on the map.',
+      description,
+      hasImageUpload: true,
+      restrictions: [],
+    })
+
+    const descriptionHtml = (heading: string, description: string) =>
+      `<h3 class="govuk-heading-s govuk-!-margin-bottom-0">${heading}</h3>\\s*<p class="govuk-body govuk-!-margin-bottom-3">${description}</p>`
+
+    it("shows a map's description above the map, with its own heading", async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(withConditions([exclusionZone(204, 'Leeds city centre\n')]))
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      expect(response.text).toMatch(
+        new RegExp(
+          `${descriptionHtml('Description of area you must not enter', 'Leeds city centre')}\\s*` +
+            '<h3 class="govuk-heading-s govuk-!-margin-bottom-2">Map of the area you must not enter</h3>\\s*' +
+            '<img class="pop-condition-map" src="/your-probation/conditions/7/204/image"',
+        ),
+      )
+      // Not under the condition text.
+      expect(response.text).toContain('Do not enter the area on the map.</span>')
+    })
+
+    it('puts the description in the collapsed "View map and description" section when there are two or more maps', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        withConditions([exclusionZone(204, 'Leeds city centre'), exclusionZone(205)]),
+      )
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      const items = [...response.text.matchAll(/<li class="pop-condition-list__item">([\s\S]*?)<\/li>/g)].map(m => m[1])
+      expect(items[0]).toMatch(
+        /<details[\s\S]*Description of area you must not enter[\s\S]*Leeds city centre[\s\S]*<img/,
+      )
+      expect(items[1]).toContain('<details')
+      expect(items[1]).not.toContain('Description of area')
+    })
+
+    it('uses the "must not leave" heading on the areas you must not leave page', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        withConditions([
+          {
+            id: 210,
+            code: '005d70e4-a247-4f82-b8b3-6d294a0f5051',
+            text: 'Stay inside the area on the map.',
+            description: 'Leeds',
+            hasImageUpload: true,
+            restrictions: [],
+          },
+        ]),
+      )
+
+      const response = await renderPage('areas-you-must-not-leave')
+
+      expect(response.text).toMatch(new RegExp(descriptionHtml('Description of area you must not leave', 'Leeds')))
+    })
+
+    it('shows no description heading when the map has no description', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(withConditions([exclusionZone(204, null)]))
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      expect(response.status).toBe(200)
+      expect(response.text).toContain('src="/your-probation/conditions/7/204/image"')
+      expect(response.text).not.toContain('Description of area')
+    })
+
+    describe('area you must live in', () => {
+      const LIVE_IN = '5db26ab3-9b6f-4bee-b2aa-53aa3f3be7dd'
+      const liveIn = (
+        overrides: Partial<AdditionalLicenceConditionResponse> = {},
+      ): AdditionalLicenceConditionResponse => ({
+        id: 300,
+        code: LIVE_IN,
+        type: 'STANDARD',
+        category: 'Residence at a specific place',
+        text: 'You must reside overnight within London probation region while of no fixed abode.',
+        restrictions: [],
+        ...overrides,
+      })
+
+      it('shows only the condition text when it has no map, as CVL sends it today', async () => {
+        peopleOnProbationService.getLicence.mockResolvedValue(
+          withConditions([liveIn({ hasImageUpload: null, description: null })]),
+        )
+
+        const response = await renderPage('area-you-must-live-in')
+
+        expect(response.status).toBe(200)
+        expect(response.text).toContain(
+          '<li class="pop-condition-list__item"><span class="pop-condition-list__number">1.</span><span>(a) You must reside overnight within London probation region while of no fixed abode.</span></li>',
+        )
+        expect(response.text).not.toContain('pop-condition-map')
+        expect(response.text).not.toContain('Map of the area')
+        expect(response.text).not.toContain('Description of area')
+        expect(response.text).not.toContain('Download map')
+        expect(response.text).toContain('Help with this licence condition')
+      })
+
+      it('does not show a description without a map', async () => {
+        peopleOnProbationService.getLicence.mockResolvedValue(withConditions([liveIn({ description: 'London' })]))
+
+        const response = await renderPage('area-you-must-live-in')
+
+        expect(response.text).not.toContain('Description of area')
+        expect(response.text).not.toContain('>London<')
+      })
+
+      it('shows a map and its description if one is ever uploaded', async () => {
+        peopleOnProbationService.getLicence.mockResolvedValue(
+          withConditions([liveIn({ type: 'IMAGE_UPLOAD', hasImageUpload: true, description: 'London' })]),
+        )
+
+        const response = await renderPage('area-you-must-live-in')
+
+        expect(response.text).toMatch(new RegExp(descriptionHtml('Description of area you must live in', 'London')))
+        expect(response.text).toContain('Map of the area you must live in</h3>')
+        expect(response.text).toContain('src="/your-probation/conditions/7/300/image"')
+        expect(response.text).toContain('alt="Map of the area you must live in for licence condition 1. (a)"')
+      })
+    })
+
+    it('does not show a description for a condition without a map', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        withConditions([{ ...exclusionZone(204, 'Leeds city centre'), hasImageUpload: false }]),
+      )
+
+      const response = await renderPage('areas-and-places-you-must-not-go-to')
+
+      expect(response.status).toBe(200)
+      expect(response.text).not.toContain('Leeds city centre')
+    })
+
+    it("does not show a condition's electronic monitoring end date, as its text already has the date", async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        withConditions([
+          {
+            code: GPS,
+            type: 'ELECTRONIC_MONITORING_WITH_RESTRICTIONS',
+            text: 'Monitored by GPS until Friday 5 March 2027.',
+            endDate: '2027-03-05',
+            restrictions: [],
+          },
+        ]),
+      )
+
+      const response = await renderPage('wear-a-gps-tag')
+
+      expect(response.text).toContain('Monitored by GPS until Friday 5 March 2027.</span></li>')
+      expect(response.text).not.toContain('2027-03-05')
+    })
+
+    it('shows conditions of a type it does not know', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        withConditions([
+          { code: CURFEW, type: 'SOMETHING_NEW_FROM_CVL', text: 'Stay at home from 7pm', restrictions: [] },
+        ]),
+      )
+
+      const response = await renderPage('follow-a-curfew')
+
+      expect(response.status).toBe(200)
+      expect(response.text).toContain('Stay at home from 7pm')
+    })
+  })
+
+  describe('approved address', () => {
+    const hdcLicence = (curfewAddress?: LicenceResponse['curfewAddress']): LicenceResponse => ({
+      ...licence([{ code: CURFEW, category: 'Curfew arrangement', text: 'Stay at home from 7pm' }]),
+      kind: 'HDC',
+      ...(curfewAddress && { curfewAddress }),
+      firstNightCurfewTimes: { fromDay: null, fromTime: '15:00:00', untilDay: null, untilTime: '07:00:00' },
+      curfewTimes: [{ fromDay: 'MONDAY', fromTime: '19:00:00', untilDay: 'TUESDAY', untilTime: '07:00:00' }],
+    })
+
+    it('shows the curfew address as the approved address on the curfew page, skipping blank lines', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        hdcLicence({
+          uprn: null,
+          firstLine: '18 Scott way',
+          secondLine: null,
+          townOrCity: 'Swindon',
+          county: '',
+          postcode: 'SN59AU',
+        }),
+      )
+
+      const response = await renderPage('follow-a-curfew')
+
+      expect(response.status).toBe(200)
+      expect(response.text).toContain('<h2 class="pop-summary-card__type">Your approved address</h2>')
+      const address = response.text.match(/<dd class="pop-summary-card__value">([\s\S]*?)<\/dd>/)[1]
+      expect(address.replace(/\s+/g, ' ').trim()).toBe('18 Scott way<br> Swindon<br> SN59AU')
+      // The curfew times aren't shown yet.
+      expect(response.text).not.toContain('MONDAY')
+      expect(response.text).not.toContain('15:00')
+    })
+
+    it('does not show an approved address when the licence has no curfew address', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(hdcLicence())
+
+      const response = await renderPage('follow-a-curfew')
+
+      expect(response.status).toBe(200)
+      expect(response.text).toContain('Stay at home from 7pm')
+      expect(response.text).not.toContain('Your approved address')
+    })
+
+    it('does not show an approved address when every line of the curfew address is blank', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        hdcLicence({
+          uprn: '100121',
+          firstLine: null,
+          secondLine: null,
+          townOrCity: null,
+          county: null,
+          postcode: null,
+        }),
+      )
+
+      const response = await renderPage('follow-a-curfew')
+
+      expect(response.text).not.toContain('Your approved address')
+    })
+
+    it('only shows the approved address on the curfew page', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue({
+        ...hdcLicence({ firstLine: '18 Scott way', postcode: 'SN59AU' }),
+        conditions: {
+          AP: {
+            standard: [],
+            additional: [{ code: GPS, category: 'Electronic monitoring', text: 'Wear a GPS tag', restrictions: [] }],
+            bespoke: [],
+          },
+        },
+      })
+
+      const response = await renderPage('wear-a-gps-tag')
+
+      expect(response.status).toBe(200)
+      expect(response.text).not.toContain('Your approved address')
+    })
+  })
+
+  describe('things you need to take part in', () => {
+    const TAKE_PART = 'df3f08a8-4ae0-41fe-b3bc-d0be1fd2d8aa'
+
+    it('signposts to the appointments page, with help, without listing any appointments', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        licence([
+          { code: TAKE_PART, category: 'Programmes or activities', text: 'Attend all appointments arranged for you.' },
+        ]),
+      )
+
+      const response = await renderPage('things-you-need-to-take-part-in')
+
+      expect(response.status).toBe(200)
+      expect(response.text).toContain('<h1 class="govuk-heading-xl">Things you need to take part in</h1>')
+      expect(response.text).toContain('Attend all appointments arranged for you.')
+      expect(response.text).toContain(
+        '<a class="govuk-link govuk-link--no-visited-state" href="/appointments" data-tracking-id="licence_condition_appointments_link">View your appointments and activities</a>',
+      )
+      expect(response.text).toContain('Help with this licence condition')
+      expect(response.text).toContain(
+        'You can check with <a class="govuk-link" href="/probation-officer" data-tracking-id="licence_condition_help_take_part_probation_officer_link">your probation officer</a> what appointments and activities you need to take part in as part of this licence condition.',
+      )
+      expect(peopleOnProbationService.getFutureAppointments).not.toHaveBeenCalled()
+      expect(response.text).not.toContain('pop-summary-card')
+    })
+
+    it('does not show the appointments link on other condition pages', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        licence([{ code: CURFEW, category: 'Curfew arrangement', text: 'Stay at home from 7pm' }]),
+      )
+
+      const response = await renderPage('follow-a-curfew')
+
+      expect(response.text).not.toContain('View your appointments and activities')
+    })
+  })
+
   it('shows the curfew help, linking to the tag conditions when the person has some', async () => {
     peopleOnProbationService.getLicence.mockResolvedValueOnce(
       licence([{ code: CURFEW }, { code: 'fd129172-bdd3-4d97-a4a0-efd7b47a49d4' }, { code: GPS }]),
@@ -1345,70 +1646,41 @@ describe('GET /licence/specific-conditions/:groupKey', () => {
 
   describe('take drug tests', () => {
     const DRUG_TEST = '322bb3f7-2ee1-46aa-ae1c-3f743efd4327'
-    const appointment = (typeCode: string, date: string) => ({
-      typeCode,
-      date,
-      startTime: '10:00',
-      endTime: '11:00',
-      location: {
-        buildingName: 'Probation Office',
-        streetName: '123 Main Street',
-        town: 'London',
-        postcode: 'SE1 2AB',
-      },
-      practitioner: { name: { forename: 'Robert', surname: 'Smithson' } },
-    })
 
-    beforeEach(() => {
+    it('signposts to the appointments page, without picking out a drug test appointment', async () => {
       peopleOnProbationService.getLicence.mockResolvedValue(
         licence([{ code: DRUG_TEST, category: 'Drug, alcohol and solvent abuse', text: 'Provide a sample' }]),
       )
-    })
-
-    it('shows the next drug test appointment and the help', async () => {
-      peopleOnProbationService.getFutureAppointments.mockResolvedValue({
-        content: [
-          appointment('C084', '2026-10-13'),
-          appointment('DRGAPT', '2026-10-20'),
-          appointment('DRGAPT', '2026-11-20'),
-        ],
-      })
 
       const response = await renderPage('take-drug-tests')
 
       expect(response.status).toBe(200)
       expect(response.text).toContain('<h1 class="govuk-heading-xl">Take drug tests</h1>')
       expect(response.text).toContain('(a) Provide a sample')
-      expect(response.text).toContain('Next drug test')
-      expect(response.text).toContain('Tuesday 20 October 2026')
-      expect(response.text).not.toContain('13 October 2026')
-      expect(response.text).not.toContain('20 November 2026')
-      expect(response.text).toContain('<dt class="pop-summary-card__key">Address</dt>')
-      expect(response.text).toContain('Probation Office')
-      expect(response.text).toContain('Robert Smithson')
-      expect(response.text).toContain('View on map')
-      expect(response.text).toContain('Add to calendar')
-      expect(response.text).toContain('You may be asked to take drug tests even if you have not previously used drugs.')
+      expect(response.text).toContain(
+        '<a class="govuk-link govuk-link--no-visited-state" href="/appointments" data-tracking-id="licence_condition_appointments_link">View your appointments and activities</a>',
+      )
+      expect(response.text).not.toContain('Next drug test')
+      expect(response.text).not.toContain('pop-summary-card')
+      expect(peopleOnProbationService.getFutureAppointments).not.toHaveBeenCalled()
     })
 
-    it('shows no card when there is no upcoming drug test', async () => {
-      peopleOnProbationService.getFutureAppointments.mockResolvedValue({ content: [appointment('C084', '2026-10-13')] })
+    it('keeps the drug test help, and says to check appointments with the probation officer', async () => {
+      peopleOnProbationService.getLicence.mockResolvedValue(
+        licence([{ code: DRUG_TEST, category: 'Drug, alcohol and solvent abuse', text: 'Provide a sample' }]),
+      )
 
       const response = await renderPage('take-drug-tests')
 
-      expect(response.status).toBe(200)
-      expect(response.text).not.toContain('Next drug test')
       expect(response.text).toContain('Help with this licence condition')
-    })
-
-    it('still shows the page when appointments cannot be loaded', async () => {
-      peopleOnProbationService.getFutureAppointments.mockRejectedValue(new Error('API down'))
-
-      const response = await renderPage('take-drug-tests')
-
-      expect(response.status).toBe(200)
-      expect(response.text).toContain('(a) Provide a sample')
-      expect(response.text).not.toContain('Next drug test')
+      expect(response.text).toContain('You may be asked to take drug tests even if you have not previously used drugs.')
+      expect(response.text).toContain('You must not do anything to tamper with your drug test.')
+      expect(response.text).toContain(
+        'If you think something could affect your result, let the person taking your test know before the test is done.',
+      )
+      expect(response.text).toContain(
+        'You can check with <a class="govuk-link" href="/probation-officer" data-tracking-id="licence_condition_help_drug_tests_probation_officer_link">your probation officer</a> what appointments and activities you need to take part in as part of this licence condition.',
+      )
     })
   })
 

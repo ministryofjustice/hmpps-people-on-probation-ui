@@ -139,11 +139,43 @@ export interface StandardLicenceConditionResponse {
 export interface AdditionalLicenceConditionResponse {
   id?: number
   category?: string
+  // CVL's condition type, such as STANDARD, CURFEW, IMAGE_UPLOAD, ELECTRONIC_MONITORING or
+  // ELECTRONIC_MONITORING_WITH_RESTRICTIONS. Kept as a string, as CVL may add more.
   type?: string
   code?: string
   text?: string
+  // Free text for image upload conditions, such as the name of a mapped area.
+  description?: string | null
+  // When electronic monitoring for this condition ends (yyyy-MM-dd).
+  endDate?: string | null
+  // Curfew conditions' times. Not shown yet.
+  curfewTimes?: LicenceConditionCurfewTimeResponse[]
   restrictions: string[]
   hasImageUpload?: boolean
+}
+
+// Times are HH:mm. An endTime earlier than startTime runs past midnight.
+export interface LicenceConditionCurfewTimeResponse {
+  startTime?: string | null
+  endTime?: string | null
+}
+
+// The address a person on home detention curfew (HDC) must stay at during their curfew.
+export interface CurfewAddressResponse {
+  uprn?: string | null
+  firstLine?: string | null
+  secondLine?: string | null
+  townOrCity?: string | null
+  county?: string | null
+  postcode?: string | null
+}
+
+// An HDC curfew period. Days are CVL's day names, e.g. MONDAY; the first night's curfew has none.
+export interface HdcCurfewTimeResponse {
+  fromDay?: string | null
+  fromTime?: string | null
+  untilDay?: string | null
+  untilTime?: string | null
 }
 
 export interface LicenceConditionImage {
@@ -183,6 +215,12 @@ export interface LicenceResponse {
   licenceStartDate?: string
   isInPssPeriod?: boolean
   conditions?: LicenceConditionsResponse
+  // Home detention curfew (kind HDC) licences only; the keys are left out for other licences.
+  curfewAddress?: CurfewAddressResponse
+  // Not shown yet.
+  firstNightCurfewTimes?: HdcCurfewTimeResponse
+  // Not shown yet.
+  curfewTimes?: HdcCurfewTimeResponse[]
 }
 
 export interface PractitionerResponse {

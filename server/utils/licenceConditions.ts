@@ -1,4 +1,3 @@
-import { format, isValid, parse } from 'date-fns'
 import type {
   AdditionalLicenceConditionResponse,
   BespokeLicenceConditionResponse,
@@ -197,6 +196,9 @@ export type NumberedConditionView = {
   number: number
   letter?: string
   text?: string
+  // CVL's description of a mapped area, shown with the condition's map. The condition's endDate isn't
+  // shown here, as the text already has the date; the licence page's tag rows use it (see toLicenceTags).
+  description?: string
   // CVL's condition id, and whether it has an uploaded image (e.g. an exclusion zone map).
   id?: number
   hasImageUpload?: boolean
@@ -226,6 +228,7 @@ export const toNumberedAdditionalConditions = (
       number: numberByCategory.get(category),
       letter: String.fromCharCode(97 + letterIndex),
       text: condition.text,
+      description: condition.description?.trim() || undefined,
       id: condition.id,
       hasImageUpload: condition.hasImageUpload,
     }
@@ -317,34 +320,22 @@ export type LicenceTagView = {
   endDate?: string
 }
 
-// NOTE: CVL doesn't give tag conditions an end date field yet, so we take it from the condition text,
-// e.g. "...ending on Sunday 25 December 2033" or "...until Saturday 31 December 2033". This is fragile:
-// if the wording changes, the date is just left out. A field for it has been requested in the API
-// response; once it's there, use it instead and remove this.
-const END_DATE_PATTERN =
-  /\b(?:until|ending on)\s+(?:(?:mon|tues|wednes|thurs|fri|satur|sun)day\s+)?(\d{1,2}\s+[a-z]+\s+\d{4})/gi
-
-const endDateIn = (texts: (string | undefined)[]): string | undefined => {
-  const dates = texts
-    .flatMap(text => [...(text ?? '').matchAll(END_DATE_PATTERN)].map(match => match[1].replace(/\s+/g, ' ')))
-    .map(date => parse(date, 'd MMMM yyyy', new Date()))
-    .filter(isValid)
-    .map(date => format(date, 'yyyy-MM-dd'))
+// The latest of the conditions' electronic monitoring end dates (yyyy-MM-dd, so they sort as text).
+const latestEndDate = (conditions: AdditionalLicenceConditionResponse[]): string | undefined =>
+  conditions
+    .map(({ endDate }) => endDate)
+    .filter(Boolean)
     .sort()
-  return dates[dates.length - 1]
-}
+    .at(-1)
 
 // The person's tags for the licence page, one per tag group they have, in the order they come in the
-// response. The end date is the latest date in the tag's own conditions or, if none of them has one,
-// in the general electronic monitoring condition.
-export const toLicenceTags = (conditions: AdditionalLicenceConditionResponse[] = []): LicenceTagView[] => {
-  const electronicMonitoringEndDate = endDateIn(conditions.filter(isElectronicMonitoring).map(({ text }) => text))
-  return toAdditionalConditionGroups(conditions)
+// response. The end date is the latest endDate in the tag's own conditions. There's no fallback to the
+// general electronic monitoring condition's date: when a tag's own conditions have none (CVL doesn't set
+// it on the RF tag 86e6f2a9 or the alcohol tag d36a3b77), the date is left out rather than guessed.
+export const toLicenceTags = (conditions: AdditionalLicenceConditionResponse[] = []): LicenceTagView[] =>
+  toAdditionalConditionGroups(conditions)
     .groups.filter(({ key }) => TAG_TYPES[key])
     .map(({ key }) => ({
       tagType: TAG_TYPES[key],
-      endDate:
-        endDateIn(conditions.filter(condition => groupOf(condition).key === key).map(({ text }) => text)) ??
-        electronicMonitoringEndDate,
+      endDate: latestEndDate(conditions.filter(condition => groupOf(condition).key === key)),
     }))
-}

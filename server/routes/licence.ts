@@ -3,6 +3,7 @@ import type { SanitisedError } from '@ministryofjustice/hmpps-rest-client'
 
 import type { Services } from '../services'
 import type {
+  CurfewAddressResponse,
   LicenceConditionImage,
   LicenceSummaryResponse,
   SentenceResponse,
@@ -20,7 +21,6 @@ import {
 import { findDocumentIdByType } from '../utils/documentTypes'
 import { getSentenceTypeExplanationTemplate } from '../utils/sentenceCategories'
 import logger from '../../logger'
-import { toAppointmentCardView, type AppointmentCardView } from './appointments'
 import {
   BESPOKE_CONDITIONS_KEY,
   TAG_CONDITION_GROUP_KEYS,
@@ -239,8 +239,9 @@ export default function licenceRoutes(services: Services): Router {
       const { groups } = toAdditionalConditionGroups(additional)
       return res.render('pages/licence-condition-group', {
         group: licence?.id ? withMaps(group, licence.id) : group,
-        mapHeading: MAP_HEADINGS[group.key],
-        nextDrugTest: group.key === 'take-drug-tests' ? await findNextDrugTest(services, crn, req.id) : undefined,
+        mapHeadings: MAP_PAGES[group.key],
+        approvedAddress: group.key === 'follow-a-curfew' ? toAddressLines(licence?.curfewAddress) : undefined,
+        showAppointmentsLink: APPOINTMENTS_LINK_GROUP_KEYS.includes(group.key),
         helpTemplate: licenceConditionHelpTemplate(group.key),
         // The curfew help links to the person's tag conditions, when they have some.
         tagGroupKey: TAG_CONDITION_GROUP_KEYS.find(key => groups.some(g => g.key === key)),
@@ -289,42 +290,53 @@ const findLicenceDetails = async (
   }
 }
 
-// Drug Test Appointment (NS) in nDelius.
-const DRUG_TEST_APPOINTMENT_TYPE_CODE = 'DRGAPT'
-
-// The person's next drug test appointment, for the "Take drug tests" page. Upcoming appointments come
-// soonest first. If they can't be loaded, the page is still shown, without the card.
-const findNextDrugTest = async (
-  services: Services,
-  crn: string,
-  correlationId: string,
-): Promise<AppointmentCardView | undefined> => {
-  try {
-    const { content } = await services.peopleOnProbationService.getFutureAppointments(crn)
-    const drugTest = content.find(
-      appointment => appointment.typeCode?.toUpperCase() === DRUG_TEST_APPOINTMENT_TYPE_CODE,
-    )
-    return drugTest ? toAppointmentCardView(drugTest) : undefined
-  } catch (error) {
-    logger.warn({ correlationId, err: error }, 'Could not load upcoming appointments for the next drug test')
-    return undefined
-  }
+// The lines of a home detention curfew licence's curfew address, without the blank ones, for the
+// "Your approved address" card on the curfew page. Undefined when there's no address to show.
+const toAddressLines = (address?: CurfewAddressResponse): string[] | undefined => {
+  if (!address) return undefined
+  const lines = [address.firstLine, address.secondLine, address.townOrCity, address.county, address.postcode]
+    .map(line => line?.trim())
+    .filter(Boolean)
+  return lines.length ? lines : undefined
 }
+
+// Pages that signpost to the appointments page with a "View your appointments and activities" link,
+// rather than picking out and listing the condition's appointments here.
+const APPOINTMENTS_LINK_GROUP_KEYS = ['things-you-need-to-take-part-in', 'take-drug-tests']
 
 const POSITIVE_INTEGER = /^[1-9]\d*$/
 
 const IMAGE_CONTENT_TYPES = ['image/png', 'image/jpeg', 'image/gif']
 
-// Pages that show the maps uploaded for their conditions (hasImageUpload), with the heading shown above
-// each map. To show maps on another page, add its group key and heading here.
-const MAP_HEADINGS: Record<string, string> = {
-  'areas-and-places-you-must-not-go-to': 'Map of the area you must not enter',
-  'areas-you-must-not-leave': 'Map of the area you must not leave',
+type MapHeadings = {
+  // Above the map (when it isn't collapsed), and in its alt text.
+  map: string
+  // Above CVL's description of the mapped area, when it has one.
+  description: string
+}
+
+// Pages that show the maps uploaded for their conditions (hasImageUpload), with their headings. To show
+// maps on another page, add its group key and both headings here.
+const MAP_PAGES: Record<string, MapHeadings> = {
+  'areas-and-places-you-must-not-go-to': {
+    map: 'Map of the area you must not enter',
+    description: 'Description of area you must not enter',
+  },
+  'areas-you-must-not-leave': {
+    map: 'Map of the area you must not leave',
+    description: 'Description of area you must not leave',
+  },
+  // CVL doesn't attach maps to this page's condition (5db26ab3) yet: it names the area in its text. Listed
+  // so a map is shown if one is ever uploaded; without one, the page shows only the condition text.
+  'area-you-must-live-in': {
+    map: 'Map of the area you must live in',
+    description: 'Description of area you must live in',
+  },
 }
 
 // Adds the image proxy URL to each condition with an uploaded map, so the map is shown under it.
 const withMaps = (group: AdditionalConditionGroupView, licenceId: number): AdditionalConditionGroupView =>
-  MAP_HEADINGS[group.key]
+  MAP_PAGES[group.key]
     ? {
         ...group,
         conditions: group.conditions.map(condition =>
@@ -348,6 +360,7 @@ const LICENCE_CONDITION_HELP: Record<string, string> = {
   'people-you-must-not-contact-or-associate-with': 'people-you-must-not-contact-or-associate-with',
   'area-you-must-live-in': 'area-you-must-live-in',
   'money-and-assets-you-are-allowed-to-have': 'money-and-assets-you-are-allowed-to-have',
+  'things-you-need-to-take-part-in': 'things-you-need-to-take-part-in',
   // Every tag page has the same help.
   'wear-a-gps-tag': 'wear-a-tag',
   'wear-a-curfew-or-rf-tag': 'wear-a-tag',
