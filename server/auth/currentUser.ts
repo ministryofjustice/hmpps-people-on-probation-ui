@@ -50,13 +50,15 @@ export async function loadCurrentUser(req: Request, res: Response, next: NextFun
 
 // People on licence can't use the service until FEATURE_LICENCE is on (isLicence is resolved by
 // the loadSentenceKind middleware). Checked wherever a signed-in user reaches an account page.
-export function isBlockedLicenceUser(res: Response): boolean {
+export function isOnLicenceWithFeatureOff(res: Response): boolean {
   return Boolean(res.locals.user && res.locals.isLicence && !config.features.licence)
 }
 
 export function requireAuthentication(req: Request, res: Response, next: NextFunction) {
   if (res.locals.user) {
-    if (isBlockedLicenceUser(res)) {
+    // Someone on licence, while FEATURE_LICENCE is off in this environment, sees the "You cannot use
+    // this service" page instead. With the flag on, this never redirects.
+    if (isOnLicenceWithFeatureOff(res)) {
       return res.redirect('/autherror')
     }
     return next()
