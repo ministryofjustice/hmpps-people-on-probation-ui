@@ -27,9 +27,19 @@ init({
     // via data-display-title on #chatbot-root.
     displayTitle: 'Hi there',
     placeholder: 'Ask a question...',
-    // One-liner shown under the greeting on the home screen. The markdown link
-    // drops the user straight to the account homepage.
-    welcomeMessage: "I'm your AI assistant. Ask me questions about your probation or [use the website instead](/).",
+    // Welcome copy agreed with the service (25 Nov 2026). It mirrors the online
+    // check-ins welcome minus the personal-data line (this service does use
+    // personal data) and minus the old list of topics it can answer, so the
+    // text stays accurate as navigation changes. "#privacy" opens privacyUrl.
+    welcomeMessage: [
+      "Hi, I'm the AI assistant.",
+      'I can help you by answering questions about your probation.',
+      'I am not a human, I may make mistakes.',
+      'Anything you ask in here:\n\n' +
+        '- will not be passed on to your probation officer\n' +
+        '- cannot be used as proof of contacting your probation officer',
+      'By continuing, you agree to our [privacy notice (opens in new tab)](#privacy).',
+    ].join('\n\n'),
     // Keep the conversation across navigation so returning to /chat from an
     // account page doesn't lose it.
     persistSession: true,
