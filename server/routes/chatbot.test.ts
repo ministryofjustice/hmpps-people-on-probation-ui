@@ -602,6 +602,67 @@ describe('POST /api/chatbot/chat', () => {
     expect(ctx.sentenceProgress.sentences).toHaveLength(1)
     expect(ctx.sentenceProgress.sentences[0].startDate).toBe('2026-01-15')
     expect(ctx.sentenceProgress.sentences[0].expectedEndDate).toBeUndefined()
+    expect(ctx.sentenceProgress.sentences[0].licenceExpiryDate).toBeUndefined()
+  })
+
+  describe("the licence's own dates", () => {
+    const licenceOnly: SentenceResponse = {
+      type: 'ORA Adult Custody (not PSS)',
+      typeCode: '327',
+      startDate: '2021-01-19',
+      expectedEndDate: '2027-03-14',
+      requirements: [],
+      licenceConditions: [{ mainCategory: { code: 'NLC8', description: 'Standard licence conditions' } }],
+    }
+
+    const licenceEntryFor = async (getLicences: jest.Mock, getLicence: jest.Mock) => {
+      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        body: mockUpstreamStreamBody(['data: {"type":"done","conversation_id":"c-licence-dates"}\n\n']),
+      } as unknown as Response)
+      const app = buildApp({
+        services: {
+          peopleOnProbationService: {
+            getSentences: jest.fn().mockResolvedValue({ sentences: [licenceOnly] }),
+            getLicences,
+            getLicence,
+          },
+        },
+      })
+      await request(app).post('/api/chatbot/chat').send({ message: 'hi' }).expect(200)
+      const { user_context: ctx } = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+      return ctx.sentenceProgress.sentences[0]
+    }
+
+    it('sends the licence start and expiry dates alongside the sentence dates, as the licence page shows them', async () => {
+      const entry = await licenceEntryFor(
+        jest.fn().mockResolvedValue([{ id: 7, licenceExpiryDate: '2026-11-20' }]),
+        jest.fn().mockResolvedValue({ id: 7, licenceStartDate: '2025-05-01' }),
+      )
+
+      expect(entry.startDate).toBe('2021-01-19')
+      expect(entry.expectedEndDate).toBe('2027-03-14')
+      expect(entry.licenceStartDate).toBe('2025-05-01')
+      expect(entry.licenceExpiryDate).toBe('2026-11-20')
+    })
+
+    it("still sends the licence expiry date when the licence's details cannot be loaded", async () => {
+      const entry = await licenceEntryFor(
+        jest.fn().mockResolvedValue([{ id: 7, licenceExpiryDate: '2026-11-20' }]),
+        jest.fn().mockRejectedValue(new Error('CVL down')),
+      )
+
+      expect(entry.licenceStartDate).toBeUndefined()
+      expect(entry.licenceExpiryDate).toBe('2026-11-20')
+    })
+
+    it('sends only the sentence dates when the licence cannot be loaded', async () => {
+      const entry = await licenceEntryFor(jest.fn().mockRejectedValue(new Error('CVL down')), jest.fn())
+
+      expect(entry.expectedEndDate).toBe('2027-03-14')
+      expect(entry.licenceStartDate).toBeUndefined()
+      expect(entry.licenceExpiryDate).toBeUndefined()
+    })
   })
 
   describe('orders that do not match', () => {

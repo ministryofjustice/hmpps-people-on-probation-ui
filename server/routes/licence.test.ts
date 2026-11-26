@@ -63,6 +63,9 @@ afterEach(() => {
 describe('GET /licence', () => {
   it('renders the licence page with the sentence summary', async () => {
     peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
+    // The licence expires before the sentence ends, so the two dates can be told apart.
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, licenceExpiryDate: '2026-11-20' }])
+    peopleOnProbationService.getLicence.mockResolvedValue({ id: 7, licenceStartDate: '2025-05-01' })
 
     const response = await request(app)
       .get('/your-probation')
@@ -79,7 +82,10 @@ describe('GET /licence', () => {
     expect(response.text).toContain('pop-requirements__section-heading">Progress and details</h2>')
     expect(response.text).not.toContain('Time in prison completed')
     expect(response.text).toContain('You are on licence')
-    expect(response.text).toContain('Until 14 March 2027')
+    // "Until" is the licence expiry date from Prisoner Search; the sentence card has nDelius's dates.
+    expect(response.text).toContain('Until 20 November 2026')
+    expect(response.text).not.toContain('Until 14 March 2027')
+    expect(response.text).toContain('14 March 2027')
     expect(response.text).toContain('Adult Custody')
     expect(response.text).not.toContain('ORA Adult Custody')
     expect(response.text).toContain('What this means')
@@ -268,12 +274,15 @@ describe('GET /licence', () => {
     expect(response.text).not.toContain('role="progressbar"')
   })
 
-  it('shows the time until the licence ends as a percentage of the licence', async () => {
+  it('shows the time until the licence ends as a percentage of the licence, from release, not the sentence start', async () => {
     jest.useFakeTimers({ now: new Date('2026-07-01T12:00:00Z'), doNotFake: ['nextTick', 'setImmediate'] })
     try {
+      // The sentence started years earlier, in custody; only the licence's own dates count.
       peopleOnProbationService.getSentences.mockResolvedValue({
-        sentences: [licenceSentence({ startDate: '2026-01-01', expectedEndDate: '2026-12-31' })],
+        sentences: [licenceSentence({ startDate: '2021-01-01', expectedEndDate: '2026-12-31' })],
       })
+      peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, licenceExpiryDate: '2026-12-31' }])
+      peopleOnProbationService.getLicence.mockResolvedValue({ id: 7, licenceStartDate: '2026-01-01' })
 
       const response = await request(app)
         .get('/your-probation')
@@ -295,19 +304,54 @@ describe('GET /licence', () => {
     }
   })
 
-  it('omits the time until the licence ends when the start date is not populated', async () => {
-    peopleOnProbationService.getSentences.mockResolvedValue({
-      sentences: [licenceSentence({ startDate: undefined })],
-    })
+  it('omits the time until the licence ends when the licence has no start date', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, licenceExpiryDate: '2026-11-20' }])
+    peopleOnProbationService.getLicence.mockResolvedValue({ id: 7 })
 
     const response = await request(app)
       .get('/your-probation')
       .set('Cookie', await createAppSessionCookie('X123456'))
       .expect(200)
 
-    expect(response.text).toContain('Until 14 March 2027')
+    expect(response.text).toContain('Until 20 November 2026')
     expect(response.text).not.toContain('Time until your licence ends')
     expect(response.text).not.toContain('role="progressbar"')
+  })
+
+  it("omits the licence's end date and time until it ends when Prisoner Search has no licence expiry date", async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7 }])
+    peopleOnProbationService.getLicence.mockResolvedValue({ id: 7, licenceStartDate: '2025-05-01' })
+
+    const response = await request(app)
+      .get('/your-probation')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('You are on licence')
+    expect(response.text).not.toContain('Until ')
+    expect(response.text).not.toContain('Time until your licence ends')
+    // The sentence card still has nDelius's dates.
+    expect(response.text).toContain('Sentence end date')
+    expect(response.text).toContain('14 March 2027')
+  })
+
+  it('omits the licence dates, but shows the sentence card, when the licence cannot be loaded', async () => {
+    peopleOnProbationService.getSentences.mockResolvedValue({ sentences: [licenceSentence()] })
+    peopleOnProbationService.getLicences.mockRejectedValue(new Error('CVL down'))
+
+    const response = await request(app)
+      .get('/your-probation')
+      .set('Cookie', await createAppSessionCookie('X123456'))
+      .expect(200)
+
+    expect(response.text).toContain('You are on licence')
+    expect(response.text).not.toContain('Until ')
+    expect(response.text).not.toContain('role="progressbar"')
+    expect(response.text).toContain('Sentence start date')
+    expect(response.text).toContain('Sentence end date')
+    expect(response.text).toContain('Total sentence length')
   })
 
   it('shows the licence page for a custodial sentence with a book number, before licence conditions are recorded', async () => {
@@ -1882,7 +1926,10 @@ describe('licence page for an indeterminate sentence', () => {
   })
 
   it('shows the start date only, with no end date, length or time until the licence ends', async () => {
-    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, indeterminateSentence: true }])
+    // Prisoner Search may still have an expiry date too.
+    peopleOnProbationService.getLicences.mockResolvedValue([
+      { id: 7, indeterminateSentence: true, licenceExpiryDate: '2099-01-01' },
+    ])
 
     const response = await renderLicencePage()
 
@@ -1913,8 +1960,8 @@ describe('licence page for an indeterminate sentence', () => {
     expect(response.text).not.toContain('Total sentence length')
   })
 
-  it("shows the sentence's end date when the licence does not say it is indeterminate", async () => {
-    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7 }])
+  it('shows the end dates when the licence does not say it is indeterminate', async () => {
+    peopleOnProbationService.getLicences.mockResolvedValue([{ id: 7, licenceExpiryDate: '2099-01-01' }])
 
     const response = await renderLicencePage()
 

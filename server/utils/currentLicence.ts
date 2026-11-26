@@ -43,13 +43,22 @@ export async function findLicenceById(
 }
 
 // The person's current licence from CVL (see findCurrentLicenceSummary), with whether its sentence is
-// indeterminate, which only the summary has. Undefined when they don't have one yet.
+// indeterminate and when the licence expires, which only the summary has (from Prisoner Search).
+// Undefined when they don't have one yet.
 export default async function findCurrentLicence(
   services: Services,
   crn: string,
-): Promise<(LicenceResponse & Pick<LicenceSummaryResponse, 'indeterminateSentence'>) | undefined> {
+): Promise<
+  (LicenceResponse & Pick<LicenceSummaryResponse, 'indeterminateSentence' | 'licenceExpiryDate'>) | undefined
+> {
   const summary = await findCurrentLicenceSummary(services, crn)
   if (!summary) return undefined
   const licence = await findLicenceById(services, crn, summary.id)
-  return licence && { ...licence, indeterminateSentence: summary.indeterminateSentence }
+  return (
+    licence && {
+      ...licence,
+      indeterminateSentence: summary.indeterminateSentence,
+      licenceExpiryDate: summary.licenceExpiryDate,
+    }
+  )
 }

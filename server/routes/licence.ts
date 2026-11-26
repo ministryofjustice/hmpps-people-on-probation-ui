@@ -41,9 +41,12 @@ type LicenceTagView = {
 type LicenceSentenceView = {
   type?: string
   typeExplanationTemplate?: string
+  // The sentence's dates, from nDelius.
   startDate?: string
   endDate?: string
   totalLength?: string
+  // The licence's own dates, for "You are on licence" and the time until the licence ends.
+  licenceExpiryDate?: string
   percentComplete?: number
   remainingDuration?: string
   tags: LicenceTagView[]
@@ -62,24 +65,31 @@ export async function renderLicenceOverview(
 ) {
   // The licence (for the tag rows and whether the sentence ends) and the licence document don't depend
   // on each other.
-  const [{ tags, indeterminate }, licenceDocumentId] = await Promise.all([
+  const [{ tags, indeterminate, licenceStartDate, licenceExpiryDate }, licenceDocumentId] = await Promise.all([
     findLicenceDetails(services, crn, req.id),
     config.features.documents ? findDocumentIdByType(services, crn, 'LICENCE_CONDITION') : undefined,
   ])
 
   // An indeterminate sentence (such as life) has no end date, so there's no end date, length or time
-  // left to show, whatever end date nDelius has.
+  // left to show, whatever end dates nDelius and Prisoner Search have.
   const endDate = indeterminate ? undefined : sentence.expectedEndDate
-  const progress = sentence.startDate && endDate ? calculateDateProgress(sentence.startDate, endDate) : undefined
+  const expiryDate = indeterminate ? undefined : licenceExpiryDate
+  // The sentence card shows the whole sentence, from nDelius. The time until the licence ends runs from
+  // release (CVL's licence start date) to the licence expiry date, so it leaves out the time in custody.
+  const sentenceProgress =
+    sentence.startDate && endDate ? calculateDateProgress(sentence.startDate, endDate) : undefined
+  const licenceProgress =
+    licenceStartDate && expiryDate ? calculateDateProgress(licenceStartDate, expiryDate) : undefined
 
   const licenceSentence: LicenceSentenceView = {
     type: formatLicenceSentenceType(sentence.type),
     typeExplanationTemplate: getSentenceTypeExplanationTemplate(sentence.typeCode, 'licence'),
     startDate: formatDate(sentence.startDate),
     endDate: formatDate(endDate),
-    totalLength: progress?.totalLength,
-    percentComplete: progress?.percentComplete,
-    remainingDuration: progress?.remainingDuration,
+    totalLength: sentenceProgress?.totalLength,
+    licenceExpiryDate: formatDate(expiryDate),
+    percentComplete: licenceProgress?.percentComplete,
+    remainingDuration: licenceProgress?.remainingDuration,
     tags,
   }
 
@@ -255,16 +265,19 @@ export default function licenceRoutes(services: Services): Router {
   return router
 }
 
-// From the person's CVL licence, for the licence page: whether their sentence is indeterminate (from
-// Prisoner Search, on the licence summary) and their electronic monitoring tags (from the licence's
-// details). Each is looked up on its own, so if the details can't be loaded the page still knows the
-// sentence is indeterminate and only the tags are left out. If the summary can't be loaded either, the
-// page is shown with the sentence's end date.
-const findLicenceDetails = async (
-  services: Services,
-  crn: string,
-  correlationId: string,
-): Promise<{ tags: LicenceTagView[]; indeterminate: boolean }> => {
+type LicenceDetails = {
+  tags: LicenceTagView[]
+  indeterminate: boolean
+  licenceStartDate?: string
+  licenceExpiryDate?: string
+}
+
+// From the person's CVL licence, for the licence page: whether their sentence is indeterminate and when
+// the licence expires (both from Prisoner Search, on the licence summary), and when the licence started and
+// their electronic monitoring tags (from the licence's details). Each is looked up on its own, so if the
+// details can't be loaded the page still has what the summary gives. If the summary can't be loaded
+// either, the page has no licence dates or tags.
+const findLicenceDetails = async (services: Services, crn: string, correlationId: string): Promise<LicenceDetails> => {
   let summary: LicenceSummaryResponse | undefined
   try {
     summary = await findCurrentLicenceSummary(services, crn)
@@ -272,21 +285,25 @@ const findLicenceDetails = async (
     logger.warn({ correlationId, err: error }, 'Could not load the licence summary for the licence page')
     return { tags: [], indeterminate: false }
   }
-  const indeterminate = summary?.indeterminateSentence === true
-  if (!summary) return { tags: [], indeterminate }
+  if (!summary) return { tags: [], indeterminate: false }
+  const fromSummary = {
+    indeterminate: summary.indeterminateSentence === true,
+    licenceExpiryDate: summary.licenceExpiryDate,
+  }
 
   try {
     const licence = await findLicenceById(services, crn, summary.id)
     return {
+      ...fromSummary,
+      licenceStartDate: licence?.licenceStartDate,
       tags: toLicenceTags(licence?.conditions?.AP?.additional).map(({ tagType, endDate }) => ({
         tagType,
         endDate: formatDate(endDate),
       })),
-      indeterminate,
     }
   } catch (error) {
-    logger.warn({ correlationId, err: error }, 'Could not load the licence for the electronic monitoring tags')
-    return { tags: [], indeterminate }
+    logger.warn({ correlationId, err: error }, 'Could not load the licence for the licence page')
+    return { ...fromSummary, tags: [] }
   }
 }
 
