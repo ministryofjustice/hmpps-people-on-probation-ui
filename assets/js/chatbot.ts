@@ -29,8 +29,8 @@ init({
     placeholder: 'Ask a question...',
     // Welcome copy agreed with the service (25 Nov 2026). It mirrors the online
     // check-ins welcome minus the personal-data line (this service does use
-    // personal data) and minus any list of what the assistant can answer, so
-    // it stays accurate as navigation changes. "#privacy" opens privacyUrl.
+    // personal data) and minus the old list of topics it can answer, so the
+    // text stays accurate as navigation changes. "#privacy" opens privacyUrl.
     welcomeMessage: [
       "Hi, I'm the AI assistant.",
       'I can help you by answering questions about your probation.',
@@ -43,6 +43,7 @@ init({
     // Keep the conversation across navigation so returning to /chat from an
     // account page doesn't lose it.
     persistSession: true,
+    suggestedQuestions: ["When's my next appointment?", 'How many hours of unpaid work do I have left?'],
     // Widget rewrites `#privacy` markdown links and the bottom-of-widget link
     // to open this URL in a new tab. `privacyMessage` is no longer needed here
     // — the chatbot's /privacy page is the single source of truth.
