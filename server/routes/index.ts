@@ -4,7 +4,7 @@ import { differenceInDays } from 'date-fns'
 import logger from '../../logger'
 import config, { chatbotEnabled } from '../config'
 import type { Services } from '../services'
-import { isBlockedLicenceUser, loadCurrentUser, requireAuthentication } from '../auth/currentUser'
+import { isOnLicenceWithFeatureOff, loadCurrentUser, requireAuthentication } from '../auth/currentUser'
 import normaliseReturnTo from '../auth/returnTo'
 import { getSessionCrn } from '../auth/sessionStore'
 import type { AppointmentResponse } from '../data/peopleOnProbationApiClient'
@@ -211,7 +211,9 @@ export default function routes(services: Services): Router {
   router.get('/', async (req, res, next) => {
     try {
       if (res.locals.user) {
-        if (isBlockedLicenceUser(res)) {
+        // The home page doesn't use requireAuthentication, so it makes the same check: someone on
+        // licence, while FEATURE_LICENCE is off, sees the "You cannot use this service" page instead.
+        if (isOnLicenceWithFeatureOff(res)) {
           return res.redirect('/autherror')
         }
         return renderAccountHome(res, next)

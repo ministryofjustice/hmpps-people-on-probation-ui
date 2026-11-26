@@ -9,7 +9,7 @@ import { getSentencesKind } from '../utils/utils'
 // per session and cache it there (null = looked up, neither kind). A failed lookup is left
 // uncached so the next request retries, and the labels fall back to the community order ones.
 //
-// The kind also gates people on licence while FEATURE_LICENCE is off (see isBlockedLicenceUser), so it
+// The kind also gates people on licence while FEATURE_LICENCE is off (see isOnLicenceWithFeatureOff), so it
 // looks for a licence across all sentences.
 
 export default function loadSentenceKind(services: Pick<Services, 'peopleOnProbationService'>) {

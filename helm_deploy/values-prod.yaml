@@ -18,7 +18,7 @@ generic-service:
     FEATURE_MISSED_APPOINTMENT_ALERT: "false"
     FEATURE_CHATBOT: "true"
     FEATURE_ANALYTICS: "true"
-    FEATURE_LICENCE: "false"
+    FEATURE_LICENCE: "true"
     # Off until the placeholder content in the research guides is finalised.
     FEATURE_RESEARCH_GUIDANCE: "false"
     FEEDBACK_BANNER_ENABLED: "true"

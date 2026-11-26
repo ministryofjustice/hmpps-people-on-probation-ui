@@ -73,6 +73,21 @@ const LEAVE = '005d70e4-a247-4f82-b8b3-6d294a0f5051'
 const GPS = '524f2fd6-ad53-47dd-8edc-2161d3dd2ed4'
 
 describe('toNumberedAdditionalConditions', () => {
+  it("adds a condition's description, when it has one", () => {
+    const result = toNumberedAdditionalConditions([
+      {
+        code: '0f9a20f4-35c7-4c77-8af8-f200f153fa11',
+        type: 'IMAGE_UPLOAD',
+        description: 'Leeds city centre\n',
+        restrictions: [],
+      },
+      { code: '0a370862-5426-49c1-b6d4-3d074d78a81a', type: 'CURFEW', description: null, restrictions: [] },
+      { code: '5db26ab3-9b6f-4bee-b2aa-53aa3f3be7dd', description: '  ', restrictions: [] },
+    ])
+
+    expect(result.map(({ description }) => description)).toEqual(['Leeds city centre', undefined, undefined])
+  })
+
   it("numbers conditions by their CVL category's place in the response, and letters them within it", () => {
     // From a real CVL response: "Things you need to take part in" spans three categories.
     const result = toNumberedAdditionalConditions([
@@ -234,61 +249,49 @@ describe('toLicenceTags', () => {
   const RF = '86e6f2a9-bb60-40f8-9ac4-310ebc72ac2f'
   const ALCOHOL = 'd36a3b77-30ba-40ce-8953-83e761d3b487'
   const ALCOHOL_MONITORING = '2F8A5418-C6E4-4F32-9E58-64B23550E504'
-  const condition = (code: string, text: string) => ({
+  const condition = (code: string, endDate?: string | null) => ({
     code,
     category: 'Electronic monitoring',
-    text,
+    endDate,
     restrictions: [] as string[],
   })
 
-  it('shows one tag per tag group, in response order, with the end date from its own condition text', () => {
+  it('shows one tag per tag group, in response order, with the end date from its own conditions only', () => {
     expect(
       toLicenceTags([
-        condition(EM, 'You must agree to have an electronic monitoring tag ... until Saturday 31 December 2033.'),
-        condition(
-          GPS,
-          'Your whereabouts will be electronically monitored by GPS Satellite Tagging, ending on Sunday 25 December 2033, and ...',
-        ),
-        condition(
-          RF,
-          'You must stay at LC Building between 5pm and midnight every day until your electronic tag is installed.',
-        ),
-        condition(ALCOHOL, 'You must not drink any alcohol until Saturday 31 December 2033.'),
+        condition(EM, '2033-12-31'),
+        condition(GPS, '2033-12-25'),
+        condition(RF),
+        condition(ALCOHOL, null),
       ]),
     ).toEqual([
       { tagType: 'a GPS', endDate: '2033-12-25' },
-      // No date in its own text, so the general electronic monitoring condition's date is used.
-      { tagType: 'a curfew or radio frequency (RF)', endDate: '2033-12-31' },
+      // No end date of their own, and the general electronic monitoring condition's date isn't used.
+      { tagType: 'a curfew or radio frequency (RF)', endDate: undefined },
+      { tagType: 'an alcohol', endDate: undefined },
+    ])
+  })
+
+  it("uses the latest end date across a tag group's conditions", () => {
+    expect(toLicenceTags([condition(ALCOHOL_MONITORING, '2033-12-30'), condition(ALCOHOL, '2033-12-31')])).toEqual([
       { tagType: 'an alcohol', endDate: '2033-12-31' },
     ])
   })
 
-  it("uses the latest date across a tag group's conditions", () => {
-    expect(
-      toLicenceTags([
-        condition(ALCOHOL, 'You must not drink any alcohol until Saturday 31 December 2033.'),
-        condition(
-          ALCOHOL_MONITORING,
-          'You will need to wear an electronic tag all the time until Friday 30 December 2033 so ...',
-        ),
-      ]),
-    ).toEqual([{ tagType: 'an alcohol', endDate: '2033-12-31' }])
-  })
-
-  it('reads dates without a day name', () => {
-    expect(toLicenceTags([condition(GPS, 'Monitored by GPS until 4 March 2027.')])).toEqual([
-      { tagType: 'a GPS', endDate: '2027-03-04' },
+  it('does not read end dates from the condition text', () => {
+    expect(toLicenceTags([{ ...condition(GPS), text: 'Monitored by GPS until Saturday 31 December 2033.' }])).toEqual([
+      { tagType: 'a GPS', endDate: undefined },
     ])
   })
 
-  it('leaves the end date out when there is none to find', () => {
-    expect(toLicenceTags([condition(RF, 'Stay at home until your electronic tag is installed.')])).toEqual([
+  it('leaves the end date out when no condition has one', () => {
+    expect(toLicenceTags([condition(EM, null), condition(RF)])).toEqual([
       { tagType: 'a curfew or radio frequency (RF)', endDate: undefined },
     ])
   })
 
   it('shows no tags for the general electronic monitoring condition alone, or for other conditions', () => {
-    expect(toLicenceTags([condition(EM, 'Agree to a tag until 1 January 2030.')])).toEqual([])
+    expect(toLicenceTags([condition(EM, '2030-01-01')])).toEqual([])
     expect(toLicenceTags([{ code: CURFEW, category: 'Curfew arrangement', restrictions: [] }])).toEqual([])
     expect(toLicenceTags(undefined)).toEqual([])
   })

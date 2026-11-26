@@ -40,8 +40,15 @@
           {% endif %}
           {# No extension: the browser adds one from the served content type. #}
           {% set mapFilename = "map-licence-condition-" + conditionRef %}
+          {# CVL's description of the mapped area goes with the map, above it, as in the design: the same for
+             one map or several. One map isn't collapsed, so it also has the map's own heading. #}
           {% set mapHtml %}
-            <img class="pop-condition-map" src="{{ condition.mapUrl }}" alt="{{ mapHeading }} for licence condition {{ conditionLabel }}">
+            {% if condition.description %}
+              <h3 class="govuk-heading-s govuk-!-margin-bottom-0">{{ mapHeadings.description }}</h3>
+              <p class="govuk-body govuk-!-margin-bottom-3">{{ condition.description }}</p>
+            {% endif %}
+            {% if mapCount == 1 %}<h3 class="govuk-heading-s govuk-!-margin-bottom-2">{{ mapHeadings.map }}</h3>{% endif %}
+            <img class="pop-condition-map" src="{{ condition.mapUrl }}" alt="{{ mapHeadings.map }} for licence condition {{ conditionLabel }}">
             <p class="govuk-body govuk-!-margin-bottom-0"><a class="govuk-link" href="{{ condition.mapUrl }}" download="{{ mapFilename }}" data-tracking-id="licence_condition_download_map">Download map<span class="govuk-visually-hidden"> for licence condition {{ conditionLabel }}</span></a></p>
           {% endset %}
           <div class="pop-condition-list__map">
@@ -53,7 +60,6 @@
                 attributes: { "data-tracking-id": "licence_condition_view_map" }
               }) }}
             {% else %}
-              <h3 class="govuk-heading-s govuk-!-margin-bottom-2">{{ mapHeading }}</h3>
               {{ mapHtml | safe }}
             {% endif %}
           </div>
@@ -61,12 +67,26 @@
     {% endfor %}
   </{{ listTag }}>
 
-  {% if nextDrugTest %}
-    {% set appointment = nextDrugTest %}
-    {% set cardTitle = "Next drug test" %}
-    {% set locationLabel = "Address" %}
-    {% set showActions = true %}
-    {% include "../partials/appointment-card.njk" %}
+  {% if approvedAddress %}
+    <div class="pop-summary-card govuk-!-margin-bottom-6">
+      <div class="pop-summary-card__header">
+        <h2 class="pop-summary-card__type">Your approved address</h2>
+      </div>
+      <dl class="pop-summary-card__details">
+        <div class="pop-summary-card__row">
+          <dt class="pop-summary-card__key">Address</dt>
+          <dd class="pop-summary-card__value">
+            {% for line in approvedAddress %}
+              {{ line }}{% if not loop.last %}<br>{% endif %}
+            {% endfor %}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  {% endif %}
+
+  {% if showAppointmentsLink %}
+    <p class="govuk-body govuk-!-margin-bottom-6"><a class="govuk-link govuk-link--no-visited-state" href="/appointments" data-tracking-id="licence_condition_appointments_link">View your appointments and activities</a></p>
   {% endif %}
 
   {% if helpTemplate %}

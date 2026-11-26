@@ -49,6 +49,51 @@ describe('PeopleOnProbationApiClient licences', () => {
     expect(fakeApi.isDone()).toBe(true)
   })
 
+  it('gets a home detention curfew licence, with its curfew address and times and the new condition fields', async () => {
+    const licence: LicenceResponse = {
+      id: 1444,
+      kind: 'HDC',
+      statusCode: 'ACTIVE',
+      curfewAddress: {
+        uprn: null,
+        firstLine: '18 Scott way',
+        secondLine: 'Prunus walk',
+        townOrCity: 'Swindon',
+        county: null,
+        postcode: 'SN59AU',
+      },
+      firstNightCurfewTimes: { fromDay: null, fromTime: '15:00:00', untilDay: null, untilTime: '07:00:00' },
+      curfewTimes: [{ fromDay: 'MONDAY', fromTime: '19:00:00', untilDay: 'TUESDAY', untilTime: '07:00:00' }],
+      conditions: {
+        AP: {
+          standard: [],
+          additional: [
+            {
+              id: 1,
+              type: 'CURFEW',
+              code: '0a370862-5426-49c1-b6d4-3d074d78a81a',
+              curfewTimes: [{ startTime: '19:00', endTime: '07:00' }],
+              restrictions: [],
+            },
+            {
+              id: 2,
+              type: 'ELECTRONIC_MONITORING_WITH_RESTRICTIONS',
+              code: '524f2fd6-ad53-47dd-8edc-2161d3dd2ed4',
+              endDate: '2027-03-05',
+              restrictions: [],
+            },
+            { id: 3, type: 'IMAGE_UPLOAD', description: 'Leeds city centre', hasImageUpload: true, restrictions: [] },
+          ],
+          bespoke: [],
+        },
+      },
+    }
+    fakeApi.get('/v1/person/Y057371/licences/1444').reply(200, licence)
+
+    await expect(client.getLicence('Y057371', 1444)).resolves.toEqual(licence)
+    expect(fakeApi.isDone()).toBe(true)
+  })
+
   it('gets a licence condition image with the system token, with its content type', async () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00])
     fakeApi
